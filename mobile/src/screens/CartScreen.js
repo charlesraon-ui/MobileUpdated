@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -486,7 +487,7 @@ const s = StyleSheet.create({
 
   // List Content
   listContent: {
-    paddingBottom: 140,
+    paddingBottom: 160,
   },
 
   emptyListContent: {
