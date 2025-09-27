@@ -317,7 +317,7 @@ export default function ProductsScreen() {
         product={item}
         onPress={() => {
           console.log('Navigating to product:', item._id);
-          router.push(`/${item._id}`);
+          router.push(`/product-detail?id=${item._id}`);
         }}
       />
     </Animated.View>

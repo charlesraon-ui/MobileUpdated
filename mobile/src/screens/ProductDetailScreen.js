@@ -1,6 +1,6 @@
 // src/screens/ProductDetailScreen.js
-import { router } from "expo-router";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -16,9 +16,9 @@ import {
 import { getProductRecommendations } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 
-export default function ProductDetailScreen({ route }) {
-  // Safely access id
-  const id = route?.params?.id;
+export default function ProductDetailScreen() {
+  // Use Expo Router's hook to get URL params
+  const { id } = useLocalSearchParams();
 
   const {
     productDetail,
@@ -41,44 +41,174 @@ export default function ProductDetailScreen({ route }) {
     addons: [],
   });
 
-  // animation (stable ref)
+  // Stable animation ref
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const isMountedRef = useRef(true);
 
-  // fetch detail + animate in
+  // Memoized values to prevent unnecessary re-renders
+  const averageRating = useMemo(
+    () => {
+      if (!productDetail?.reviews?.length) return 0;
+      return productDetail.reviews.reduce((s, r) => s + (r.rating || 0), 0) / productDetail.reviews.length;
+    },
+    [productDetail?.reviews]
+  );
+
+  const img = useMemo(() => {
+    if (!productDetail) return "https://via.placeholder.com/400x300.png?text=No+Image";
+    const imageSource = productDetail?.imageUrl || productDetail?.images?.[0];
+    if (!imageSource) return "https://via.placeholder.com/400x300.png?text=No+Image";
+    if (String(imageSource).startsWith("http")) return imageSource;
+    return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
+  }, [productDetail, toAbsoluteUrl]);
+
+  // Memoized handlers to prevent re-creation
+  const handleSubmit = useCallback(() => {
+    if (!newRating || !newComment.trim()) return;
+    if (productDetail?._id && submitReview) {
+      submitReview(productDetail._id, newRating, newComment);
+      setNewRating(0);
+      setNewComment("");
+    }
+  }, [newRating, newComment, submitReview, productDetail?._id]);
+
+  const handleAddToCartPress = useCallback((product) => {
+    if (handleAddToCart) {
+      handleAddToCart(product);
+    }
+  }, [handleAddToCart]);
+
+  const handleBackPress = useCallback(() => {
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/products'); // Fallback route
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  }, []);
+
+  // Cleanup function
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // fetch detail + animate in - Fixed dependencies
+  useEffect(() => {
+    if (!id || !fetchProductDetail) return;
+    
+    const loadProductDetail = async () => {
+      try {
+        await fetchProductDetail(id);
+        
+        if (!isMountedRef.current) return;
+        
+        // Reset and start animation
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, { 
+          toValue: 1, 
+          duration: 300, 
+          useNativeDriver: true 
+        }).start();
+      } catch (error) {
+        console.error('Failed to fetch product detail:', error);
+      }
+    };
+
+    loadProductDetail();
+  }, [id]); // Only depend on id
+
+  // fetch per-product recommendations - Fixed to prevent infinite loops
   useEffect(() => {
     if (!id) return;
-    fetchProductDetail(id);
-    fadeAnim.setValue(0);
-    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-  }, [id]);
-
-  // fetch per-product recommendations
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      if (!id) return;
+    
+    let cancelled = false;
+    
+    const fetchRecommendations = async () => {
       try {
         setRecoLoading(true);
         const res = await getProductRecommendations(id, 8);
-        if (!active) return;
+        
+        if (cancelled || !isMountedRef.current) return;
+        
         const data = res?.data || {};
         setRecos({
           similar: Array.isArray(data.similar) ? data.similar : [],
           complementary: Array.isArray(data.complementary) ? data.complementary : [],
           addons: Array.isArray(data.addons) ? data.addons : [],
         });
-      } catch {
-        if (active) setRecos({ similar: [], complementary: [], addons: [] });
+      } catch (error) {
+        console.error('Failed to fetch recommendations:', error);
+        if (!cancelled && isMountedRef.current) {
+          setRecos({ similar: [], complementary: [], addons: [] });
+        }
       } finally {
-        if (active) setRecoLoading(false);
+        if (!cancelled && isMountedRef.current) {
+          setRecoLoading(false);
+        }
       }
-    })();
-    return () => {
-      active = false;
     };
-  }, [id]);
 
-  // guard: no id
+    fetchRecommendations();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [id]); // Only depend on id
+
+  const renderStars = useCallback((rating, interactive = false, onPress = null) => (
+    <View style={s.starsContainer}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <TouchableOpacity
+          key={star}
+          onPress={() => interactive && onPress?.(star)}
+          disabled={!interactive}
+          style={interactive ? s.interactiveStar : s.staticStar}
+          activeOpacity={interactive ? 0.7 : 1}
+        >
+          <Text style={[s.starText, { color: star <= rating ? "#FFD700" : "#E5E7EB" }]}>
+            ★
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  ), []);
+
+  // Memoized RecoRow component to prevent unnecessary re-renders
+  const RecoRow = useCallback(({ item }) => {
+    if (!item) return null;
+    
+    const imgSrc = item.imageUrl || "https://via.placeholder.com/120x120.png?text=Item";
+    return (
+      <View style={s.recoRow}>
+        <Image 
+          source={{ uri: imgSrc }} 
+          style={s.recoImg}
+          onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={s.recoName} numberOfLines={2}>{item.name || 'Product'}</Text>
+          <Text style={s.recoPrice}>₱{Number(item.price || 0).toLocaleString("en-PH")}</Text>
+        </View>
+        <TouchableOpacity 
+          onPress={() => handleAddToCartPress(item)}
+          activeOpacity={0.7}
+        >
+          <Text style={s.recoAdd}>Add</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [handleAddToCartPress]);
+
+  const renderRecoItem = useCallback(({ item }) => <RecoRow item={item} />, [RecoRow]);
+
+  // Guard: no id
   if (!id) {
     return (
       <View style={s.loadingContainer}>
@@ -86,17 +216,18 @@ export default function ProductDetailScreen({ route }) {
         <View style={s.loadingBox}>
           <Text style={s.loadingText}>Invalid product ID</Text>
           <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ marginTop: 16, padding: 12, backgroundColor: "#10B981", borderRadius: 8 }}
+            onPress={handleBackPress}
+            style={s.backToProductsButton}
+            activeOpacity={0.8}
           >
-            <Text style={{ color: "white", textAlign: "center" }}>← Go Back</Text>
+            <Text style={s.backToProductsText}>← Go Back</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // guard: loading detail
+  // Guard: loading detail
   if (!productDetail) {
     return (
       <View style={s.loadingContainer}>
@@ -111,71 +242,17 @@ export default function ProductDetailScreen({ route }) {
 
   const p = productDetail;
 
-  // Better image URL handling
-  const getImageUrl = (product) => {
-    const imageSource = product?.imageUrl || product?.images?.[0];
-    if (!imageSource) return "https://via.placeholder.com/400x300.png?text=No+Image";
-    if (String(imageSource).startsWith("http")) return imageSource;
-    return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
-  };
-  const img = getImageUrl(p);
-
-  const averageRating = useMemo(
-    () =>
-      p.reviews?.length
-        ? p.reviews.reduce((s, r) => s + (r.rating || 0), 0) / p.reviews.length
-        : 0,
-    [p.reviews]
-  );
-
-  const handleSubmit = () => {
-    if (!newRating || !newComment.trim()) return;
-    submitReview(p._id, newRating, newComment);
-    setNewRating(0);
-    setNewComment("");
-  };
-
-  const renderStars = (rating, interactive = false, onPress = null) => (
-    <View style={s.starsContainer}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity
-          key={star}
-          onPress={() => interactive && onPress?.(star)}
-          disabled={!interactive}
-          style={interactive ? s.interactiveStar : s.staticStar}
-        >
-          <Text style={[s.starText, { color: star <= rating ? "#FFD700" : "#E5E7EB" }]}>
-            ★
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  // small product row for recos
-  const RecoRow = ({ item }) => {
-    const imgSrc = item.imageUrl || "https://via.placeholder.com/120x120.png?text=Item";
-    return (
-      <View style={s.recoRow}>
-        <Image source={{ uri: imgSrc }} style={s.recoImg} />
-        <View style={{ flex: 1 }}>
-          <Text style={s.recoName} numberOfLines={2}>{item.name}</Text>
-          <Text style={s.recoPrice}>₱{Number(item.price || 0).toLocaleString("en-PH")}</Text>
-        </View>
-        <TouchableOpacity onPress={() => handleAddToCart(item)}>
-          <Text style={s.recoAdd}>Add</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   return (
     <View style={s.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
 
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <TouchableOpacity 
+          onPress={handleBackPress} 
+          style={s.backButton}
+          activeOpacity={0.8}
+        >
           <Text style={s.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={1}>
@@ -198,6 +275,10 @@ export default function ProductDetailScreen({ route }) {
               resizeMode="cover"
               onLoadStart={() => setImageLoading(true)}
               onLoadEnd={() => setImageLoading(false)}
+              onError={(e) => {
+                console.log('Product image load error:', e.nativeEvent.error);
+                setImageLoading(false);
+              }}
             />
             {imageLoading && (
               <View style={s.imageLoader}>
@@ -227,7 +308,7 @@ export default function ProductDetailScreen({ route }) {
             {!!p.tags?.length && (
               <View style={s.tagsContainer}>
                 {p.tags.map((tag, i) => (
-                  <View key={i} style={s.tagBadge}>
+                  <View key={`tag-${i}`} style={s.tagBadge}>
                     <Text style={s.tagText}>{tag}</Text>
                   </View>
                 ))}
@@ -246,6 +327,7 @@ export default function ProductDetailScreen({ route }) {
                 <TouchableOpacity
                   onPress={() => setShowFullDescription(!showFullDescription)}
                   style={s.readMoreButton}
+                  activeOpacity={0.7}
                 >
                   <Text style={s.readMoreText}>
                     {showFullDescription ? "Show less" : "Read more"}
@@ -257,60 +339,64 @@ export default function ProductDetailScreen({ route }) {
 
           {/* Add to Cart */}
           <View style={s.addToCartContainer}>
-            <TouchableOpacity style={s.addToCartButton} onPress={() => handleAddToCart(p)} activeOpacity={0.8}>
+            <TouchableOpacity 
+              style={s.addToCartButton} 
+              onPress={() => handleAddToCartPress(p)} 
+              activeOpacity={0.8}
+            >
               <Text style={s.addToCartText}>Add to Cart</Text>
             </TouchableOpacity>
           </View>
 
-          {/* ---------- AI RECOMMENDATIONS ---------- */}
-          {(recoLoading ||
-            recos.similar.length ||
-            recos.complementary.length ||
-            recos.addons.length) ? (
+          {/* AI RECOMMENDATIONS */}
+          {(recoLoading || recos.similar.length || recos.complementary.length || recos.addons.length) ? (
             <View style={s.recoSection}>
               <Text style={s.recoTitle}>Recommended for this item</Text>
 
               {recoLoading ? (
-                <View style={{ alignItems: "center", marginVertical: 8 }}>
+                <View style={s.recoLoadingContainer}>
                   <View style={s.loadingSpinner} />
                   <Text style={s.muted}>Finding similar and complementary items…</Text>
                 </View>
               ) : (
                 <>
                   {recos.similar.length > 0 && (
-                    <>
+                    <View style={s.recoCategory}>
                       <Text style={s.recoHeading}>Similar items</Text>
                       <FlatList
                         data={recos.similar}
-                        keyExtractor={(it) => it._id}
-                        renderItem={({ item }) => <RecoRow item={item} />}
-                        ItemSeparatorComponent={() => <View style={s.sep} />}
+                        keyExtractor={(item, index) => `similar-${item._id || index}`}
+                        renderItem={renderRecoItem}
+                        ItemSeparatorComponent={() => <View style={s.separator} />}
+                        scrollEnabled={false}
                       />
-                    </>
+                    </View>
                   )}
 
                   {recos.complementary.length > 0 && (
-                    <>
+                    <View style={s.recoCategory}>
                       <Text style={s.recoHeading}>Frequently bought together</Text>
                       <FlatList
                         data={recos.complementary}
-                        keyExtractor={(it) => it._id}
-                        renderItem={({ item }) => <RecoRow item={item} />}
-                        ItemSeparatorComponent={() => <View style={s.sep} />}
+                        keyExtractor={(item, index) => `complementary-${item._id || index}`}
+                        renderItem={renderRecoItem}
+                        ItemSeparatorComponent={() => <View style={s.separator} />}
+                        scrollEnabled={false}
                       />
-                    </>
+                    </View>
                   )}
 
                   {recos.addons.length > 0 && (
-                    <>
+                    <View style={s.recoCategory}>
                       <Text style={s.recoHeading}>Customers also added</Text>
                       <FlatList
                         data={recos.addons}
-                        keyExtractor={(it) => it._id}
-                        renderItem={({ item }) => <RecoRow item={item} />}
-                        ItemSeparatorComponent={() => <View style={s.sep} />}
+                        keyExtractor={(item, index) => `addons-${item._id || index}`}
+                        renderItem={renderRecoItem}
+                        ItemSeparatorComponent={() => <View style={s.separator} />}
+                        scrollEnabled={false}
                       />
-                    </>
+                    </View>
                   )}
                 </>
               )}
@@ -359,7 +445,7 @@ export default function ProductDetailScreen({ route }) {
             <View style={s.existingReviews}>
               {p.reviews?.length > 0 ? (
                 p.reviews.map((review, index) => (
-                  <View key={index} style={s.reviewCard}>
+                  <View key={`review-${review._id || index}`} style={s.reviewCard}>
                     <View style={s.reviewHeader}>
                       <View style={s.reviewerInfo}>
                         <View style={s.avatarPlaceholder}>
@@ -369,11 +455,11 @@ export default function ProductDetailScreen({ route }) {
                         </View>
                         <View>
                           <Text style={s.reviewerName}>{review.userId?.name || "Anonymous"}</Text>
-                          {renderStars(review.rating)}
+                          {renderStars(review.rating || 0)}
                         </View>
                       </View>
                     </View>
-                    <Text style={s.reviewComment}>{review.comment}</Text>
+                    <Text style={s.reviewComment}>{review.comment || ''}</Text>
                   </View>
                 ))
               ) : (
@@ -399,6 +485,17 @@ const s = StyleSheet.create({
     borderColor: "#E5E7EB", borderTopColor: "#10B981", marginBottom: 16,
   },
   loadingText: { fontSize: 16, color: "#6B7280", fontWeight: "500" },
+  backToProductsButton: { 
+    marginTop: 16, 
+    padding: 12, 
+    backgroundColor: "#10B981", 
+    borderRadius: 8 
+  },
+  backToProductsText: { 
+    color: "white", 
+    textAlign: "center", 
+    fontWeight: "600" 
+  },
 
   header: {
     backgroundColor: "#10B981", paddingTop: 50, paddingBottom: 16, paddingHorizontal: 16,
@@ -467,10 +564,12 @@ const s = StyleSheet.create({
 
   // Recos
   recoSection: { marginTop: 24, paddingHorizontal: 16 },
-  recoTitle: { fontSize: 20, fontWeight: "800", color: "#111827", marginBottom: 8 },
-  recoHeading: { fontSize: 16, fontWeight: "800", color: "#374151", marginTop: 10, marginBottom: 6 },
-  sep: { height: 1, backgroundColor: "#E5E7EB" },
+  recoTitle: { fontSize: 20, fontWeight: "800", color: "#111827", marginBottom: 12 },
+  recoCategory: { marginBottom: 20 },
+  recoHeading: { fontSize: 16, fontWeight: "800", color: "#374151", marginBottom: 8 },
+  separator: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 4 },
   muted: { color: "#6B7280", marginTop: 8 },
+  recoLoadingContainer: { alignItems: "center", marginVertical: 8 },
   recoRow: {
     flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8,
   },

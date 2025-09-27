@@ -167,19 +167,20 @@ export default function CartScreen({ navigation }) {
         extraData={cart}
       />
 
+      {/* Add this checkout section right after FlatList */}
       {cart.length > 0 && (
-        <View style={s.modernFooter}>
-          <View style={s.footerContent}>
-            <View style={s.subtotalSection}>
+        <View style={s.checkoutSection}>
+          <View style={s.checkoutCard}>
+            <View style={s.subtotalRow}>
               <Text style={s.subtotalLabel}>Subtotal</Text>
               <Text style={s.subtotalValue}>
                 ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
               </Text>
             </View>
-            <Text style={s.modernTaxNote}>Tax and delivery fees calculated at checkout</Text>
+            <Text style={s.taxNote}>Tax and delivery fees calculated at checkout</Text>
             
-            <TouchableOpacity style={s.modernCheckoutBtn} onPress={goToCheckout}>
-              <Text style={s.modernCheckoutTxt}>Proceed to Checkout</Text>
+            <TouchableOpacity style={s.checkoutButton} onPress={goToCheckout}>
+              <Text style={s.checkoutButtonText}>Proceed to Checkout</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -641,5 +642,62 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     color: "#10B981",
+  },
+  checkoutSection: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+
+  checkoutCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  subtotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  subtotalLabel: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  subtotalValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  taxNote: {
+    color: "#6B7280",
+    fontSize: 12,
+    marginBottom: 16,
+  },
+
+  checkoutButton: {
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  checkoutButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
