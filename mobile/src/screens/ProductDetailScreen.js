@@ -32,6 +32,8 @@ export default function ProductDetailScreen() {
   const [newComment, setNewComment] = useState("");
   const [imageLoading, setImageLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // AI recos
   const [recoLoading, setRecoLoading] = useState(false);
@@ -44,6 +46,7 @@ export default function ProductDetailScreen() {
   // Stable animation ref
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const isMountedRef = useRef(true);
+  const currentProductId = useRef(null);
 
   // Memoized values to prevent unnecessary re-renders
   const averageRating = useMemo(
@@ -62,19 +65,38 @@ export default function ProductDetailScreen() {
     return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
   }, [productDetail, toAbsoluteUrl]);
 
+  // Reset states when component mounts
+  useEffect(() => {
+    isMountedRef.current = true;
+    setError(null);
+    setIsLoading(false);
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Memoized handlers to prevent re-creation
   const handleSubmit = useCallback(() => {
     if (!newRating || !newComment.trim()) return;
     if (productDetail?._id && submitReview) {
-      submitReview(productDetail._id, newRating, newComment);
-      setNewRating(0);
-      setNewComment("");
+      try {
+        submitReview(productDetail._id, newRating, newComment);
+        setNewRating(0);
+        setNewComment("");
+      } catch (error) {
+        console.error('Submit review error:', error);
+      }
     }
   }, [newRating, newComment, submitReview, productDetail?._id]);
 
   const handleAddToCartPress = useCallback((product) => {
     if (handleAddToCart) {
-      handleAddToCart(product);
+      try {
+        handleAddToCart(product);
+      } catch (error) {
+        console.error('Add to cart error:', error);
+      }
     }
   }, [handleAddToCart]);
 
@@ -90,48 +112,63 @@ export default function ProductDetailScreen() {
     }
   }, []);
 
-  // Cleanup function
+  // fetch product detail - Fixed to prevent loops
   useEffect(() => {
-    isMountedRef.current = true;
+    if (!id || currentProductId.current === id) return;
+    if (!fetchProductDetail || isLoading) return;
     
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // fetch detail + animate in - Fixed dependencies
-  useEffect(() => {
-    if (!id || !fetchProductDetail) return;
+    currentProductId.current = id;
     
     const loadProductDetail = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
+        setIsLoading(true);
+        setError(null);
+        
         await fetchProductDetail(id);
         
         if (!isMountedRef.current) return;
         
-        // Reset and start animation
+        // Reset and start animation only after successful load
         fadeAnim.setValue(0);
-        Animated.timing(fadeAnim, { 
+        const animation = Animated.timing(fadeAnim, { 
           toValue: 1, 
           duration: 300, 
           useNativeDriver: true 
-        }).start();
+        });
+        
+        animation.start();
+        
+        return () => {
+          animation.stop();
+        };
+        
       } catch (error) {
         console.error('Failed to fetch product detail:', error);
+        if (isMountedRef.current) {
+          setError('Failed to load product details');
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadProductDetail();
   }, [id]); // Only depend on id
 
-  // fetch per-product recommendations - Fixed to prevent infinite loops
+  // fetch recommendations - Fixed to prevent infinite loops
   useEffect(() => {
-    if (!id) return;
+    if (!id || !productDetail || recoLoading) return;
     
     let cancelled = false;
     
     const fetchRecommendations = async () => {
       try {
+        if (cancelled || !isMountedRef.current) return;
+        
         setRecoLoading(true);
         const res = await getProductRecommendations(id, 8);
         
@@ -155,12 +192,14 @@ export default function ProductDetailScreen() {
       }
     };
 
-    fetchRecommendations();
+    // Add small delay to prevent race conditions
+    const timeoutId = setTimeout(fetchRecommendations, 100);
     
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
-  }, [id]); // Only depend on id
+  }, [id, productDetail?._id]); // Only run when id or product changes
 
   const renderStars = useCallback((rating, interactive = false, onPress = null) => (
     <View style={s.starsContainer}>
@@ -190,7 +229,7 @@ export default function ProductDetailScreen() {
         <Image 
           source={{ uri: imgSrc }} 
           style={s.recoImg}
-          onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+          onError={(e) => console.log('Reco image load error:', e.nativeEvent.error)}
         />
         <View style={{ flex: 1 }}>
           <Text style={s.recoName} numberOfLines={2}>{item.name || 'Product'}</Text>
@@ -227,8 +266,37 @@ export default function ProductDetailScreen() {
     );
   }
 
+  // Guard: error state
+  if (error) {
+    return (
+      <View style={s.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#10B981" />
+        <View style={s.loadingBox}>
+          <Text style={s.errorText}>⚠️ {error}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              setError(null);
+              currentProductId.current = null; // Reset to allow retry
+            }}
+            style={s.retryButton}
+            activeOpacity={0.8}
+          >
+            <Text style={s.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleBackPress}
+            style={s.backToProductsButton}
+            activeOpacity={0.8}
+          >
+            <Text style={s.backToProductsText}>← Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // Guard: loading detail
-  if (!productDetail) {
+  if (isLoading || !productDetail) {
     return (
       <View style={s.loadingContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#10B981" />
@@ -265,6 +333,7 @@ export default function ProductDetailScreen() {
         style={s.scrollView}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Image */}
@@ -369,6 +438,9 @@ export default function ProductDetailScreen() {
                         renderItem={renderRecoItem}
                         ItemSeparatorComponent={() => <View style={s.separator} />}
                         scrollEnabled={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={5}
+                        windowSize={10}
                       />
                     </View>
                   )}
@@ -382,6 +454,9 @@ export default function ProductDetailScreen() {
                         renderItem={renderRecoItem}
                         ItemSeparatorComponent={() => <View style={s.separator} />}
                         scrollEnabled={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={5}
+                        windowSize={10}
                       />
                     </View>
                   )}
@@ -395,6 +470,9 @@ export default function ProductDetailScreen() {
                         renderItem={renderRecoItem}
                         ItemSeparatorComponent={() => <View style={s.separator} />}
                         scrollEnabled={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={5}
+                        windowSize={10}
                       />
                     </View>
                   )}
@@ -485,6 +563,18 @@ const s = StyleSheet.create({
     borderColor: "#E5E7EB", borderTopColor: "#10B981", marginBottom: 16,
   },
   loadingText: { fontSize: 16, color: "#6B7280", fontWeight: "500" },
+  errorText: { fontSize: 16, color: "#DC2626", fontWeight: "500", textAlign: "center", marginBottom: 16 },
+  retryButton: { 
+    marginBottom: 12, 
+    padding: 12, 
+    backgroundColor: "#DC2626", 
+    borderRadius: 8 
+  },
+  retryButtonText: { 
+    color: "white", 
+    textAlign: "center", 
+    fontWeight: "600" 
+  },
   backToProductsButton: { 
     marginTop: 16, 
     padding: 12, 

@@ -3,11 +3,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useContext, useRef, useState } from "react";
 import {
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
@@ -16,8 +17,11 @@ const GREEN_BG = "#ECFDF5";
 const GREEN_BORDER = "#A7F3D0";
 const GREEN_DARK = "#065F46";
 const GRAY = "#6B7280";
+const LIGHT_GRAY = "#F3F4F6";
 const BORDER = "#E5E7EB";
 const BLUE = "#3B82F6";
+const ORANGE = "#F59E0B";
+const RED = "#EF4444";
 
 function OrderDetailsModal({ order, visible, onClose }) {
   if (!order) return null;
@@ -33,12 +37,32 @@ function OrderDetailsModal({ order, visible, onClose }) {
         return BLUE;
       case 'cancelled':
       case 'failed':
-        return '#EF4444';
+        return RED;
       case 'shipped':
       case 'out_for_delivery':
-        return '#F59E0B';
+        return ORANGE;
       default:
         return GRAY;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    const statusLower = String(status || "").toLowerCase();
+    switch (statusLower) {
+      case 'delivered':
+      case 'completed':
+        return '✅';
+      case 'processing':
+      case 'confirmed':
+        return '⚡';
+      case 'cancelled':
+      case 'failed':
+        return '❌';
+      case 'shipped':
+      case 'out_for_delivery':
+        return '🚚';
+      default:
+        return '⏳';
     }
   };
 
@@ -46,87 +70,137 @@ function OrderDetailsModal({ order, visible, onClose }) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={s.modalContainer}>
         <View style={s.modalHeader}>
-          <Text style={s.modalTitle}>Order Details</Text>
+          <View>
+            <Text style={s.modalTitle}>Order Details</Text>
+            <Text style={s.modalSubtitle}>#{String(order._id).slice(-8).toUpperCase()}</Text>
+          </View>
           <TouchableOpacity onPress={onClose} style={s.closeButton}>
             <Text style={s.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={s.modalContent} showsVerticalScrollIndicator={false}>
-          {/* Order Info */}
-          <View style={s.detailSection}>
-            <Text style={s.detailSectionTitle}>Order Information</Text>
-            <View style={s.detailRow}>
-              <Text style={s.detailLabel}>Order ID:</Text>
-              <Text style={s.detailValue}>#{String(order._id).slice(-8).toUpperCase()}</Text>
+          {/* Status Banner */}
+          <View style={[s.statusBanner, { backgroundColor: `${getStatusColor(order.status)}15` }]}>
+            <Text style={s.statusIcon}>{getStatusIcon(order.status)}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.statusBannerTitle, { color: getStatusColor(order.status) }]}>
+                {String(order.status || 'Pending').toUpperCase()}
+              </Text>
+              <Text style={s.statusBannerSubtitle}>
+                Order placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </Text>
             </View>
-            <View style={s.detailRow}>
-              <Text style={s.detailLabel}>Date Placed:</Text>
-              <Text style={s.detailValue}>{new Date(order.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</Text>
+            <View style={s.totalPriceBadge}>
+              <Text style={s.totalPriceText}>₱{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
             </View>
-            <View style={s.detailRow}>
-              <Text style={s.detailLabel}>Status:</Text>
-              <View style={[s.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
-                <Text style={[s.statusText, { color: getStatusColor(order.status) }]}>
-                  {String(order.status || 'Pending').toUpperCase()}
-                </Text>
-              </View>
+          </View>
+
+          {/* Quick Info Cards */}
+          <View style={s.quickInfoContainer}>
+            <View style={s.quickInfoCard}>
+              <Text style={s.quickInfoIcon}>📅</Text>
+              <Text style={s.quickInfoLabel}>Date</Text>
+              <Text style={s.quickInfoValue}>{new Date(order.createdAt).toLocaleDateString()}</Text>
             </View>
-            <View style={s.detailRow}>
-              <Text style={s.detailLabel}>Payment Method:</Text>
-              <Text style={s.detailValue}>{order.paymentMethod || 'COD'}</Text>
+            <View style={s.quickInfoCard}>
+              <Text style={s.quickInfoIcon}>💳</Text>
+              <Text style={s.quickInfoLabel}>Payment</Text>
+              <Text style={s.quickInfoValue}>{order.paymentMethod || 'COD'}</Text>
             </View>
-            <View style={s.detailRow}>
-              <Text style={s.detailLabel}>Total Amount:</Text>
-              <Text style={[s.detailValue, s.totalAmount]}>₱{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
+            <View style={s.quickInfoCard}>
+              <Text style={s.quickInfoIcon}>📦</Text>
+              <Text style={s.quickInfoLabel}>Items</Text>
+              <Text style={s.quickInfoValue}>{order.items?.length || 0}</Text>
             </View>
           </View>
 
           {/* Delivery Address */}
           <View style={s.detailSection}>
-            <Text style={s.detailSectionTitle}>Delivery Address</Text>
-            <Text style={s.addressText}>{order.deliveryAddress || order.address || 'No address provided'}</Text>
+            <Text style={s.detailSectionTitle}>📍 Delivery Address</Text>
+            <View style={s.addressCard}>
+              <Text style={s.addressText}>{order.deliveryAddress || order.address || 'No address provided'}</Text>
+            </View>
           </View>
 
           {/* Items */}
           {order.items && order.items.length > 0 && (
             <View style={s.detailSection}>
-              <Text style={s.detailSectionTitle}>Items Ordered ({order.items.length})</Text>
-              {order.items.map((item, index) => (
-                <View key={index} style={s.itemRow}>
-                  <View style={s.itemInfo}>
-                    <Text style={s.itemName}>{item.product?.name || item.name || 'Product'}</Text>
-                    <Text style={s.itemDetails}>Qty: {item.quantity} × ₱{Number(item.price || 0).toFixed(2)}</Text>
+              <Text style={s.detailSectionTitle}>🛍️ Items Ordered</Text>
+              <View style={s.itemsContainer}>
+                {order.items.map((item, index) => (
+                  <View key={index} style={[s.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}>
+                    <View style={s.itemIcon}>
+                      <Text style={s.itemIconText}>📦</Text>
+                    </View>
+                    <View style={s.itemInfo}>
+                      <Text style={s.itemName}>{item.product?.name || item.name || 'Product'}</Text>
+                      <Text style={s.itemDetails}>Quantity: {item.quantity}</Text>
+                      <Text style={s.itemPrice}>₱{Number(item.price || 0).toFixed(2)} each</Text>
+                    </View>
+                    <View style={s.itemTotalContainer}>
+                      <Text style={s.itemTotal}>₱{(Number(item.quantity || 1) * Number(item.price || 0)).toFixed(2)}</Text>
+                    </View>
                   </View>
-                  <Text style={s.itemTotal}>₱{(Number(item.quantity || 1) * Number(item.price || 0)).toFixed(2)}</Text>
+                ))}
+                
+                {/* Order Summary */}
+                <View style={s.orderSummary}>
+                  <View style={s.summaryRow}>
+                    <Text style={s.summaryLabel}>Subtotal:</Text>
+                    <Text style={s.summaryValue}>
+                      ₱{order.items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={s.summaryRow}>
+                    <Text style={s.summaryLabel}>Delivery Fee:</Text>
+                    <Text style={s.summaryValue}>₱0.00</Text>
+                  </View>
+                  <View style={[s.summaryRow, s.summaryTotal]}>
+                    <Text style={s.summaryTotalLabel}>Total:</Text>
+                    <Text style={s.summaryTotalValue}>₱{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
+                  </View>
                 </View>
-              ))}
+              </View>
             </View>
           )}
 
           {/* Order Timeline */}
           <View style={s.detailSection}>
-            <Text style={s.detailSectionTitle}>Order Timeline</Text>
+            <Text style={s.detailSectionTitle}>📋 Order Timeline</Text>
             <View style={s.timelineContainer}>
               <View style={s.timelineItem}>
                 <View style={[s.timelineDot, { backgroundColor: GREEN }]} />
+                <View style={s.timelineLine} />
                 <View style={s.timelineContent}>
                   <Text style={s.timelineTitle}>Order Placed</Text>
                   <Text style={s.timelineDate}>{new Date(order.createdAt).toLocaleString()}</Text>
+                  <Text style={s.timelineDescription}>Your order has been received and is being processed.</Text>
                 </View>
               </View>
               {order.status !== 'pending' && (
                 <View style={s.timelineItem}>
                   <View style={[s.timelineDot, { backgroundColor: BLUE }]} />
+                  <View style={s.timelineLine} />
                   <View style={s.timelineContent}>
                     <Text style={s.timelineTitle}>Order Confirmed</Text>
                     <Text style={s.timelineDate}>Processing your order</Text>
+                    <Text style={s.timelineDescription}>We're preparing your items for shipment.</Text>
+                  </View>
+                </View>
+              )}
+              {['shipped', 'out_for_delivery', 'delivered', 'completed'].includes(String(order.status).toLowerCase()) && (
+                <View style={s.timelineItem}>
+                  <View style={[s.timelineDot, { backgroundColor: ORANGE }]} />
+                  <View style={s.timelineLine} />
+                  <View style={s.timelineContent}>
+                    <Text style={s.timelineTitle}>Order Shipped</Text>
+                    <Text style={s.timelineDate}>On the way to you</Text>
+                    <Text style={s.timelineDescription}>Your order is out for delivery.</Text>
                   </View>
                 </View>
               )}
@@ -134,10 +208,11 @@ function OrderDetailsModal({ order, visible, onClose }) {
           </View>
         </ScrollView>
 
-        {/* Support Button */}
+        {/* Action Buttons */}
         <View style={s.modalFooter}>
           <TouchableOpacity style={s.supportButton} activeOpacity={0.8}>
-            <Text style={s.supportButtonText}>📞 Contact Support</Text>
+            <Text style={s.supportIcon}>📞</Text>
+            <Text style={s.supportButtonText}>Contact Support</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -149,6 +224,7 @@ export default function OrdersScreen() {
   const { focusOrderId } = useLocalSearchParams();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const {
     orders,
@@ -168,58 +244,179 @@ export default function OrdersScreen() {
     }, [isLoggedIn])
   );
 
+  const onRefresh = useCallback(async () => {
+    if (!isLoggedIn) return;
+    setRefreshing(true);
+    try {
+      await refreshAuthedData?.();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isLoggedIn, refreshAuthedData]);
+
   const handleViewDetails = (order) => {
     setSelectedOrder(order);
     setModalVisible(true);
   };
 
+  const getStatusColor = (status) => {
+    const statusLower = String(status || "").toLowerCase();
+    switch (statusLower) {
+      case 'delivered':
+      case 'completed':
+        return GREEN;
+      case 'processing':
+      case 'confirmed':
+        return BLUE;
+      case 'cancelled':
+      case 'failed':
+        return RED;
+      case 'shipped':
+      case 'out_for_delivery':
+        return ORANGE;
+      default:
+        return GRAY;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    const statusLower = String(status || "").toLowerCase();
+    switch (statusLower) {
+      case 'delivered':
+      case 'completed':
+        return '✅';
+      case 'processing':
+      case 'confirmed':
+        return '⚡';
+      case 'cancelled':
+      case 'failed':
+        return '❌';
+      case 'shipped':
+      case 'out_for_delivery':
+        return '🚚';
+      default:
+        return '⏳';
+    }
+  };
+
   return (
-    <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 24 }}>
-      <Text style={s.h1}>Order History</Text>
+    <View style={s.container}>
+      {/* Header */}
+      <View style={s.header}>
+        <Text style={s.headerTitle}>My Orders</Text>
+        <Text style={s.headerSubtitle}>Track your purchase history</Text>
+      </View>
 
-      {orders.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyText}>📦</Text>
-          <Text style={s.emptyTitle}>No orders yet</Text>
-          <Text style={s.emptySubtitle}>You haven't placed any orders yet. Start shopping to see your orders here!</Text>
-        </View>
-      ) : (
-        orders.map((o) => {
-          const isFocus = String(o._id) === String(focusOrderId || "");
-          return (
-            <View
-              key={o._id}
-              style={[
-                s.orderRow,
-                isFocus && { borderColor: "#059669", borderWidth: 2 },
-              ]}
-            >
-              <View style={s.orderAccent} />
-              <View style={s.orderHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.orderId}>#{String(o._id).slice(-6).toUpperCase()}</Text>
-                  <Text style={s.orderMeta}>{new Date(o.createdAt).toLocaleString()}</Text>
-                  <Text style={s.orderAddress}>📍 {o.address || 'No address'}</Text>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={s.orderAmt}>₱{Number(o.totalAmount || o.total || 0).toFixed(2)}</Text>
-                  <Text style={s.orderStatus}>{o.status || "Pending"}</Text>
-                </View>
-              </View>
-
-              {/* View Details Button */}
-              <TouchableOpacity 
-                style={s.viewDetailsButton} 
-                onPress={() => handleViewDetails(o)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.viewDetailsText}>View Full Details</Text>
-                <Text style={s.viewDetailsArrow}>→</Text>
-              </TouchableOpacity>
+      <ScrollView 
+        style={s.scrollContainer}
+        contentContainerStyle={s.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[GREEN]} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {orders.length === 0 ? (
+          <View style={s.empty}>
+            <View style={s.emptyIconContainer}>
+              <Text style={s.emptyIcon}>🛍️</Text>
             </View>
-          );
-        })
-      )}
+            <Text style={s.emptyTitle}>No orders yet</Text>
+            <Text style={s.emptySubtitle}>
+              Your order history will appear here once you make your first purchase. 
+              Start shopping to see your orders!
+            </Text>
+            <TouchableOpacity style={s.emptyButton} activeOpacity={0.8}>
+              <Text style={s.emptyButtonText}>Start Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={s.ordersContainer}>
+            <Text style={s.ordersCount}>
+              {orders.length} order{orders.length !== 1 ? 's' : ''} found
+            </Text>
+            
+            {orders.map((order, index) => {
+              const isFocus = String(order._id) === String(focusOrderId || "");
+              const statusColor = getStatusColor(order.status);
+              const statusIcon = getStatusIcon(order.status);
+              
+              return (
+                <TouchableOpacity
+                  key={order._id}
+                  style={[
+                    s.orderCard,
+                    isFocus && s.orderCardFocused,
+                  ]}
+                  onPress={() => handleViewDetails(order)}
+                  activeOpacity={0.95}
+                >
+                  {/* Status indicator */}
+                  <View style={[s.statusIndicator, { backgroundColor: statusColor }]} />
+                  
+                  {/* Order Header */}
+                  <View style={s.orderCardHeader}>
+                    <View style={s.orderIdContainer}>
+                      <Text style={s.orderIdLabel}>Order</Text>
+                      <Text style={s.orderId}>#{String(order._id).slice(-6).toUpperCase()}</Text>
+                    </View>
+                    <View style={s.statusContainer}>
+                      <Text style={s.statusIcon}>{statusIcon}</Text>
+                      <Text style={[s.statusText, { color: statusColor }]}>
+                        {String(order.status || 'Pending')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Order Info */}
+                  <View style={s.orderInfo}>
+                    <View style={s.orderMetaRow}>
+                      <View style={s.orderMetaItem}>
+                        <Text style={s.orderMetaIcon}>📅</Text>
+                        <Text style={s.orderMetaText}>
+                          {new Date(order.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </Text>
+                      </View>
+                      <View style={s.orderMetaItem}>
+                        <Text style={s.orderMetaIcon}>📦</Text>
+                        <Text style={s.orderMetaText}>
+                          {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {order.address && (
+                      <View style={s.addressPreview}>
+                        <Text style={s.addressIcon}>📍</Text>
+                        <Text style={s.addressText} numberOfLines={1}>
+                          {order.address}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Price and Action */}
+                  <View style={s.orderCardFooter}>
+                    <View style={s.priceContainer}>
+                      <Text style={s.priceLabel}>Total</Text>
+                      <Text style={s.priceValue}>
+                        ₱{Number(order.totalAmount || order.total || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={s.actionButton}>
+                      <Text style={s.actionButtonText}>View Details</Text>
+                      <Text style={s.actionButtonArrow}>→</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
 
       {/* Order Details Modal */}
       <OrderDetailsModal 
@@ -230,104 +427,261 @@ export default function OrdersScreen() {
           setSelectedOrder(null);
         }}
       />
-    </ScrollView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    backgroundColor: "#F8FAFC",
   },
-  h1: { 
-    fontSize: 24, 
-    fontWeight: "700", 
-    marginBottom: 20,
+  
+  // Header
+  header: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: GRAY,
+    fontWeight: "500",
+  },
+
+  // Scroll container
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+
+  // Orders list
+  ordersContainer: {
+    padding: 16,
+  },
+  ordersCount: {
+    fontSize: 14,
+    color: GRAY,
+    fontWeight: "600",
+    marginBottom: 16,
     textAlign: "center",
   },
 
   // Empty state
   empty: { 
     alignItems: "center", 
-    paddingVertical: 60, 
-    paddingHorizontal: 20,
+    paddingVertical: 80, 
+    paddingHorizontal: 32,
     marginTop: 40,
   },
-  emptyText: {
-    fontSize: 48,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: GREEN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  emptyIcon: {
+    fontSize: 36,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: "center",
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: GRAY,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  emptyButton: {
+    backgroundColor: GREEN,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: GREEN,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
 
   // Order cards
-  orderRow: {
-    marginTop: 8,
-    padding: 12,
+  orderCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    marginBottom: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: GREEN_BORDER,
-    backgroundColor: GREEN_BG,
-    borderRadius: 12,
+    borderColor: "#F3F4F6",
     position: "relative",
   },
-  orderAccent: {
+  orderCardFocused: {
+    borderColor: GREEN,
+    borderWidth: 2,
+    shadowColor: GREEN,
+    shadowOpacity: 0.2,
+  },
+  statusIndicator: {
     position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
     width: 4,
-    backgroundColor: GREEN,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
-  orderHeader: {
+  
+  // Order card header
+  orderCardHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  orderId: { fontWeight: "800", color: GREEN_DARK },
-  orderMeta: { color: "#065F46AA", marginTop: 2 },
-  orderAddress: { color: "#065F46AA", marginTop: 4, fontSize: 12 },
-  orderAmt: { fontWeight: "800", color: GREEN_DARK, textAlign: "right" },
-  orderStatus: { 
-    color: GREEN, 
-    textTransform: "capitalize", 
-    fontWeight: "700", 
-    marginTop: 2, 
-    textAlign: "right" 
+  orderIdContainer: {
+    flex: 1,
   },
-
-  // View Details Button
-  viewDetailsButton: {
-    marginTop: 8,
+  orderIdLabel: {
+    fontSize: 12,
+    color: GRAY,
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  orderId: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  statusContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: GREEN,
+    backgroundColor: LIGHT_GRAY,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  viewDetailsText: {
+  statusIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "capitalize",
+  },
+
+  // Order info
+  orderInfo: {
+    marginBottom: 16,
+  },
+  orderMetaRow: {
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  orderMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 24,
+  },
+  orderMetaIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  orderMetaText: {
+    fontSize: 14,
+    color: GRAY,
+    fontWeight: "500",
+  },
+  addressPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: LIGHT_GRAY,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addressIcon: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  addressText: {
+    fontSize: 14,
+    color: "#111827",
+    fontWeight: "500",
+    flex: 1,
+  },
+
+  // Order card footer
+  orderCardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  priceContainer: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: GRAY,
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  priceValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: GREEN_DARK,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: GREEN_BG,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: GREEN_BORDER,
+  },
+  actionButtonText: {
+    fontSize: 14,
     color: GREEN_DARK,
     fontWeight: "600",
-    marginRight: 4,
+    marginRight: 6,
   },
-  viewDetailsArrow: {
+  actionButtonArrow: {
+    fontSize: 14,
     color: GREEN_DARK,
     fontWeight: "700",
   },
@@ -342,27 +696,39 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: LIGHT_GRAY,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
     color: "#111827",
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: GRAY,
+    fontWeight: "600",
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   closeButtonText: {
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "600",
+    fontSize: 18,
+    color: GRAY,
+    fontWeight: "700",
   },
   modalContent: {
     flex: 1,
@@ -372,89 +738,194 @@ const s = StyleSheet.create({
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: BORDER,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: LIGHT_GRAY,
+  },
+
+  // Status banner
+  statusBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: GREEN_BORDER,
+  },
+  statusIcon: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  statusBannerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  statusBannerSubtitle: {
+    fontSize: 14,
+    color: GRAY,
+    fontWeight: "500",
+  },
+  totalPriceBadge: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  totalPriceText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: GREEN_DARK,
+  },
+
+  // Quick info cards
+  quickInfoContainer: {
+    flexDirection: "row",
+    marginBottom: 24,
+    gap: 12,
+  },
+  quickInfoCard: {
+    flex: 1,
+    backgroundColor: LIGHT_GRAY,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  quickInfoIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickInfoLabel: {
+    fontSize: 12,
+    color: GRAY,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  quickInfoValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
   },
 
   // Detail sections
   detailSection: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   detailSectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: GRAY,
-    fontWeight: "500",
-  },
-  detailValue: {
-    fontSize: 14,
-    color: "#111827",
-    fontWeight: "600",
-    textAlign: "right",
-    flex: 1,
-    marginLeft: 16,
-  },
-  totalAmount: {
-    color: GREEN_DARK,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+
+  // Address card
+  addressCard: {
+    backgroundColor: LIGHT_GRAY,
+    padding: 16,
     borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  addressText: {
-    fontSize: 14,
-    color: "#111827",
-    lineHeight: 20,
-    padding: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
     borderWidth: 1,
     borderColor: BORDER,
   },
 
-  // Items
+  // Items container
+  itemsContainer: {
+    backgroundColor: LIGHT_GRAY,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: "hidden",
+  },
   itemRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    padding: 16,
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: BORDER,
+  },
+  itemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GREEN_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  itemIconText: {
+    fontSize: 16,
   },
   itemInfo: {
     flex: 1,
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#111827",
     marginBottom: 4,
   },
   itemDetails: {
-    fontSize: 12,
+    fontSize: 14,
+    color: GRAY,
+    marginBottom: 2,
+  },
+  itemPrice: {
+    fontSize: 14,
     color: GRAY,
   },
+  itemTotalContainer: {
+    alignItems: "flex-end",
+  },
   itemTotal: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     color: GREEN_DARK,
+  },
+
+  // Order summary
+  orderSummary: {
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderTopWidth: 2,
+    borderTopColor: GREEN_BORDER,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: GRAY,
+    fontWeight: "500",
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: "#111827",
+    fontWeight: "600",
+  },
+  summaryTotal: {
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 12,
+    marginTop: 8,
+  },
+  summaryTotalLabel: {
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "700",
+  },
+  summaryTotalValue: {
+    fontSize: 20,
+    color: GREEN_DARK,
+    fontWeight: "800",
   },
 
   // Timeline
@@ -463,39 +934,76 @@ const s = StyleSheet.create({
   },
   timelineItem: {
     flexDirection: "row",
-    marginBottom: 16,
+    marginBottom: 24,
   },
   timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     marginTop: 4,
-    marginRight: 12,
+    marginRight: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  timelineLine: {
+    position: "absolute",
+    left: 7,
+    top: 20,
+    bottom: -24,
+    width: 2,
+    backgroundColor: BORDER,
   },
   timelineContent: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
   },
   timelineTitle: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: "#111827",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   timelineDate: {
-    fontSize: 12,
+    fontSize: 14,
     color: GRAY,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  timelineDescription: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
   },
 
   // Support button
   supportButton: {
     backgroundColor: BLUE,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    shadowColor: BLUE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  supportIcon: {
+    fontSize: 18,
+    marginRight: 8,
   },
   supportButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });
