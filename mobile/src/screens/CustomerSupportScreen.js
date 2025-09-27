@@ -77,7 +77,7 @@ export default function CustomerSupportScreen() {
       description: "Speak directly with our team",
       icon: "📞",
       action: () => {
-        Linking.openURL("tel:+639123456789");
+        Linking.openURL("tel:+639954730790");
       },
     },
     {
@@ -85,7 +85,7 @@ export default function CustomerSupportScreen() {
       description: "Send us an email",
       icon: "✉️",
       action: () => {
-        Linking.openURL("mailto:support@yourstore.com");
+        Linking.openURL("mailto:info@goagritrading.com");
       },
     },
     {
@@ -293,8 +293,8 @@ export default function CustomerSupportScreen() {
               <Text style={s.contactInfoIcon}>📱</Text>
               <View style={s.contactInfoContent}>
                 <Text style={s.contactInfoLabel}>Phone Support</Text>
-                <Text style={s.contactInfoValue}>+63 912 345 6789</Text>
-                <Text style={s.contactInfoHours}>Mon-Fri: 9AM-6PM</Text>
+                <Text style={s.contactInfoValue}>+63 995 473 0790</Text>
+                <Text style={s.contactInfoHours}>Mon-Fri: 8:00AM-5:00PM</Text>
               </View>
             </View>
 
@@ -302,7 +302,7 @@ export default function CustomerSupportScreen() {
               <Text style={s.contactInfoIcon}>📧</Text>
               <View style={s.contactInfoContent}>
                 <Text style={s.contactInfoLabel}>Email Support</Text>
-                <Text style={s.contactInfoValue}>support@yourstore.com</Text>
+                <Text style={s.contactInfoValue}>info@goagritrading.com</Text>
                 <Text style={s.contactInfoHours}>Response within 24 hours</Text>
               </View>
             </View>
@@ -311,8 +311,8 @@ export default function CustomerSupportScreen() {
               <Text style={s.contactInfoIcon}>📍</Text>
               <View style={s.contactInfoContent}>
                 <Text style={s.contactInfoLabel}>Office Address</Text>
-                <Text style={s.contactInfoValue}>123 Business St.</Text>
-                <Text style={s.contactInfoHours}>Paranaque City, Metro Manila</Text>
+                <Text style={s.contactInfoValue}>Poblacion 1, Moncada</Text>
+                <Text style={s.contactInfoHours}>Tarlac, Philippines</Text>
               </View>
             </View>
           </View>
