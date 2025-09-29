@@ -11,12 +11,15 @@ import {
   register as apiRegister,
   clearAuth,
   getCategories,
+  getDeliveryForOrder,
+  getDriverContact,
   getMyReviewsApi,
   getProductApi,
   getProducts,
   getRecommendations,
   getToken,
   isValidGcash,
+  listMyDeliveries,
   setUser as persistUser,
   getUser as readUser,
   setCartApi,
@@ -110,39 +113,66 @@ export default function AppProvider({ children }) {
     })();
   }, [userId, (cart || []).map((i) => i?.productId).join(",")]);
 
-  // refresh backend data for authed user
   const refreshAuthedData = useCallback(
-    async (u = user) => {
-      if (!u) return;
-      const id = u?._id || u?.id || u?.email;
-      if (!id) return;
+  async (u = user) => {
+    if (!u) return;
+    const id = u?._id || u?.id || u?.email;
+    if (!id) return;
 
-      try {
-        const [cartResp, ordersResp] = await Promise.allSettled([
-          apiGetCart(id),
-          apiGetOrders(id),
-        ]);
+    try {
+      // 1) pull cart & orders in parallel
+      const [cartResp, ordersResp] = await Promise.allSettled([
+        apiGetCart(id),
+        apiGetOrders(id),
+      ]);
 
-        if (cartResp.status === "fulfilled") {
-          const items = cartResp.value?.data?.items;
-          setCart(Array.isArray(items) ? items : []);
-        } else {
-          setCart([]);
-        }
-
-        if (ordersResp.status === "fulfilled") {
-          const data = ordersResp.value?.data;
-          setOrders(Array.isArray(data) ? data : []);
-        } else {
-          setOrders([]);
-        }
-      } catch {
+      // cart
+      if (cartResp.status === "fulfilled") {
+        const items = cartResp.value?.data?.items;
+        setCart(Array.isArray(items) ? items : []);
+      } else {
         setCart([]);
-        setOrders([]);
       }
-    },
-    [user]
-  );
+
+      // orders (base list)
+      const baseOrders = ordersResp.status === "fulfilled" && Array.isArray(ordersResp.value?.data)
+        ? ordersResp.value.data
+        : [];
+
+      // 2) fetch all deliveries once, map by orderId
+      let byOrderId = {};
+        try {
+          const { data: deliveriesResp } = await listMyDeliveries();
+          const list = deliveriesResp?.success ? deliveriesResp.deliveries : [];
+          byOrderId = list.reduce((acc, d) => {
+            // d.order could be an ObjectId string or a populated object with _id
+            const orderKey = typeof d.order === 'string' 
+              ? d.order 
+              : String(d.order?._id || '');
+            if (orderKey) {
+              acc[orderKey] = d;
+            }
+            return acc;
+          }, {});
+        } catch (e) {
+          console.warn('fetch deliveries failed:', e.message);
+        }
+
+      // 3) attach delivery onto each order (if exists)
+      const mergedOrders = baseOrders.map((o) => {
+        const key = String(o._id);
+        const delivery = byOrderId[key];
+        return delivery ? { ...o, delivery } : o;
+      });
+
+      setOrders(mergedOrders);
+    } catch {
+      setCart([]);
+      setOrders([]);
+    }
+  },
+  [user]
+);
 
   // guard with alert
   const ensureAuthed = () => {
@@ -491,6 +521,11 @@ export default function AppProvider({ children }) {
     toAbsoluteUrl,
     setUserState,
     persistUser,
+
+     // deliveries
+    listMyDeliveries,
+    getDeliveryForOrder,
+    getDriverContact,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

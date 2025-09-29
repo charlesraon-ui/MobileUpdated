@@ -18,7 +18,7 @@ function pickImage(product, toAbsoluteUrl) {
   return toAbsoluteUrl ? toAbsoluteUrl(first) : first;
 }
 
-export default function ProductCard({ product, onPress }) {
+export default function ProductCard({ product, onPress, onAddToCart }) {
   const { handleAddToCart, categoryLabelOf, toAbsoluteUrl } = useContext(AppCtx);
   const [imageLoading, setImageLoading] = useState(true);
   const [scaleValue] = useState(new Animated.Value(1));
@@ -40,16 +40,21 @@ export default function ProductCard({ product, onPress }) {
   };
 
   const handleAddToCartPress = (e) => {
-    e.stopPropagation(); // Prevent card press when adding to cart
+    e.stopPropagation();
+    
+    // First add to cart in context
     handleAddToCart(product);
+    
+    // Then trigger the confirmation modal if the prop exists
+    if (onAddToCart) {
+      onAddToCart(product);
+    }
   };
 
-  // Calculate average rating if reviews exist
   const averageRating = product?.reviews?.length 
     ? (product.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / product.reviews.length).toFixed(1)
     : null;
 
-  // Check if product is in stock
   const inStock = product?.stock > 0;
   const stockLevel = product?.stock || 0;
 
@@ -72,28 +77,24 @@ export default function ProductCard({ product, onPress }) {
             onLoadEnd={() => setImageLoading(false)}
           />
           
-          {/* Loading overlay */}
           {imageLoading && (
             <View style={s.imageLoadingOverlay}>
               <View style={s.loadingIndicator} />
             </View>
           )}
           
-          {/* Stock Status Badge */}
           {!inStock && (
             <View style={s.outOfStockBadge}>
               <Text style={s.outOfStockText}>Out of Stock</Text>
             </View>
           )}
 
-          {/* Discount Badge (if you have discount data) */}
           {product?.discount && (
             <View style={s.discountBadge}>
               <Text style={s.discountText}>-{product.discount}%</Text>
             </View>
           )}
 
-          {/* Image Gradient Overlay */}
           <View style={s.imageGradient} />
         </View>
 
@@ -122,7 +123,6 @@ export default function ProductCard({ product, onPress }) {
 
           {/* Product Details */}
           <View style={s.detailsContainer}>
-            {/* Weight */}
             {product?.weightKg && (
               <View style={s.detailItem}>
                 <Text style={s.detailIcon}>⚖️</Text>
@@ -130,7 +130,6 @@ export default function ProductCard({ product, onPress }) {
               </View>
             )}
             
-            {/* Stock Level */}
             {inStock && stockLevel <= 10 && (
               <View style={s.detailItem}>
                 <Text style={s.detailIcon}>📦</Text>
@@ -187,7 +186,6 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   
-  // Image Styles
   imageContainer: {
     position: "relative",
     height: 180,
@@ -229,7 +227,6 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.03)",
   },
   
-  // Badges
   outOfStockBadge: {
     position: "absolute",
     top: 12,
@@ -264,7 +261,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
   
-  // Content Styles
   content: {
     padding: 20,
   },
@@ -323,7 +319,6 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   
-  // Details Container
   detailsContainer: {
     flexDirection: "row",
     marginBottom: 16,
@@ -354,7 +349,6 @@ const s = StyleSheet.create({
     color: "#DC2626",
   },
   
-  // Bottom Row
   bottomRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -389,7 +383,6 @@ const s = StyleSheet.create({
     marginLeft: 8,
   },
   
-  // Add to Cart Button
   addButton: {
     backgroundColor: "#10B981",
     paddingHorizontal: 20,

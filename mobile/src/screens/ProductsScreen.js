@@ -6,6 +6,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -36,8 +37,12 @@ export default function ProductsScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   
+  // Cart confirmation modal
+  const [showCartConfirmation, setShowCartConfirmation] = useState(false);
+  const [addedProduct, setAddedProduct] = useState(null);
+  
   // Filter states
-  const [sortBy, setSortBy] = useState("popularity"); // popularity, newest, oldest, highPrice, lowPrice, review
+  const [sortBy, setSortBy] = useState("popularity");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [tempFilters, setTempFilters] = useState({
@@ -50,6 +55,7 @@ export default function ProductsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const searchInputRef = useRef(null);
+  const cartModalScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -66,11 +72,48 @@ export default function ProductsScreen() {
     ]).start();
   }, []);
 
+  // Animate cart confirmation modal
+  useEffect(() => {
+    if (showCartConfirmation) {
+      Animated.spring(cartModalScale, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(cartModalScale, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showCartConfirmation]);
+
+  // Function to handle add to cart with confirmation
+  const handleAddToCart = (product) => {
+    setAddedProduct(product);
+    setShowCartConfirmation(true);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowCartConfirmation(false);
+    }, 3000);
+  };
+
+  const goToCart = () => {
+    setShowCartConfirmation(false);
+    router.push('/cart'); // Adjust route as needed
+  };
+
+  const continueShopping = () => {
+    setShowCartConfirmation(false);
+  };
+
   // Filter and sort products
   const getFilteredAndSortedProducts = () => {
     let filtered = products || [];
 
-    // Filter by category
     if (selectedCategory !== "All") {
       filtered = filtered.filter(product => {
         const productCategory = product.category;
@@ -84,7 +127,6 @@ export default function ProductsScreen() {
       });
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(product => 
         product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,7 +134,6 @@ export default function ProductsScreen() {
       );
     }
 
-    // Filter by price range
     if (minPrice && !isNaN(minPrice)) {
       filtered = filtered.filter(product => product.price >= parseFloat(minPrice));
     }
@@ -100,7 +141,6 @@ export default function ProductsScreen() {
       filtered = filtered.filter(product => product.price <= parseFloat(maxPrice));
     }
 
-    // Sort products
     switch (sortBy) {
       case "newest":
         filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -121,7 +161,7 @@ export default function ProductsScreen() {
           return avgB - avgA;
         });
         break;
-      default: // popularity - keep original order or sort by some popularity metric
+      default:
         break;
     }
 
@@ -179,6 +219,76 @@ export default function ProductsScreen() {
     </TouchableOpacity>
   );
 
+  // Cart Confirmation Modal
+  const renderCartConfirmationModal = () => (
+    <Modal
+      visible={showCartConfirmation}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={continueShopping}
+    >
+      <View style={styles.cartModalOverlay}>
+        <Animated.View 
+          style={[
+            styles.cartModalContent,
+            {
+              transform: [{ scale: cartModalScale }]
+            }
+          ]}
+        >
+          {/* Success Icon */}
+          <View style={styles.successIconContainer}>
+            <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+          </View>
+
+          {/* Product Info */}
+          {addedProduct && (
+            <>
+              <Text style={styles.cartModalTitle}>Added to Cart!</Text>
+              
+              <View style={styles.addedProductInfo}>
+                {addedProduct.images && addedProduct.images[0] && (
+                  <Image 
+                    source={{ uri: addedProduct.images[0] }}
+                    style={styles.addedProductImage}
+                  />
+                )}
+                <View style={styles.addedProductDetails}>
+                  <Text style={styles.addedProductName} numberOfLines={2}>
+                    {addedProduct.name}
+                  </Text>
+                  <Text style={styles.addedProductPrice}>
+                    ₱{addedProduct.price?.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.cartModalActions}>
+            <TouchableOpacity
+              style={styles.continueShoppingButton}
+              onPress={continueShopping}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.continueShoppingText}>Continue Shopping</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.viewCartButton}
+              onPress={goToCart}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="cart-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.viewCartText}>View Cart</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+
   const renderFilterModal = () => (
     <Modal
       visible={showFilterModal}
@@ -188,7 +298,6 @@ export default function ProductsScreen() {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          {/* Header */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filter</Text>
             <TouchableOpacity
@@ -199,7 +308,6 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Category */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Category</Text>
             <View style={styles.filterOptions}>
@@ -214,7 +322,6 @@ export default function ProductsScreen() {
             </View>
           </View>
 
-          {/* Sort By */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Sort By</Text>
             <View style={styles.filterOptions}>
@@ -251,7 +358,6 @@ export default function ProductsScreen() {
             </View>
           </View>
 
-          {/* Price Range */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Price Range</Text>
             <View style={styles.priceInputsContainer}>
@@ -274,7 +380,6 @@ export default function ProductsScreen() {
             </View>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.modalActions}>
             <TouchableOpacity
               style={styles.resetButton}
@@ -319,6 +424,7 @@ export default function ProductsScreen() {
           console.log('Navigating to product:', item._id);
           router.push(`/product-detail?id=${item._id}`);
         }}
+        onAddToCart={() => handleAddToCart(item)}
       />
     </Animated.View>
   );
@@ -358,7 +464,6 @@ export default function ProductsScreen() {
     <View style={styles.headerContainer}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
       
-      {/* Header */}
       <Animated.View 
         style={[
           styles.header,
@@ -381,7 +486,6 @@ export default function ProductsScreen() {
         </Text>
       </Animated.View>
 
-      {/* Search and Filter Bar */}
       <Animated.View 
         style={[
           styles.searchContainer,
@@ -419,7 +523,6 @@ export default function ProductsScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Active Filters Display */}
       {(selectedCategory !== "All" || sortBy !== "popularity" || minPrice || maxPrice) && (
         <View style={styles.activeFiltersContainer}>
           <Text style={styles.activeFiltersLabel}>Active filters:</Text>
@@ -485,6 +588,7 @@ export default function ProductsScreen() {
         scrollEventThrottle={16}
       />
       {renderFilterModal()}
+      {renderCartConfirmationModal()}
     </View>
   );
 }
@@ -499,7 +603,6 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
-  // Header
   headerContainer: {
     marginBottom: 8,
   },
@@ -540,7 +643,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     alignItems: "center",
-    backdropFilter: "blur(10px)",
   },
 
   statNumber: {
@@ -565,7 +667,6 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  // Search and Filter
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -628,7 +729,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 
-  // Active Filters
   activeFiltersContainer: {
     paddingHorizontal: 20,
     paddingBottom: 16,
@@ -666,7 +766,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  // Filter Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -793,13 +892,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  // Products
   productCardContainer: {
     marginHorizontal: 20,
     marginBottom: 16,
   },
 
-  // Empty State
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -860,5 +957,122 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  // Cart Confirmation Modal Styles
+  cartModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  cartModalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+
+  successIconContainer: {
+    marginBottom: 16,
+  },
+
+  cartModalTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+
+  addedProductInfo: {
+    flexDirection: "row",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 16,
+    padding: 16,
+    width: "100%",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  addedProductImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+    marginRight: 12,
+  },
+
+  addedProductDetails: {
+    flex: 1,
+    justifyContent: "center",
+  },
+
+  addedProductName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+
+  addedProductPrice: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#10B981",
+  },
+
+  cartModalActions: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+
+  continueShoppingButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  continueShoppingText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#10B981",
+  },
+
+  viewCartButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  viewCartText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

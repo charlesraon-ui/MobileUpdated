@@ -26,43 +26,56 @@ const RED = "#EF4444";
 function OrderDetailsModal({ order, visible, onClose }) {
   if (!order) return null;
 
-  const getStatusColor = (status) => {
+  // ✅ Get delivery status from order.delivery
+  const deliveryStatus = order.delivery?.status || order.status || "pending";
+
+  const getDeliveryStatusColor = (status) => {
     const statusLower = String(status || "").toLowerCase();
     switch (statusLower) {
-      case 'delivered':
       case 'completed':
         return GREEN;
-      case 'processing':
-      case 'confirmed':
+      case 'assigned':
+      case 'in-transit':
         return BLUE;
       case 'cancelled':
-      case 'failed':
         return RED;
-      case 'shipped':
-      case 'out_for_delivery':
-        return ORANGE;
+      case 'pending':
       default:
         return GRAY;
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getDeliveryStatusIcon = (status) => {
     const statusLower = String(status || "").toLowerCase();
     switch (statusLower) {
-      case 'delivered':
       case 'completed':
         return '✅';
-      case 'processing':
-      case 'confirmed':
-        return '⚡';
-      case 'cancelled':
-      case 'failed':
-        return '❌';
-      case 'shipped':
-      case 'out_for_delivery':
+      case 'assigned':
+        return '👨‍🚚';
+      case 'in-transit':
         return '🚚';
+      case 'cancelled':
+        return '❌';
+      case 'pending':
       default:
         return '⏳';
+    }
+  };
+
+  const getDeliveryStatusText = (status) => {
+    const statusLower = String(status || "").toLowerCase();
+    switch (statusLower) {
+      case 'completed':
+        return 'COMPLETED';
+      case 'assigned':
+        return 'ASSIGNED';
+      case 'in-transit':
+        return 'IN TRANSIT';
+      case 'cancelled':
+        return 'CANCELLED';
+      case 'pending':
+      default:
+        return 'PENDING';
     }
   };
 
@@ -80,12 +93,12 @@ function OrderDetailsModal({ order, visible, onClose }) {
         </View>
 
         <ScrollView style={s.modalContent} showsVerticalScrollIndicator={false}>
-          {/* Status Banner */}
-          <View style={[s.statusBanner, { backgroundColor: `${getStatusColor(order.status)}15` }]}>
-            <Text style={s.statusIcon}>{getStatusIcon(order.status)}</Text>
+          {/* Delivery Status Banner */}
+          <View style={[s.statusBanner, { backgroundColor: `${getDeliveryStatusColor(deliveryStatus)}15` }]}>
+            <Text style={s.statusIcon}>{getDeliveryStatusIcon(deliveryStatus)}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[s.statusBannerTitle, { color: getStatusColor(order.status) }]}>
-                {String(order.status || 'Pending').toUpperCase()}
+              <Text style={[s.statusBannerTitle, { color: getDeliveryStatusColor(deliveryStatus) }]}>
+                {getDeliveryStatusText(deliveryStatus)}
               </Text>
               <Text style={s.statusBannerSubtitle}>
                 Order placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
@@ -96,7 +109,7 @@ function OrderDetailsModal({ order, visible, onClose }) {
               </Text>
             </View>
             <View style={s.totalPriceBadge}>
-              <Text style={s.totalPriceText}>₱{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
+              <Text style={s.totalPriceText}>₱{Number(order.total || 0).toFixed(2)}</Text>
             </View>
           </View>
 
@@ -119,11 +132,45 @@ function OrderDetailsModal({ order, visible, onClose }) {
             </View>
           </View>
 
+          {/* Delivery Info */}
+          {order.delivery && (
+            <View style={s.detailSection}>
+              <Text style={s.detailSectionTitle}>🚚 Delivery Information</Text>
+              <View style={s.deliveryCard}>
+                <View style={s.deliveryRow}>
+                  <Text style={s.deliveryLabel}>Type:</Text>
+                  <Text style={s.deliveryValue}>{order.delivery.type || 'N/A'}</Text>
+                </View>
+                {order.delivery.assignedDriver && (
+                  <>
+                    <View style={s.deliveryRow}>
+                      <Text style={s.deliveryLabel}>Driver:</Text>
+                      <Text style={s.deliveryValue}>{order.delivery.assignedDriver.name || 'N/A'}</Text>
+                    </View>
+                    <View style={s.deliveryRow}>
+                      <Text style={s.deliveryLabel}>Phone:</Text>
+                      <Text style={s.deliveryValue}>{order.delivery.assignedDriver.phone || 'N/A'}</Text>
+                    </View>
+                  </>
+                )}
+                {order.delivery.assignedVehicle && (
+                  <View style={s.deliveryRow}>
+                    <Text style={s.deliveryLabel}>Vehicle:</Text>
+                    <Text style={s.deliveryValue}>
+                      {order.delivery.assignedVehicle.plate || 'N/A'} 
+                      {order.delivery.assignedVehicle.model ? ` (${order.delivery.assignedVehicle.model})` : ''}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Delivery Address */}
           <View style={s.detailSection}>
             <Text style={s.detailSectionTitle}>📍 Delivery Address</Text>
             <View style={s.addressCard}>
-              <Text style={s.addressText}>{order.deliveryAddress || order.address || 'No address provided'}</Text>
+              <Text style={s.addressText}>{order.address || 'No address provided'}</Text>
             </View>
           </View>
 
@@ -138,7 +185,7 @@ function OrderDetailsModal({ order, visible, onClose }) {
                       <Text style={s.itemIconText}>📦</Text>
                     </View>
                     <View style={s.itemInfo}>
-                      <Text style={s.itemName}>{item.product?.name || item.name || 'Product'}</Text>
+                      <Text style={s.itemName}>{item.name || 'Product'}</Text>
                       <Text style={s.itemDetails}>Quantity: {item.quantity}</Text>
                       <Text style={s.itemPrice}>₱{Number(item.price || 0).toFixed(2)} each</Text>
                     </View>
@@ -162,16 +209,16 @@ function OrderDetailsModal({ order, visible, onClose }) {
                   </View>
                   <View style={[s.summaryRow, s.summaryTotal]}>
                     <Text style={s.summaryTotalLabel}>Total:</Text>
-                    <Text style={s.summaryTotalValue}>₱{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
+                    <Text style={s.summaryTotalValue}>₱{Number(order.total || 0).toFixed(2)}</Text>
                   </View>
                 </View>
               </View>
             </View>
           )}
 
-          {/* Order Timeline */}
+          {/* Delivery Timeline */}
           <View style={s.detailSection}>
-            <Text style={s.detailSectionTitle}>📋 Order Timeline</Text>
+            <Text style={s.detailSectionTitle}>🚚 Delivery Timeline</Text>
             <View style={s.timelineContainer}>
               <View style={s.timelineItem}>
                 <View style={[s.timelineDot, { backgroundColor: GREEN }]} />
@@ -182,25 +229,53 @@ function OrderDetailsModal({ order, visible, onClose }) {
                   <Text style={s.timelineDescription}>Your order has been received and is being processed.</Text>
                 </View>
               </View>
-              {order.status !== 'pending' && (
+              {deliveryStatus !== 'pending' && deliveryStatus !== 'cancelled' && (
                 <View style={s.timelineItem}>
                   <View style={[s.timelineDot, { backgroundColor: BLUE }]} />
-                  <View style={s.timelineLine} />
+                  {deliveryStatus !== 'completed' && <View style={s.timelineLine} />}
                   <View style={s.timelineContent}>
-                    <Text style={s.timelineTitle}>Order Confirmed</Text>
-                    <Text style={s.timelineDate}>Processing your order</Text>
-                    <Text style={s.timelineDescription}>We're preparing your items for shipment.</Text>
+                    <Text style={s.timelineTitle}>
+                      {deliveryStatus === 'assigned' ? 'Driver Assigned' : 'Preparing Your Order'}
+                    </Text>
+                    <Text style={s.timelineDate}>
+                      {deliveryStatus === 'assigned' ? 'Driver is preparing for pickup' : 'Getting your items ready'}
+                    </Text>
+                    <Text style={s.timelineDescription}>
+                      {deliveryStatus === 'assigned' 
+                        ? 'A driver has been assigned and will pick up your order soon.' 
+                        : 'We\'re carefully preparing your items for delivery.'}
+                    </Text>
                   </View>
                 </View>
               )}
-              {['shipped', 'out_for_delivery', 'delivered', 'completed'].includes(String(order.status).toLowerCase()) && (
+              {deliveryStatus === 'in-transit' && (
                 <View style={s.timelineItem}>
                   <View style={[s.timelineDot, { backgroundColor: ORANGE }]} />
                   <View style={s.timelineLine} />
                   <View style={s.timelineContent}>
-                    <Text style={s.timelineTitle}>Order Shipped</Text>
+                    <Text style={s.timelineTitle}>Out for Delivery</Text>
                     <Text style={s.timelineDate}>On the way to you</Text>
-                    <Text style={s.timelineDescription}>Your order is out for delivery.</Text>
+                    <Text style={s.timelineDescription}>Your order is currently being delivered to your address.</Text>
+                  </View>
+                </View>
+              )}
+              {deliveryStatus === 'completed' && (
+                <View style={s.timelineItem}>
+                  <View style={[s.timelineDot, { backgroundColor: GREEN }]} />
+                  <View style={s.timelineContent}>
+                    <Text style={s.timelineTitle}>Delivered</Text>
+                    <Text style={s.timelineDate}>Successfully delivered</Text>
+                    <Text style={s.timelineDescription}>Your order has been delivered successfully!</Text>
+                  </View>
+                </View>
+              )}
+              {deliveryStatus === 'cancelled' && (
+                <View style={s.timelineItem}>
+                  <View style={[s.timelineDot, { backgroundColor: RED }]} />
+                  <View style={s.timelineContent}>
+                    <Text style={s.timelineTitle}>Cancelled</Text>
+                    <Text style={s.timelineDate}>Order cancelled</Text>
+                    <Text style={s.timelineDescription}>This order has been cancelled.</Text>
                   </View>
                 </View>
               )}
@@ -259,43 +334,54 @@ export default function OrdersScreen() {
     setModalVisible(true);
   };
 
-  const getStatusColor = (status) => {
-    const statusLower = String(status || "").toLowerCase();
-    switch (statusLower) {
-      case 'delivered':
+  // ✅ Updated to use delivery.status instead of order.status
+  const getDeliveryStatusColor = (order) => {
+    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    switch (status) {
       case 'completed':
         return GREEN;
-      case 'processing':
-      case 'confirmed':
+      case 'assigned':
+      case 'in-transit':
         return BLUE;
       case 'cancelled':
-      case 'failed':
         return RED;
-      case 'shipped':
-      case 'out_for_delivery':
-        return ORANGE;
+      case 'pending':
       default:
         return GRAY;
     }
   };
 
-  const getStatusIcon = (status) => {
-    const statusLower = String(status || "").toLowerCase();
-    switch (statusLower) {
-      case 'delivered':
+  const getDeliveryStatusIcon = (order) => {
+    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    switch (status) {
       case 'completed':
         return '✅';
-      case 'processing':
-      case 'confirmed':
-        return '⚡';
-      case 'cancelled':
-      case 'failed':
-        return '❌';
-      case 'shipped':
-      case 'out_for_delivery':
+      case 'assigned':
+        return '👨‍🚚';
+      case 'in-transit':
         return '🚚';
+      case 'cancelled':
+        return '❌';
+      case 'pending':
       default:
         return '⏳';
+    }
+  };
+
+  const getDeliveryStatusText = (order) => {
+    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'assigned':
+        return 'Assigned';
+      case 'in-transit':
+        return 'In Transit';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'pending':
+      default:
+        return 'Pending';
     }
   };
 
@@ -304,7 +390,7 @@ export default function OrdersScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>My Orders</Text>
-        <Text style={s.headerSubtitle}>Track your purchase history</Text>
+        <Text style={s.headerSubtitle}>Track your delivery status</Text>
       </View>
 
       <ScrollView 
@@ -337,8 +423,8 @@ export default function OrdersScreen() {
             
             {orders.map((order, index) => {
               const isFocus = String(order._id) === String(focusOrderId || "");
-              const statusColor = getStatusColor(order.status);
-              const statusIcon = getStatusIcon(order.status);
+              const deliveryStatusColor = getDeliveryStatusColor(order);
+              const deliveryStatusIcon = getDeliveryStatusIcon(order);
               
               return (
                 <TouchableOpacity
@@ -350,8 +436,8 @@ export default function OrdersScreen() {
                   onPress={() => handleViewDetails(order)}
                   activeOpacity={0.95}
                 >
-                  {/* Status indicator */}
-                  <View style={[s.statusIndicator, { backgroundColor: statusColor }]} />
+                  {/* Delivery Status indicator */}
+                  <View style={[s.statusIndicator, { backgroundColor: deliveryStatusColor }]} />
                   
                   {/* Order Header */}
                   <View style={s.orderCardHeader}>
@@ -360,9 +446,9 @@ export default function OrdersScreen() {
                       <Text style={s.orderId}>#{String(order._id).slice(-6).toUpperCase()}</Text>
                     </View>
                     <View style={s.statusContainer}>
-                      <Text style={s.statusIcon}>{statusIcon}</Text>
-                      <Text style={[s.statusText, { color: statusColor }]}>
-                        {String(order.status || 'Pending')}
+                      <Text style={s.statusIcon}>{deliveryStatusIcon}</Text>
+                      <Text style={[s.statusText, { color: deliveryStatusColor }]}>
+                        {getDeliveryStatusText(order)}
                       </Text>
                     </View>
                   </View>
@@ -403,11 +489,11 @@ export default function OrdersScreen() {
                     <View style={s.priceContainer}>
                       <Text style={s.priceLabel}>Total</Text>
                       <Text style={s.priceValue}>
-                        ₱{Number(order.totalAmount || order.total || 0).toFixed(2)}
+                        ₱{Number(order.total || 0).toFixed(2)}
                       </Text>
                     </View>
                     <View style={s.actionButton}>
-                      <Text style={s.actionButtonText}>View Details</Text>
+                      <Text style={s.actionButtonText}>Track Delivery</Text>
                       <Text style={s.actionButtonArrow}>→</Text>
                     </View>
                   </View>
@@ -600,7 +686,6 @@ const s = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
-    textTransform: "capitalize",
   },
 
   // Order info
@@ -822,6 +907,30 @@ const s = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
     marginBottom: 16,
+  },
+
+  // Delivery card
+  deliveryCard: {
+    backgroundColor: LIGHT_GRAY,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  deliveryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  deliveryLabel: {
+    fontSize: 14,
+    color: GRAY,
+    fontWeight: "600",
+  },
+  deliveryValue: {
+    fontSize: 14,
+    color: "#111827",
+    fontWeight: "600",
   },
 
   // Address card
