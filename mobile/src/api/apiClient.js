@@ -1,6 +1,7 @@
 // mobile/src/api/apiClient.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import Constants from 'expo-constants';
 
 /* -------------------- Axios auth header -------------------- */
 axios.interceptors.request.use(async (config) => {
@@ -17,6 +18,14 @@ axios.interceptors.request.use(async (config) => {
 });
 
 /* -------------------- API base -------------------- */
+const BASE_URL = Constants.expoConfig?.extra?.apiUrl || process.env.API_URL || "https://goagritrading-backend.onrender.com"
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
 const ENV_URL = process.env.EXPO_PUBLIC_API_URL;
 export const API_URL = ENV_URL || "http://192.168.100.196:5000/api";
 export const API_ORIGIN = API_URL.replace(/\/api$/, "");

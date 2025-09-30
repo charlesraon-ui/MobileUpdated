@@ -1,0 +1,25 @@
+# render.yaml  (place this at the repo root)
+services:
+  - type: web
+    name: GoAgriTrading-backend
+    env: node
+    rootDir: backend            # run everything from /backend
+    buildCommand: |
+      corepack enable || true   # no-op if not available
+      npm install --legacy-peer-deps
+    startCommand: npm start     # must exist in backend/package.json
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Add the rest in the Render dashboard or here (avoid committing secrets):
+      # - key: MONGO_URI
+      #   sync: false
+      # - key: JWT_SECRET
+      #   sync: false
+      # - key: CORS_ORIGIN
+      #   value: https://your-frontend.vercel.app
+      # - key: PAYMONGO_PUBLIC_KEY
+      #   sync: false
+      # - key: PAYMONGO_SECRET_KEY
+      #   sync: false

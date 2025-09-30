@@ -509,8 +509,8 @@ export const createEPayment = async (req, res) => {
         deliveryFee,
         address,
       },
-      // success_url: req.body.successUrl || `${APP_URL}/orders/success`,
-      // cancel_url: req.body.cancelUrl  || `${APP_URL}/checkout`,
+      success_url: `${baseUrl}/payment/success?orderId=${order._id}`,
+      cancel_url: `${baseUrl}/payment/cancel?orderId=${order._id}`,
     });
 
     // Return URL for the app to open

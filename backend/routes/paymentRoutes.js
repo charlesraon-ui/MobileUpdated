@@ -10,20 +10,27 @@ router.get("/success", async (req, res) => {
     const { orderId } = req.query;
     
     if (!orderId) {
-      return res.redirect(process.env.FRONTEND_FAILED_URL);
+      return res.redirect('exp://payment-failed'); // or your app scheme
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.redirect(process.env.FRONTEND_FAILED_URL);
+      return res.redirect('exp://payment-failed');
     }
 
-    console.log("✅ Payment success redirect for order:", orderId);
-    res.redirect(`${process.env.FRONTEND_SUCCESS_URL}?orderId=${orderId}`);
+    // Update order status
+    order.status = "confirmed";
+    order.paymentStatus = "paid";
+    await order.save();
+
+    console.log("✅ Payment success for order:", orderId);
+    
+    // Redirect to mobile app with deep link
+    res.redirect(`exp://payment-success?orderId=${orderId}`);
     
   } catch (err) {
     console.error("PAYMENT_SUCCESS_ERROR:", err);
-    res.redirect(process.env.FRONTEND_FAILED_URL);
+    res.redirect('exp://payment-failed');
   }
 });
 
