@@ -1,25 +1,109 @@
 import { Router } from "express";
-import {
-    checkPaymentStatus,
-    createGCashOrder,
-    createSource,
-    handlePaymentFailed,
-    handlePaymentSuccess,
-    handleWebhook,
-} from "../controllers/paymentController.js";
-import { authMiddleware } from "../middleware/authMiddleware.js";
+import Cart from "../models/Cart.js";
+import Order from "../models/Order.js";
 
 const router = Router();
 
-// Protected routes (require authentication)
-router.post("/source", authMiddleware, createSource);
-router.post("/gcash/order", authMiddleware, createGCashOrder);
-router.get("/status/:sourceId", authMiddleware, checkPaymentStatus);
+/* Success redirect */
+router.get("/success", async (req, res) => {
+  try {
+    const { orderId } = req.query;
+    
+    if (!orderId) {
+      return res.redirect(process.env.FRONTEND_FAILED_URL);
+    }
 
-// Public routes (for redirects)
-router.get("/success", handlePaymentSuccess);
-router.get("/failed", handlePaymentFailed);
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.redirect(process.env.FRONTEND_FAILED_URL);
+    }
 
-router.post("/webhook", handleWebhook);
+    console.log("✅ Payment success redirect for order:", orderId);
+    res.redirect(`${process.env.FRONTEND_SUCCESS_URL}?orderId=${orderId}`);
+    
+  } catch (err) {
+    console.error("PAYMENT_SUCCESS_ERROR:", err);
+    res.redirect(process.env.FRONTEND_FAILED_URL);
+  }
+});
+
+/* Cancel redirect */
+router.get("/cancel", async (req, res) => {
+  try {
+    const { orderId } = req.query;
+    
+    if (orderId) {
+      const order = await Order.findById(orderId);
+      if (order) {
+        order.status = "payment_cancelled";
+        await order.save();
+      }
+    }
+
+    console.log("❌ Payment cancelled for order:", orderId);
+    res.redirect(`${process.env.FRONTEND_FAILED_URL}?orderId=${orderId}`);
+    
+  } catch (err) {
+    console.error("PAYMENT_CANCEL_ERROR:", err);
+    res.redirect(process.env.FRONTEND_FAILED_URL);
+  }
+});
+
+/* Webhook */
+router.post("/webhook", async (req, res) => {
+  try {
+    const event = req.body.data;
+    console.log("🔔 PayMongo webhook:", event.attributes.type);
+
+    if (event.attributes.type === "checkout_session.payment.paid") {
+      const sessionId = event.attributes.data.id;
+      const order = await Order.findOne({ paymongoSessionId: sessionId });
+      
+      if (!order) {
+        console.warn("⚠️ Order not found for session:", sessionId);
+        return res.json({ received: true });
+      }
+
+      order.status = "confirmed";
+      order.paymongoPaymentId = event.attributes.data.attributes.payments?.[0]?.id;
+      await order.save();
+
+      await Cart.deleteOne({ userId: order.userId });
+      console.log("✅ Payment confirmed for order:", order._id);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("WEBHOOK_ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Verify status */
+router.get("/verify/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Order not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      orderId: order._id,
+      status: order.status,
+      isPaid: order.status === "confirmed"
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      message: err.message 
+    });
+  }
+});
 
 export default router;

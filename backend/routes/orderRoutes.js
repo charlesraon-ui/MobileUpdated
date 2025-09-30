@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  createGCashOrder,
+  createEPaymentOrder,
   createMyOrder,
   createOrder,
   getMyOrders,
@@ -15,14 +15,14 @@ const router = Router();
 router.post("/", createOrder);
 router.get("/:userId", getOrders);
 
-// 🆕 GCash payment endpoint
-router.post("/gcash", authMiddleware, createGCashOrder);
+// 🆕 E-Payment endpoint
+router.post("/epayment", authMiddleware, createEPaymentOrder);
 
 // protected (current user only)
 router.post("/me", authMiddleware, createMyOrder);
 router.get("/me/list", authMiddleware, getMyOrders);
 
-// deliveries (protect with auth as well)
+// deliveries
 router.get("/", authMiddleware, listDelivery);
 
 export default router;

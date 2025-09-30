@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-// ----- Auto-attach token -----
+/* -------------------- Axios auth header -------------------- */
 axios.interceptors.request.use(async (config) => {
   try {
     if (!config.headers?.Authorization) {
@@ -16,14 +16,13 @@ axios.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ----- Base URL (env first, else your LAN IP) -----
+/* -------------------- API base -------------------- */
 const ENV_URL = process.env.EXPO_PUBLIC_API_URL;
-export const API_URL = ENV_URL || "http://192.168.100.196:5000/api"; // ← your IPv4
+export const API_URL = ENV_URL || "http://192.168.100.196:5000/api";
 export const API_ORIGIN = API_URL.replace(/\/api$/, "");
-
 console.log("API_URL in app:", API_URL);
 
-// Error logging
+/* -------------------- Axios error log -------------------- */
 axios.interceptors.response.use(
   (r) => r,
   (err) => {
@@ -32,14 +31,14 @@ axios.interceptors.response.use(
   }
 );
 
-// Helpers
+/* -------------------- Helpers -------------------- */
 export const toAbsoluteUrl = (u) => {
   if (!u) return null;
   try { return new URL(u).href; }
   catch { return `${API_ORIGIN}/${String(u).replace(/^\/+/, "")}`; }
 };
 
-// Auth / Storage
+/* -------------------- Auth / Storage -------------------- */
 export const setToken = async (token) => {
   if (token) {
     await AsyncStorage.setItem("pos-token", token);
@@ -65,12 +64,9 @@ export const clearAuth = async () => {
 };
 export const isValidGcash = (num) => /^09\d{9}$/.test((num || "").trim());
 
-// API calls (ensure server mounts match)
-export const register = (payload) =>
-  axios.post(`${API_URL}/auth/register`, payload);
-
-export const login = (payload) =>
-  axios.post(`${API_URL}/auth/login`, payload);
+/* -------------------- Core APIs -------------------- */
+export const register = (payload) => axios.post(`${API_URL}/auth/register`, payload);
+export const login    = (payload) => axios.post(`${API_URL}/auth/login`, payload);
 
 export const getProducts   = () => axios.get(`${API_URL}/products`);
 export const getProductApi = (id) => axios.get(`${API_URL}/products/${id}`);
@@ -91,12 +87,12 @@ export const setCartApi = (payload) => axios.post(`${API_URL}/cart`, payload);
 export const getOrders   = (userId) => axios.get(`${API_URL}/orders/${userId}`);
 export const createOrder = (payload) => axios.post(`${API_URL}/orders`, payload);
 
-// Deliveries
+/* -------------------- Deliveries -------------------- */
 export const listMyDeliveries    = () => axios.get(`${API_URL}/delivery/mine`);
 export const getDeliveryForOrder = (orderId) => axios.get(`${API_URL}/delivery/by-order/${orderId}`);
 export const getDriverContact    = (deliveryId) => axios.get(`${API_URL}/delivery/${deliveryId}/driver`);
 
-// AI Recommendations
+/* -------------------- Recommendations -------------------- */
 export const getRecommendations = ({ userId, cartIds = [], limit = 10 }) => {
   const params = new URLSearchParams();
   if (userId) params.set("userId", userId);
@@ -104,44 +100,30 @@ export const getRecommendations = ({ userId, cartIds = [], limit = 10 }) => {
   if (limit) params.set("limit", String(limit));
   return axios.get(`${API_URL}/recommendations?${params.toString()}`);
 };
-
 export const getProductRecommendations = (productId, limit = 8) =>
   axios.get(`${API_URL}/recommendations/product/${productId}`, { params: { limit } });
 
+/* -------------------- Payments (PayMongo) -------------------- */
+// Card/intent style (if you still use these)
 export const createPaymentIntent = (amount, description, userId) =>
-  axios.post(`${API_URL}/payment/payment-intent`, {
-    amount,
-    description,
-    userId,
-  });
-
+  axios.post(`${API_URL}/payment/payment-intent`, { amount, description, userId });
 export const createPaymentMethod = (type, details) =>
-  axios.post(`${API_URL}/payment/payment-method`, {
-    type,
-    details,
-  });
-
+  axios.post(`${API_URL}/payment/payment-method`, { type, details });
 export const attachPaymentMethod = (paymentIntentId, paymentMethodId, clientKey) =>
-  axios.post(`${API_URL}/payment/attach`, {
-    paymentIntentId,
-    paymentMethodId,
-    clientKey,
-  });
+  axios.post(`${API_URL}/payment/attach`, { paymentIntentId, paymentMethodId, clientKey });
 
+// Source/hosted checkout style
 export const createPaymentSource = (amount, type, userId, orderId) =>
-  axios.post(`${API_URL}/payment/source`, {
-    amount,
-    type,
-    userId,
-    orderId,
-  });
+  axios.post(`${API_URL}/payment/source`, { amount, type, userId, orderId });
 
+// Your existing backend entrypoint for hosted checkout
+export const createEPaymentOrder = (payload) =>
+  axios.post(`${API_URL}/orders/epayment`, payload);
+
+// 🔹 NEW: export name that your CheckoutScreen calls
+// Expects backend to return: { success: true, payment: { checkoutUrl: "https://..." } }
 export const createGCashOrder = (payload) =>
-axios.post(`${API_URL}/payment/gcash/order`, payload);
-
-export const createGCashPayment = (payload) =>
-  axios.post(`${API_URL}/payment/gcash/order`, payload);
+  createEPaymentOrder(payload);
 
 export const checkPaymentStatus = (sourceId) =>
   axios.get(`${API_URL}/payment/status/${sourceId}`);
-

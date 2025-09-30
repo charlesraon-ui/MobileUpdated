@@ -10,7 +10,7 @@ import {
   login as apiLogin,
   register as apiRegister,
   clearAuth,
-  createGCashOrder,
+  createEPaymentOrder,
   getCategories,
   getDeliveryForOrder,
   getDriverContact,
@@ -283,49 +283,42 @@ const handlePlaceOrder = async () => {
   };
 
   try {
-    // 🎯 CHECK PAYMENT METHOD HERE
-    if (paymentMethod === "GCash") {
-      console.log("💳 GCash payment selected, calling createGCashOrder...");
+    // 🎯 CHECK PAYMENT METHOD
+    if (paymentMethod === "E-Payment") {
+      console.log("💳 E-Payment selected, redirecting to PayMongo...");
       
-      // Call GCash-specific endpoint
-      const gcashResp = await createGCashOrder(payload);
-      console.log("✅ GCash order response:", gcashResp.data);
+      const response = await createEPaymentOrder(payload);
+      console.log("✅ E-Payment response:", response.data);
       
-      const checkoutUrl = gcashResp.data?.checkoutUrl;
+      const checkoutUrl = response.data?.checkoutUrl;
       if (!checkoutUrl) {
-        return { 
-          success: false, 
-          message: "Failed to get GCash payment URL" 
-        };
+        return { success: false, message: "Failed to create payment link" };
       }
 
-      // Open GCash payment page
-      console.log("🔗 Opening GCash URL:", checkoutUrl);
+      // Open PayMongo checkout
+      console.log("🔗 Opening PayMongo URL:", checkoutUrl);
       const canOpen = await Linking.canOpenURL(checkoutUrl);
       
       if (canOpen) {
         await Linking.openURL(checkoutUrl);
         
-        // Clear cart and state after redirecting
+        // Clear state after redirecting
         setCart([]);
         setDeliveryAddress("");
         setGcashNumber("");
         
         return { 
           success: true, 
-          message: "Redirecting to GCash payment...",
-          order: gcashResp.data 
+          message: "Redirecting to payment...",
+          order: response.data 
         };
       } else {
-        return { 
-          success: false, 
-          message: "Cannot open GCash payment URL" 
-        };
+        return { success: false, message: "Cannot open payment URL" };
       }
       
     } else {
-      // COD flow (original)
-      console.log("💵 COD payment selected, creating regular order...");
+      // COD or GCash flow (original)
+      console.log("💵 COD/GCash payment selected");
       
       const resp = await apiCreateOrder(payload);
       const order =

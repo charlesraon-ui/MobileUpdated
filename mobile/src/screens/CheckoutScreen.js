@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as apiCheck from "../api/apiClient";
 import { createGCashOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 
@@ -36,8 +37,6 @@ export default function CheckoutScreen() {
     setDeliveryAddress,
     paymentMethod,
     setPaymentMethod,
-    gcashNumber,
-    setGcashNumber,
     handlePlaceOrder,
     isLoggedIn,
     refreshAuthedData,
@@ -45,18 +44,23 @@ export default function CheckoutScreen() {
 
   const [deliveryMethod, setDeliveryMethod] = useState("in-house");
   const [placing, setPlacing] = useState(false);
-  const isPayMongoGCash = paymentMethod === "PayMongo-GCash";
-  const isPayMongoPayMaya = paymentMethod === "PayMongo-PayMaya";
   const isCOD = paymentMethod === "COD";
-  const isLegacyGCash = paymentMethod === "GCash";
+  
+  console.log("api keys:", Object.keys(apiCheck));
+
 
   console.log("Payment states:", {
   paymentMethod,
-  isPayMongoGCash,
-  isPayMongoPayMaya,
   isCOD,
-  isLegacyGCash,
 });
+
+const getDeliveryFee = (method) => {
+  if (method === "pickup") return 0;
+  if (method === "in-house") return 50;
+  if (method === "third-party") return 80;
+  return 0;
+};
+
 
   // --- toast ---
   const [toast, setToast] = useState("");
@@ -91,70 +95,54 @@ export default function CheckoutScreen() {
     return "";
   }, [deliveryAddress, deliveryMethod]);
 
-  const gcashError = useMemo(() => {
-    if (!isPayMongoGCash) return "";
-    const n = (gcashNumber || "").trim();
-    return /^(09\d{9})$/.test(n) ? "" : "Enter a valid 11-digit GCash number starting with 09.";
-  }, [gcashNumber, isPayMongoGCash]);
 
   const disabled =
-    !isLoggedIn || cartTotal <= 0 || !!addrError || !!gcashError || placing;
+    !isLoggedIn || cartTotal <= 0 || !!addrError || placing;
 
   const onPlace = async () => {
   if (disabled) return;
   setPlacing(true);
-  
-  try {
-    // ========== GCASH PAYMENT ==========
-    if (paymentMethod === "GCash") {
-      console.log("🔵 GCash payment selected");
-      
-      // Validate GCash number
-      if (!gcashNumber || gcashNumber.trim().length !== 11) {
-        Alert.alert("Invalid GCash Number", "Please enter a valid 11-digit GCash number");
-        setPlacing(false);
-        return;
-      }
 
+  try {
+    if (paymentMethod === "E-Payment") {
+      // Hosted checkout (e.g., PayMongo). No mobile number required here.
       showToast("Creating payment...");
 
-      const payload = {
-        items: cart,
-        total: cartTotal,
-        address: deliveryAddress,
-        gcashNumber: gcashNumber.trim(),
-        deliveryType: deliveryMethod,
-      };
 
-      console.log("📤 Sending GCash order:", payload);
+      const deliveryFee = getDeliveryFee(deliveryMethod);
+          const amountCentavos = Math.round((cartTotal + deliveryFee) * 100); // PayMongo uses centavos
+          const payload = {
+            items: cart.map(p => ({
+              id: p._id || p.id,
+              name: p.name,
+              quantity: p.quantity || p.qty || 1,
+              amount: Math.round(Number(p.price || p.unitPrice || 0) * 100), // centavos
+            })),
+            total: cartTotal,            // still send for your own records
+            deliveryFee,                 // helpful on server
+            amount: amountCentavos,      // 👈 for PayMongo
+            address: deliveryAddress,
+            deliveryType: deliveryMethod,
+            channel: "multi",            // "gcash" | "card" | "multi" (let server choose Checkout)
+            // (optional) successUrl / cancelUrl if your backend passes them through:
+            // successUrl: "https://your.app/orders/success",
+            // cancelUrl: "https://your.app/checkout?canceled=1",
+          };
 
       try {
         const response = await createGCashOrder(payload);
+        const checkoutUrl = response?.data?.payment?.checkoutUrl;
 
-        console.log("📥 Response:", response.data);
-
-        if (response?.data?.success && response.data.payment?.checkoutUrl) {
-          const checkoutUrl = response.data.payment.checkoutUrl;
-          
-          console.log("🔗 Opening PayMongo URL:", checkoutUrl);
-          
+        if (response?.data?.success && checkoutUrl) {
           showToast("Redirecting to payment...");
-          
-          // Open GCash checkout in browser
+
           const canOpen = await Linking.canOpenURL(checkoutUrl);
           if (canOpen) {
             await Linking.openURL(checkoutUrl);
-            
-            // Show success message
             Alert.alert(
               "Complete Your Payment",
-              "Please complete your GCash payment in the browser. Your order will be confirmed once payment is received.",
-              [
-                {
-                  text: "View My Orders",
-                  onPress: () => router.push("/tabs/orders"),
-                },
-              ]
+              "Finish your payment in the browser. Your order will appear once payment is confirmed.",
+              [{ text: "View My Orders", onPress: () => router.push("/tabs/orders") }]
             );
           } else {
             Alert.alert("Error", "Cannot open payment page. Please try again.");
@@ -163,55 +151,35 @@ export default function CheckoutScreen() {
           Alert.alert("Error", response?.data?.message || "Failed to create payment");
         }
       } catch (error) {
-        console.error("❌ GCash order error:", error);
+        console.error("❌ E-Payment error:", error);
         Alert.alert(
           "Payment Error",
-          error.response?.data?.message || error.message || "Failed to create payment. Please try again."
+          error?.response?.data?.message || error?.message || "Failed to create payment"
         );
+      } finally {
+        setPlacing(false);
       }
-      
-      setPlacing(false);
       return;
     }
 
-    // ========== COD PAYMENT ==========
-    console.log("🔵 COD payment selected");
+    // Fallback: Cash on Delivery
     const res = await handlePlaceOrder();
-    
     if (res?.success) {
       const orderId = res.order?._id || res.order?.id;
       const shortId = String(orderId || "").slice(-6).toUpperCase();
       showToast(`Order #${shortId} placed!`);
-      
-      setTimeout(() => {
-        router.push("/tabs/orders");
-      }, 1000);
+      setTimeout(() => router.push("/tabs/orders"), 1000);
     } else {
       Alert.alert("Order Failed", res?.message || "Please try again.");
     }
   } catch (error) {
     console.error("❌ Place order error:", error);
-    Alert.alert(
-      "Error",
-      error.response?.data?.message || error.message || "Failed to place order"
-    );
+    Alert.alert("Error", error?.response?.data?.message || error?.message || "Failed to place order");
   } finally {
     setPlacing(false);
   }
 };
 
-  const getDeliveryFee = (method) => {
-    switch (method) {
-      case "pickup":
-        return 0;
-      case "in-house":
-        return 50;
-      case "third-party":
-        return 80;
-      default:
-        return 0;
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -346,54 +314,41 @@ export default function CheckoutScreen() {
           )}
 
           {/* Payment Section */}
-          <View style={s.sectionContainer}>
-            <View style={s.sectionHeader}>
-              <Ionicons name="card-outline" size={22} color={GREEN} />
-              <Text style={s.sectionTitle}>Payment Method</Text>
-            </View>
-            
-            <View style={s.paymentOptions}>
-              <PaymentChip
-                icon="cash-outline"
-                label="Cash on Delivery"
-                active={!isPayMongoGCash}
-                onPress={() => {
-                  setPaymentMethod("COD");
-                  setGcashNumber("");
-                }}
-              />
-              <PaymentChip
-                icon="phone-portrait-outline"
-                label="GCash"
-                active={isPayMongoGCash}
-                onPress={() => setPaymentMethod("PayMongo-Gcash")}
-              />
-            </View>
-
-            {/* GCash Number Input */}
-            {isPayMongoGCash && (
-              <View style={s.gcashContainer}>
-                <Text style={s.inputLabel}>GCash Mobile Number</Text>
-                <View style={s.inputContainer}>
-                  <TextInput
-                    value={gcashNumber}
-                    onChangeText={(t) => setGcashNumber(t.replace(/[^\d]/g, "").slice(0, 11))}
-                    placeholder="09xxxxxxxxx"
-                    keyboardType="number-pad"
-                    style={[s.modernInput, !!gcashError && s.inputError]}
-                    placeholderTextColor={GRAY}
-                  />
-                  <Ionicons 
-                    name="phone-portrait" 
-                    size={20} 
-                    color={!!gcashError ? "#EF4444" : GRAY} 
-                    style={s.inputIcon} 
-                  />
-                </View>
-                {!!gcashError && <Text style={s.errorText}>{gcashError}</Text>}
+            <View style={s.sectionContainer}>
+              <View style={s.sectionHeader}>
+                <Ionicons name="card-outline" size={22} color={GREEN} />
+                <Text style={s.sectionTitle}>Payment Method</Text>
               </View>
-            )}
-          </View>
+              
+              <View style={s.paymentOptions}>
+                <PaymentChip
+                  icon="cash-outline"
+                  label="Cash on Delivery"
+                  active={paymentMethod === "COD"}
+                  onPress={() => {
+                    setPaymentMethod("COD");
+                  }}
+                />
+                <PaymentChip
+                  icon="wallet-outline"
+                  label="E-Payment"
+                  active={paymentMethod === "E-Payment"}
+                  onPress={() => {
+                    setPaymentMethod("E-Payment");
+                  }}
+                />
+              </View>
+
+              {/* E-Payment Info */}
+              {paymentMethod === "E-Payment" && (
+                <View style={s.infoBox}>
+                  <Ionicons name="information-circle-outline" size={20} color="#3B82F6" />
+                  <Text style={s.infoText}>
+                    Choose from GCash, GrabPay, Maya, Cards, or Online Banking
+                  </Text>
+                </View>
+              )}
+            </View>
         </View>
 
         {/* Place Order Button */}
@@ -1040,4 +995,23 @@ const s = StyleSheet.create({
   bottomSpacer: {
     height: 32,
   },
+
+  infoBox: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  borderWidth: 1,
+  borderColor: "#BFDBFE",
+  backgroundColor: "#EFF6FF",
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  borderRadius: 12,
+},
+infoText: {
+  flex: 1,
+  fontSize: 13,
+  color: "#1F2937",
+  fontWeight: "500",
+},
+
 });

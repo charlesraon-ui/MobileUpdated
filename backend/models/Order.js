@@ -4,10 +4,11 @@ import mongoose from "mongoose";
 const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-    name: String,
-    price: { type: Number, min: 0 },
+    name: { type: String, required: true },
     imageUrl: String,
-    quantity: { type: Number, default: 1, min: 1 },
+    // store PRICES IN PESOS in DB
+    price: { type: Number, required: true, min: 0 },   // e.g., 1150 for ₱1,150.00
+    quantity: { type: Number, required: true, min: 1, default: 1 },
   },
   { _id: false }
 );
@@ -15,23 +16,48 @@ const orderItemSchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true },
+
     items: { type: [orderItemSchema], default: [] },
-    total: { type: Number, min: 0, default: 0 },
-    address: String,
-    paymentMethod: String, // e.g., "cod" | "gcash"
-    gcashNumber: String,
+
+    // keep totals in PESOS; compute in a pre-save if not provided
+    subtotal: { type: Number, min: 0, default: 0 },     // items sum (pesos)
+    deliveryFee: { type: Number, min: 0, default: 0 },  // pesos
+    total: { type: Number, min: 0, default: 0 },        // pesos = subtotal + deliveryFee
+
+    address: { type: String, default: "" },
+    deliveryType: {
+      type: String,
+      enum: ["pickup", "in-house", "third-party"],
+      default: "in-house",
+    },
+
+    paymentMethod: {
+      type: String,
+      enum: ["COD", "E-Payment"],
+      default: "COD",
+    },
+
     status: { type: String, default: "pending" },
 
-    paymentStatus: { 
-      type: String, 
-      enum: ["pending", "paid", "failed", "refunded"],
-      default: "pending" 
-    },
-    paymentSourceId: String,
-    paymentStatus: { type: String, default: "pending" }, // pending, paid, failed
-    paidAt: Date,
+    // PayMongo tracking
+    paymongoSessionId: { type: String },
+    paymongoPaymentId: { type: String },
   },
   { timestamps: true }
 );
 
+// Keep totals consistent if caller forgot to compute
+orderSchema.pre("save", function (next) {
+  const items = this.items || [];
+  const subtotal = items.reduce(
+    (sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 0),
+    0
+  );
+  this.subtotal = Math.round((Number(this.subtotal) || subtotal) * 100) / 100;
+  this.deliveryFee = Math.round((Number(this.deliveryFee) || 0) * 100) / 100;
+  this.total = Math.round((this.subtotal + this.deliveryFee) * 100) / 100;
+  next();
+});
+
 export default mongoose.models.Order || mongoose.model("Order", orderSchema);
+

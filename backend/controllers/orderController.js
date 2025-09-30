@@ -1,6 +1,111 @@
+import fetch from "node-fetch";
 import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
+
+/* ---------------- PayMongo E-Payment (All Methods) ---------------------- */
+export const createEPaymentOrder = async (req, res) => {
+  try {
+    const me = req.user?.userId;
+    if (!me) return res.status(401).json({ message: "Unauthorized" });
+
+    console.log("💳 E-Payment order request:", req.body);
+
+    // 1) Create order in database
+    const order = await Order.create({ 
+      ...req.body, 
+      userId: String(me),
+      status: "pending_payment",
+      paymentMethod: "E-Payment"
+    });
+
+    console.log("✅ Order created:", order._id);
+
+    // 2) Create linked delivery
+    await Delivery.create({
+      order: order._id,
+      type: req.body.deliveryType || "in-house",
+      deliveryAddress: req.body.address || "",
+      status: "pending",
+    });
+
+    // 3) Create PayMongo Checkout Session
+    const amountInCentavos = Math.round(order.total * 100);
+
+    const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${Buffer.from(process.env.PAYMONGO_SECRET_KEY + ":").toString("base64")}`
+      },
+      body: JSON.stringify({
+        data: {
+          attributes: {
+            send_email_receipt: false,
+            show_description: true,
+            show_line_items: true,
+            description: `Order #${String(order._id).slice(-6).toUpperCase()}`,
+            line_items: order.items.map(item => ({
+              currency: "PHP",
+              amount: Math.round(item.price * 100),
+              name: item.name,
+              quantity: item.quantity
+            })),
+            payment_method_types: [
+              "gcash",
+              "grab_pay",
+              "paymaya",
+              "card",
+              "dob",
+            ],
+            success_url: `${process.env.API_URL}/api/payment/success?orderId=${order._id}`,
+            cancel_url: `${process.env.API_URL}/api/payment/cancel?orderId=${order._id}`,
+           reference_number: String(order._id)
+          }
+        }
+      })
+    });
+
+    const paymongoData = await paymongoResponse.json();
+    
+    if (!paymongoResponse.ok) {
+      console.error("❌ PayMongo error:", JSON.stringify(paymongoData, null, 2));
+      return res.status(paymongoResponse.status).json({
+        success: false,
+        message:
+          paymongoData?.errors?.[0]?.detail ||
+          paymongoData?.errors?.[0]?.title ||
+          "PayMongo API error",
+        provider: paymongoData,
+      });
+    }
+
+    const session = paymongoData.data;
+    const checkoutUrl = session.attributes.checkout_url;
+
+    console.log("🔗 PayMongo Checkout URL:", checkoutUrl);
+
+    // 4) Save session ID
+    order.paymongoSessionId = session.id;
+    await order.save();
+
+    // 5) Return checkout URL
+    res.status(201).json({
+      success: true,
+      orderId: order._id,
+      checkoutUrl,
+      sessionId: session.id,
+      message: "E-Payment checkout created"
+    });
+
+  } catch (err) {
+    console.error("CREATE_EPAYMENT_ORDER_ERROR:", err);
+    res.status(500).json({ 
+      success: false,
+      message: err.message || "Failed to create payment" 
+    });
+  }
+};
 
 /* ---------------- Authenticated: create order for current user ---------------------- */
 export const createMyOrder = async (req, res) => {
@@ -137,100 +242,49 @@ export const listDelivery = async (req, res) => {
 /* ---------------- Aliases ----------------------------------------------------------- */
 export { getMyOrders as listMyOrders, getOrders as listOrders };
 
-/* ---------------- PayMongo E-Payment (All Methods) ---------------------- */
-export const createEPaymentOrder = async (req, res) => {
+export const createEPayment = async (req, res) => {
   try {
-    const me = req.user?.userId;
-    if (!me) return res.status(401).json({ message: "Unauthorized" });
+    console.log("[EPAYMENT] user:", req.user?.id);
+    console.log("[EPAYMENT] body:", JSON.stringify(req.body, null, 2));
 
-    console.log("💳 E-Payment order request:", req.body);
-
-    // 1) Create order in database
-    const order = await Order.create({ 
-      ...req.body, 
-      userId: String(me),
-      status: "pending_payment",
-      paymentMethod: "E-Payment"
-    });
-
-    console.log("✅ Order created:", order._id);
-
-    // 2) Create linked delivery
-    await Delivery.create({
-      order: order._id,
-      type: req.body.deliveryType || "in-house",
-      deliveryAddress: req.body.address || "",
-      status: "pending",
-    });
-
-    // 3) Create PayMongo Checkout Session (supports ALL payment methods)
-    const amountInCentavos = Math.round(order.total * 100);
-
-    const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${Buffer.from(process.env.PAYMONGO_SECRET_KEY + ":").toString("base64")}`
-      },
-      body: JSON.stringify({
-        data: {
-          attributes: {
-            send_email_receipt: false,
-            show_description: true,
-            show_line_items: true,
-            description: `Order #${String(order._id).slice(-6).toUpperCase()}`,
-            line_items: order.items.map(item => ({
-              currency: "PHP",
-              amount: Math.round(item.price * 100),
-              name: item.name,
-              quantity: item.quantity
-            })),
-            payment_method_types: [
-              "gcash",      // GCash
-              "grab_pay",   // GrabPay  
-              "paymaya",    // Maya
-              "card",       // Credit/Debit Cards
-              "dob",        // Online Banking
-            ],
-            success_url: `${process.env.API_URL}/api/payment/success?orderId=${order._id}`,
-            cancel_url: `${process.env.API_URL}/api/payment/cancel?orderId=${order._id}`,
-            reference_number: String(order._id)
-          }
-        }
-      })
-    });
-
-    const paymongoData = await paymongoResponse.json();
-    
-    if (!paymongoResponse.ok) {
-      console.error("❌ PayMongo error:", paymongoData);
-      throw new Error(paymongoData.errors?.[0]?.detail || "PayMongo API error");
+    const { items = [], amount, deliveryFee = 0, address, deliveryType, channel = "multi" } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "items[] required" });
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "amount (centavos) required" });
     }
 
-    const session = paymongoData.data;
-    const checkoutUrl = session.attributes.checkout_url;
-
-    console.log("🔗 PayMongo Checkout URL:", checkoutUrl);
-
-    // 4) Save session ID to order
-    order.paymongoSessionId = session.id;
-    await order.save();
-
-    // 5) Return checkout URL
-    res.status(201).json({
-      success: true,
-      orderId: order._id,
-      checkoutUrl,
-      sessionId: session.id,
-      message: "E-Payment checkout created"
+    // Example: create PayMongo Checkout Session (pseudo; adjust to your SDK)
+    const session = await createCheckoutSession({
+      line_items: items.map(i => ({
+        name: i.name || "Item",
+        amount: i.amount,      // centavos per item
+        quantity: i.quantity || 1,
+        currency: "PHP",
+      })),
+      amount,                  // total centavos (or let PayMongo compute)
+      channel,                 // "gcash" | "multi"
+      metadata: {
+        userId: req.user?.id || "",
+        deliveryType,
+        deliveryFee,
+        address,
+      },
+      // success_url: req.body.successUrl || `${APP_URL}/orders/success`,
+      // cancel_url: req.body.cancelUrl  || `${APP_URL}/checkout`,
     });
 
+    // Return URL for the app to open
+    return res.json({
+      success: true,
+      payment: { checkoutUrl: session.checkout_url || session.url }, // match your provider’s key
+    });
   } catch (err) {
-    console.error("CREATE_EPAYMENT_ORDER_ERROR:", err);
-    res.status(500).json({ 
+    console.error("[EPAYMENT ERROR]", err?.response?.data || err);
+    return res.status(500).json({
       success: false,
-      message: err.message || "Failed to create payment" 
+      message: err?.response?.data?.message || err?.message || "Failed to create e-payment session",
     });
   }
 };
-
