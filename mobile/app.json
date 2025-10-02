@@ -82,8 +82,12 @@
     "extra": {
       "apiUrl": "https://goagritrading-backend.onrender.com",
       "eas": {
-        "projectId": ""
-      }
+        "projectId": "e762036f-0b8a-4705-a8d9-b3c2c04cecec"
+      },
+      "router": {}
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
