@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import BundleCard from "../components/BundleCard";
 import ProductCard from "../components/ProductCard";
 import { AppCtx } from "../context/AppContext";
 
@@ -25,6 +26,7 @@ const { width } = Dimensions.get('window');
 export default function ProductsScreen() {
   const {
     products,
+    bundles,
     categories,
     selectedCategory,
     setSelectedCategory,
@@ -51,6 +53,49 @@ export default function ProductsScreen() {
     minPrice: "",
     maxPrice: ""
   });
+
+  const filteredBundles = useMemo(() => {
+  const q = (searchQuery || "").toLowerCase();
+  return (bundles || []).filter((b) => {
+    const name = (b?.name || "").toLowerCase();
+    const desc = (b?.description || "").toLowerCase();
+    return name.includes(q) || desc.includes(q);
+  });
+}, [bundles, searchQuery]);
+
+const renderBundlesSection = () => {
+  if (!filteredBundles || filteredBundles.length === 0) return null;
+  
+  return (
+    <View style={styles.bundlesSection}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="gift-outline" size={24} color="#10B981" />
+        <Text style={styles.sectionTitle}>Special Bundles</Text>
+        <View style={styles.bundleBadge}>
+          <Text style={styles.bundleBadgeText}>{filteredBundles.length}</Text>
+        </View>
+      </View>
+      
+      <Text style={styles.sectionSubtitle}>
+        Save more with our curated product bundles
+      </Text>
+      
+      {filteredBundles.map((bundle) => (
+        <BundleCard
+          key={bundle._id}
+          bundle={bundle}
+          onPress={() => router.push(`/bundle-detail?id=${bundle._id}`)}
+        />
+      ))}
+      
+      <View style={styles.bundleDivider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>Individual Products</Text>
+        <View style={styles.dividerLine} />
+      </View>
+    </View>
+  );
+};
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -567,26 +612,31 @@ export default function ProductsScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProductCard}
-        keyExtractor={(item) => item._id}
-        numColumns={1}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#10B981"]}
-            tintColor="#10B981"
-            progressBackgroundColor="#F8FAFC"
-          />
-        }
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-      />
+              <FlatList
+          data={filteredProducts}
+          renderItem={renderProductCard}
+          keyExtractor={(item) => item._id}
+          numColumns={1}
+          ListHeaderComponent={() => (
+            <>
+              {renderHeader()}
+              {renderBundlesSection()} {/* ADD THIS */}
+            </>
+          )}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#10B981"]}
+              tintColor="#10B981"
+              progressBackgroundColor="#F8FAFC"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        />
       {renderFilterModal()}
       {renderCartConfirmationModal()}
     </View>
@@ -1075,4 +1125,66 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
+
+  bundlesSection: {
+  paddingHorizontal: 20,
+  paddingTop: 8,
+  paddingBottom: 24,
+},
+
+sectionHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 8,
+  gap: 8,
+},
+
+sectionTitle: {
+  fontSize: 22,
+  fontWeight: "800",
+  color: "#111827",
+  flex: 1,
+},
+
+bundleBadge: {
+  backgroundColor: "#10B981",
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 12,
+},
+
+bundleBadgeText: {
+  color: "#FFFFFF",
+  fontSize: 12,
+  fontWeight: "700",
+},
+
+sectionSubtitle: {
+  fontSize: 14,
+  color: "#6B7280",
+  marginBottom: 16,
+  fontStyle: "italic",
+},
+
+bundleDivider: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 24,
+  marginBottom: 16,
+  gap: 12,
+},
+
+dividerLine: {
+  flex: 1,
+  height: 1,
+  backgroundColor: "#E5E7EB",
+},
+
+dividerText: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#6B7280",
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+},
 });

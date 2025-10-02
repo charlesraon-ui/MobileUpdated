@@ -8,26 +8,21 @@ export const createEPaymentOrder = async (req, res) => {
     const me = req.user?.userId || req.user?.id;
     if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    // Ensure JSON body parsing is enabled in your app: app.use(express.json())
-
     console.log("💳 E-Payment order request (keys):", Object.keys(req.body || {}));
     const {
       items: rawItems = [],
       deliveryType = "in-house",
       address = "",
-      deliveryFee: deliveryFeeInBody = 0, // pesos
-      total: totalInBody,                 // pesos (optional)
+      deliveryFee: deliveryFeeInBody = 0,
+      total: totalInBody,
       channel = "multi",
     } = req.body || {};
 
-    // Quick visibility
     console.log("RAW items[0]:", rawItems?.[0]);
 
-    // Helper: coerce any numeric-ish value into a Number
     const toNum = (v) => {
       if (typeof v === "number") return v;
       if (typeof v === "string") {
-        // remove commas/spaces and convert, e.g. "1,150.50" -> 1150.50, "115000" -> 115000
         const cleaned = v.replace(/[, ]+/g, "");
         const n = Number(cleaned);
         return Number.isFinite(n) ? n : NaN;
@@ -35,21 +30,18 @@ export const createEPaymentOrder = async (req, res) => {
       return NaN;
     };
 
-    // Normalize client items -> Order items in PESOS
     const items = (Array.isArray(rawItems) ? rawItems : []).map((it, idx) => {
       const qty = toNum(it?.quantity ?? it?.qty ?? 1);
 
-      // Try multiple possible fields for unit price
       let pricePeso =
         it?.price != null ? toNum(it.price)
         : it?.unitPrice != null ? toNum(it.unitPrice)
         : it?.unit_price != null ? toNum(it.unit_price)
         : it?.product?.price != null ? toNum(it.product.price)
-        : it?.amount != null ? toNum(it.amount) / 100 // centavos -> pesos
+        : it?.amount != null ? toNum(it.amount) / 100
         : NaN;
 
       if (!Number.isFinite(pricePeso)) {
-        // Give a clear 400 with what we received
         return {
           __invalid: true,
           __error: `items[${idx}].price/amount missing or invalid`,
@@ -71,19 +63,17 @@ export const createEPaymentOrder = async (req, res) => {
         };
       }
 
-      // Round to 2dp to avoid float drift
       pricePeso = Math.round(pricePeso * 100) / 100;
 
       return {
         productId: it?.productId || it?.id || it?._id || undefined,
         name: it?.name || it?.productName || it?.product?.name || "Item",
         imageUrl: it?.imageUrl || it?.image || it?.product?.imageUrl || undefined,
-        price: pricePeso,           // PESOS
-        quantity: Math.floor(qty),  // integer >= 1
+        price: pricePeso,
+        quantity: Math.floor(qty),
       };
     });
 
-    // If any invalid item, return 400 with details
     const bad = items.find(x => x?.__invalid);
     if (bad) {
       console.error("❌ Normalization error:", bad);
@@ -94,22 +84,18 @@ export const createEPaymentOrder = async (req, res) => {
       });
     }
 
-    // Empty cart guard
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Cart is empty." });
     }
 
-    // Show normalized first item to confirm mapping worked
     console.log("NORM items[0]:", items?.[0]);
 
-    // Delivery fee (pesos)
     const deliveryFee =
       Number.isFinite(toNum(deliveryFeeInBody)) ? toNum(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
       : deliveryType === "third-party" ? 80
       : 50;
 
-    // Totals (pesos)
     const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
     const total = Number.isFinite(toNum(totalInBody)) && toNum(totalInBody) > 0
       ? toNum(totalInBody)
@@ -138,16 +124,15 @@ export const createEPaymentOrder = async (req, res) => {
       status: "pending",
     });
 
-    // 3) PayMongo Checkout Session (centavos)
-    const baseUrl = process.env.APP_URL; // must be https
-    if (!baseUrl || !/^https:\/\//i.test(baseUrl)) {
-      return res.status(500).json({ success: false, message: "APP_URL must be HTTPS for PayMongo" });
-    }
-
+    // 3) PayMongo Checkout Session with DEEP LINKS
+    // FIX: Use deep link scheme instead of web URL for mobile app
+    const baseUrl = process.env.APP_URL || "https://your-backend.com";
+    const appScheme = "goagritrading"; // Your app's deep link scheme
+    
     const amountInCentavos = Math.round(Number(order.total) * 100);
     const lineItems = order.items.map((item) => ({
       currency: "PHP",
-      amount: Math.round(Number(item.price) * 100), // per-unit centavos
+      amount: Math.round(Number(item.price) * 100),
       name: item.name,
       quantity: item.quantity,
     }));
@@ -172,8 +157,9 @@ export const createEPaymentOrder = async (req, res) => {
               : ["gcash", "grab_pay", "paymaya", "card"],
             amount_total: amountInCentavos,
             currency: "PHP",
-            success_url: `${baseUrl}/payment/success?orderId=${order._id}`,
-            cancel_url:  `${baseUrl}/payment/cancel?orderId=${order._id}`,
+            // FIX: Use deep link URLs for mobile app
+            success_url: `${appScheme}://payment/success?orderId=${order._id}`,
+            cancel_url: `${appScheme}://payment/cancel?orderId=${order._id}`,
             reference_number: String(order._id),
             metadata: {
               userId: String(me),

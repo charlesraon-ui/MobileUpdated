@@ -1,4 +1,3 @@
-// mobile/src/api/apiClient.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -99,6 +98,10 @@ export const setCartApi = (payload) => api.post(`/api/cart`, payload);
 
 export const getOrders   = (userId) => api.get(`/api/orders/${userId}`);
 export const createOrder = (payload) => api.post(`/api/orders`, payload);
+
+/** ------------- Bundles ------------- */
+export const getBundles = () => api.get(`/api/bundles`);
+export const getBundleApi = (id) => api.get(`/api/bundles/${id}`);
 
 /** ------------- Deliveries ------------- */
 export const listMyDeliveries    = () => api.get(`/api/delivery/mine`);

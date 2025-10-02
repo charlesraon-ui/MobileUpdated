@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile", 
+    "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,13 +14,11 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/go-agri-logo.png",
+        "backgroundImage": "./assets/images/background-logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-
       "intentFilters": [
         {
           "action": "VIEW",
@@ -29,9 +27,13 @@
               "scheme": "mobile"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ]
+      ],
+      "package": "com.charlestimothy.mobile"
     },
     "web": {
       "output": "static",
@@ -57,7 +59,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://your-app-backend.onrender.com"
+      "apiUrl": "https://your-app-backend.onrender.com",
+      "router": {},
+      "eas": {
+        "projectId": "15717921-af2f-4f2c-a8aa-9934cf70325b"
+      }
     }
   }
 }

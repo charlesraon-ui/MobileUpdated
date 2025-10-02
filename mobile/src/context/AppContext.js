@@ -1,4 +1,3 @@
-// mobile/src/context/AppContext.js
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
@@ -11,6 +10,8 @@ import {
   register as apiRegister,
   clearAuth,
   createEPaymentOrder,
+  getBundleApi,
+  getBundles,
   getCategories,
   getDeliveryForOrder,
   getDriverContact,
@@ -35,11 +36,13 @@ export default function AppProvider({ children }) {
 
   // data state
   const [products, setProducts] = useState([]);
+  const [bundles, setBundles] = useState([]);
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
   const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [productDetail, setProductDetail] = useState(null);
+  const [bundleDetail, setBundleDetail] = useState(null);
   const [myReviews, setMyReviews] = useState([]);
   const [recoItems, setRecoItems] = useState([]);
 
@@ -73,12 +76,15 @@ export default function AppProvider({ children }) {
         const u = await readUser();
         if (u) setUserState(u);
 
-        const [prod, cats] = await Promise.all([
+        const [prod, cats, bundlesResp] = await Promise.all([
           getProducts(),
           getCategories().catch(() => ({ data: [] })),
+          getBundles().catch(() => ({ data: [] })),
         ]);
 
         setProducts(Array.isArray(prod?.data) ? prod.data : []);
+        setBundles(Array.isArray(bundlesResp?.data) ? bundlesResp.data : []);
+        
         const map = {};
         (cats.data || []).forEach((c) => {
           map[String(c._id)] = c.name || c.categoryName || "";
@@ -251,6 +257,59 @@ export default function AppProvider({ children }) {
     persistCart(updated);
   };
 
+  // ---------------- BUNDLE ACTIONS ----------------
+  const fetchBundleDetail = async (id) => {
+    try {
+      const res = await getBundleApi(id);
+      setBundleDetail(res.data);
+    } catch (e) {
+      console.warn("fetchBundleDetail failed:", e.message);
+      setBundleDetail(null);
+    }
+  };
+
+  const handleAddBundleToCart = async (bundle) => {
+    if (!bundle?.items || !Array.isArray(bundle.items)) {
+      throw new Error("Invalid bundle data");
+    }
+
+    // Get all products from the bundle
+    const bundleProducts = bundle.items.map(item => {
+      const product = item.productId;
+      if (!product) return null;
+      
+      return {
+        productId: product._id,
+        name: product.name,
+        price: Number(product.price || 0),
+        imageUrl: product.imageUrl || product.images?.[0] || "",
+        quantity: Number(item.quantity || 1),
+      };
+    }).filter(Boolean);
+
+    // Add each bundle product to cart (merge if already exists)
+    let updated = [...cart];
+    
+    for (const bundleItem of bundleProducts) {
+      const idx = updated.findIndex((i) => i.productId === bundleItem.productId);
+      
+      if (idx > -1) {
+        // Product exists, increase quantity
+        updated = updated.map((i, k) => 
+          k === idx 
+            ? { ...i, quantity: Number(i.quantity || 0) + Number(bundleItem.quantity) }
+            : i
+        );
+      } else {
+        // New product, add to cart
+        updated.push(bundleItem);
+      }
+    }
+
+    setCart(updated);
+    await persistCart(updated);
+  };
+
   // ---------------- PLACE ORDER ----------------
 const handlePlaceOrder = async () => {
   if (!ensureAuthed()) return { success: false, message: "Not logged in" };
@@ -258,16 +317,34 @@ const handlePlaceOrder = async () => {
   const addr = String((deliveryAddress || "").trim());
   if (!addr) return { success: false, message: "Delivery address is required" };
 
-  if (paymentMethod === "GCash" && !isValidGcash(gcashNumber)) {
-    return { success: false, message: "Invalid GCash number" };
+  if (paymentMethod === "E-Payment") {
+  console.log("💳 E-Payment selected, redirecting to PayMongo...");
+  
+  const response = await createEPaymentOrder(payload);
+  console.log("✅ E-Payment response:", response.data);
+  
+  const checkoutUrl = response.data?.checkoutUrl;
+  if (!checkoutUrl) {
+    return { success: false, message: "Failed to create payment link" };
   }
 
-  const total = Array.isArray(cart)
-    ? cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0)
-    : 0;
-  if (!Array.isArray(cart) || cart.length === 0 || total <= 0) {
-    return { success: false, message: "Your cart is empty." };
+  console.log("🔗 Opening PayMongo URL:", checkoutUrl);
+  
+  // Open URL in browser
+  const supported = await Linking.canOpenURL(checkoutUrl);
+  if (supported) {
+    await Linking.openURL(checkoutUrl);
+    
+    // Don't clear cart yet - wait for success callback
+    return { 
+      success: true, 
+      message: "Redirecting to payment...",
+      pending: true // Add this flag
+    };
+  } else {
+    return { success: false, message: "Cannot open payment URL" };
   }
+}
 
   const deliveryType = "in-house";
 
@@ -522,7 +599,7 @@ const handlePlaceOrder = async () => {
 
   const value = {
     // state
-    loading, products, cart, setCart, orders, user,
+    loading, products, bundles, cart, setCart, orders, user,
     selectedCategory, setSelectedCategory,
     lastAddedCategory, setLastAddedCategory,
     searchQuery, setSearchQuery,
@@ -557,6 +634,11 @@ const handlePlaceOrder = async () => {
     submitReview,
     myReviews,
     fetchMyReviews,
+
+    // bundles
+    bundleDetail,
+    fetchBundleDetail,
+    handleAddBundleToCart,
 
     // helpers
     categoryMap,
