@@ -41,7 +41,7 @@
             {
               "scheme": "https",
               "host": "goagritrading-backend.onrender.com",
-              "pathPrefix": "/payment"
+              "pathPrefix": "/api/payment"
             },
             {
               "scheme": "goagritrading"

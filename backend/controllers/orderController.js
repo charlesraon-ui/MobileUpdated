@@ -8,7 +8,8 @@ export const createEPaymentOrder = async (req, res) => {
     const me = req.user?.userId || req.user?.id;
     if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    console.log("💳 E-Payment order request (keys):", Object.keys(req.body || {}));
+    console.log("💳 E-Payment order request (body keys):", Object.keys(req.body || {}));
+    
     const {
       items: rawItems = [],
       deliveryType = "in-house",
@@ -18,8 +19,18 @@ export const createEPaymentOrder = async (req, res) => {
       channel = "multi",
     } = req.body || {};
 
+    // Validate PayMongo credentials
+    if (!process.env.PAYMONGO_SECRET_KEY) {
+      console.error("❌ PAYMONGO_SECRET_KEY is not configured");
+      return res.status(500).json({
+        success: false,
+        message: "Payment system not configured. Please contact support.",
+      });
+    }
+
     console.log("RAW items[0]:", rawItems?.[0]);
 
+    // Helper to convert values to numbers
     const toNum = (v) => {
       if (typeof v === "number") return v;
       if (typeof v === "string") {
@@ -30,6 +41,7 @@ export const createEPaymentOrder = async (req, res) => {
       return NaN;
     };
 
+    // Normalize items
     const items = (Array.isArray(rawItems) ? rawItems : []).map((it, idx) => {
       const qty = toNum(it?.quantity ?? it?.qty ?? 1);
 
@@ -74,6 +86,7 @@ export const createEPaymentOrder = async (req, res) => {
       };
     });
 
+    // Check for invalid items
     const bad = items.find(x => x?.__invalid);
     if (bad) {
       console.error("❌ Normalization error:", bad);
@@ -88,8 +101,9 @@ export const createEPaymentOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "Cart is empty." });
     }
 
-    console.log("NORM items[0]:", items?.[0]);
+    console.log("✅ NORM items[0]:", items?.[0]);
 
+    // Calculate totals
     const deliveryFee =
       Number.isFinite(toNum(deliveryFeeInBody)) ? toNum(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
@@ -124,9 +138,7 @@ export const createEPaymentOrder = async (req, res) => {
       status: "pending",
     });
 
-    // 3) PayMongo Checkout Session with DEEP LINKS
-    // ✅ FIX: Use deep link scheme for mobile app
-    
+    // 3) PayMongo Checkout Session
     const amountInCentavos = Math.round(Number(order.total) * 100);
     const lineItems = order.items.map((item) => ({
       currency: "PHP",
@@ -137,6 +149,7 @@ export const createEPaymentOrder = async (req, res) => {
 
     const backendUrl = process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com';
 
+    // Create PayMongo checkout session
     const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
@@ -155,11 +168,8 @@ export const createEPaymentOrder = async (req, res) => {
               channel === "gcash" ? ["gcash"]
               : channel === "card" ? ["card"]
               : ["gcash", "grab_pay", "paymaya", "card"],
-            amount_total: amountInCentavos,
-            currency: "PHP",
-            // ✅ FIXED: Use deep link URLs for mobile app redirect
-            success_url: `${process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com'}/api/payment/success?orderId=${order._id}`,
-            cancel_url: `${process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com'}/api/payment/cancel?orderId=${order._id}`,
+            success_url: `${backendUrl}/api/payment/success?orderId=${order._id}`,
+            cancel_url: `${backendUrl}/api/payment/cancel?orderId=${order._id}`,
             reference_number: String(order._id),
             metadata: {
               userId: String(me),
@@ -173,6 +183,7 @@ export const createEPaymentOrder = async (req, res) => {
     });
 
     const paymongoData = await paymongoResponse.json();
+    
     if (!paymongoResponse.ok) {
       console.error("❌ PayMongo error:", JSON.stringify(paymongoData, null, 2));
       return res.status(paymongoResponse.status).json({
@@ -187,8 +198,12 @@ export const createEPaymentOrder = async (req, res) => {
 
     const session = paymongoData?.data;
     const checkoutUrl = session?.attributes?.checkout_url;
+    
     if (!checkoutUrl) {
-      return res.status(502).json({ success: false, message: "Missing checkout_url from PayMongo" });
+      return res.status(502).json({ 
+        success: false, 
+        message: "Missing checkout_url from PayMongo" 
+      });
     }
 
     // 4) Save session id

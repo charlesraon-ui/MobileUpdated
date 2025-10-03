@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Linking from 'expo-linking';
 import { useRouter } from "expo-router";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as apiCheck from "../api/apiClient";
 import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 
@@ -44,18 +43,8 @@ export default function CheckoutScreen() {
 
   const [deliveryMethod, setDeliveryMethod] = useState("in-house");
   const [placing, setPlacing] = useState(false);
-  const isCOD = paymentMethod === "COD";
-  
-  console.log("api keys:", Object.keys(apiCheck));
 
-
-  console.log("Payment states:", {
-  paymentMethod,
-  isCOD,
-});
-
-
-  // --- toast ---
+  // toast
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
   const showToast = (msg) => {
@@ -63,7 +52,6 @@ export default function CheckoutScreen() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2200);
   };
-  useEffect(() => () => toastTimer.current && clearTimeout(toastTimer.current), []);
 
   // refresh on focus
   const refreshingRef = useRef(false);
@@ -77,7 +65,7 @@ export default function CheckoutScreen() {
     }, [isLoggedIn])
   );
 
-// ✅ ADD THIS HELPER FUNCTION
+  // Helper functions
   const getDeliveryFee = (method) => {
     if (method === "pickup") return 0;
     if (method === "in-house") return 50;
@@ -85,17 +73,15 @@ export default function CheckoutScreen() {
     return 0;
   };
 
-  // ✅ ADD THIS HELPER FUNCTION
   const calculateOrderTotals = () => {
     const deliveryFee = getDeliveryFee(deliveryMethod);
     const subtotal = cartTotal;
     const total = subtotal + deliveryFee;
-    const amountCentavos = Math.round(total * 100);
 
-    return { deliveryFee, subtotal, total, amountCentavos };
+    return { deliveryFee, subtotal, total };
   };
 
-  // validations
+  // Validations
   const addrError = useMemo(() => {
     if (deliveryMethod === "pickup") return "";
     
@@ -107,73 +93,104 @@ export default function CheckoutScreen() {
 
   const disabled = !isLoggedIn || cartTotal <= 0 || !!addrError || placing;
 
-  // ✅ FIXED FUNCTION - Remove duplicate code
+  // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
     if (disabled) return;
+    
     setPlacing(true);
 
     try {
+      const { deliveryFee, subtotal, total } = calculateOrderTotals();
+
+      // ✅ E-PAYMENT FLOW
       if (paymentMethod === "E-Payment") {
-        showToast("Creating payment...");
+        showToast("Creating payment session...");
 
-        const { deliveryFee, subtotal, total, amountCentavos } = calculateOrderTotals();
-
+        // Build proper payload structure
         const payload = {
-          items: cart.map(p => ({
-            id: p._id || p.id,
-            name: p.name,
-            quantity: p.quantity || p.qty || 1,
-            amount: Math.round(Number(p.price || p.unitPrice || 0) * 100),
+          items: cart.map(item => ({
+            productId: item.productId || item._id,
+            name: item.name,
+            price: Number(item.price || 0),
+            imageUrl: item.imageUrl || "",
+            quantity: Number(item.quantity || 1)
           })),
-          total: subtotal,
-          deliveryFee,
-          amount: amountCentavos,
-          address: deliveryAddress,
+          total: total,
+          deliveryFee: deliveryFee,
+          address: deliveryAddress.trim(),
           deliveryType: deliveryMethod,
-          channel: "multi",
+          channel: "multi" // Support all payment methods
         };
 
+        console.log("📤 Sending E-Payment payload:", JSON.stringify(payload, null, 2));
+
         const response = await createEPaymentOrder(payload);
+        
+        console.log("📥 E-Payment response:", response.data);
+
         const checkoutUrl = response?.data?.payment?.checkoutUrl;
 
-        if (response?.data?.success && checkoutUrl) {
-          showToast("Redirecting to payment...");
-          
-          const canOpen = await Linking.canOpenURL(checkoutUrl);
-          if (canOpen) {
-            await Linking.openURL(checkoutUrl);
-            Alert.alert(
-              "Complete Your Payment",
-              "Finish your payment in the browser. Your order will appear once payment is confirmed.",
-              [{ text: "View My Orders", onPress: () => router.push("/tabs/orders") }]
-            );
-          } else {
-            Alert.alert("Error", "Cannot open payment page. Please try again.");
-          }
-        } else {
-          Alert.alert("Error", response?.data?.message || "Failed to create payment");
+        if (!checkoutUrl) {
+          throw new Error("No checkout URL received from payment provider");
         }
+
+        showToast("Redirecting to payment...");
         
-        return; // ✅ Exit early after E-Payment
+        // Open payment URL
+        const canOpen = await Linking.canOpenURL(checkoutUrl);
+        
+        if (!canOpen) {
+          throw new Error("Cannot open payment URL");
+        }
+
+        await Linking.openURL(checkoutUrl);
+        
+        // Show info dialog
+        Alert.alert(
+          "Complete Your Payment",
+          "Please complete your payment in the browser. Your order will appear once payment is confirmed.",
+          [
+            { 
+              text: "View Orders", 
+              onPress: () => router.replace("/tabs/orders") 
+            }
+          ]
+        );
+
+        return;
       }
 
-      // ✅ COD flow - ONLY ONE OCCURRENCE
+      // ✅ COD FLOW
+      showToast("Placing order...");
+      
       const res = await handlePlaceOrder();
+      
       if (res?.success) {
         const orderId = res.order?._id || res.order?.id;
         const shortId = String(orderId || "").slice(-6).toUpperCase();
+        
         showToast(`Order #${shortId} placed!`);
-        setTimeout(() => router.push("/tabs/orders"), 1000);
+        
+        setTimeout(() => {
+          router.replace("/tabs/orders");
+        }, 1000);
       } else {
-        Alert.alert("Order Failed", res?.message || "Please try again.");
+        throw new Error(res?.message || "Order creation failed");
       }
+
     } catch (error) {
       console.error("❌ Place order error:", error);
-      Alert.alert("Error", error?.response?.data?.message || error?.message || "Failed to place order");
+      
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        "Failed to place order. Please try again.";
+      
+      Alert.alert("Order Failed", errorMessage);
     } finally {
       setPlacing(false);
     }
-  }; // ✅ Function ends here properly
+  };
 
   return (
     <KeyboardAvoidingView
@@ -351,7 +368,7 @@ export default function CheckoutScreen() {
           {placing ? (
             <View style={s.loadingContainer}>
               <ActivityIndicator color="#fff" size="small" />
-              <Text style={s.btnText}>Processing Order...</Text>
+              <Text style={s.btnText}>Processing...</Text>
             </View>
           ) : (
             <View style={s.btnContent}>
@@ -418,590 +435,175 @@ function PaymentChip({ icon, label, active, onPress }) {
 }
 
 const s = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F8FAFC" 
-  },
-  
-  scrollContainer: { 
-    paddingBottom: 20 
-  },
-
-  // Modern Header
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  scrollContainer: { paddingBottom: 20 },
   modernHeader: {
-    backgroundColor: GREEN,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: GREEN, paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: 20, paddingHorizontal: 20, flexDirection: "row",
+    alignItems: "center", justifyContent: "space-between",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
   },
-
   modernBackBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
   },
-
   headerContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    flex: 1, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 8,
   },
-
-  modernH1: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  headerSpacer: {
-    width: 44,
-  },
-
-  // Summary Card
+  modernH1: { fontSize: 20, fontWeight: "700", color: "#FFFFFF" },
+  headerSpacer: { width: 44 },
   summaryCard: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginTop: -10,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: "#FFFFFF", marginHorizontal: 16, marginTop: -10,
+    borderRadius: 16, padding: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 12, elevation: 8,
   },
-
   summaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
+    flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8,
   },
-
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
+  summaryTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
   summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 8,
   },
-
-  summaryLabel: {
-    fontSize: 14,
-    color: GRAY,
-    fontWeight: "500",
-  },
-
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-  },
-
-  freeText: {
-    color: GREEN,
-    fontWeight: "700",
-  },
-
+  summaryLabel: { fontSize: 14, color: GRAY, fontWeight: "500" },
+  summaryValue: { fontSize: 14, fontWeight: "600", color: "#111827" },
+  freeText: { color: GREEN, fontWeight: "700" },
   summaryDivider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 12,
+    height: 1, backgroundColor: "#E5E7EB", marginVertical: 12,
   },
-
   totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "row", justifyContent: "space-between",
     alignItems: "center",
   },
-
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  totalValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: GREEN,
-  },
-
-  // Modern Card
+  totalLabel: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  totalValue: { fontSize: 20, fontWeight: "800", color: GREEN },
   modernCard: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: "#FFFFFF", marginHorizontal: 16, marginTop: 16,
+    borderRadius: 16, padding: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
   },
-
-  // Section Styling
-  sectionContainer: {
-    marginBottom: 24,
-  },
-
+  sectionContainer: { marginBottom: 24 },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
+    flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8,
   },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  // Delivery Options
-  deliveryOptions: {
-    gap: 12,
-  },
-
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  deliveryOptions: { gap: 12 },
   deliveryCard: {
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: "#FFFFFF",
+    borderWidth: 2, borderColor: "#E5E7EB", borderRadius: 12,
+    padding: 16, backgroundColor: "#FFFFFF",
   },
-
   deliveryCardSelected: {
-    borderColor: GREEN,
-    backgroundColor: GREEN_BG,
+    borderColor: GREEN, backgroundColor: GREEN_BG,
   },
-
   deliveryContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: "row", alignItems: "center", gap: 12,
   },
-
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 48, height: 48, borderRadius: 24, backgroundColor: "#F3F4F6",
+    alignItems: "center", justifyContent: "center",
   },
-
-  iconContainerSelected: {
-    backgroundColor: GREEN_BORDER,
-  },
-
-  deliveryInfo: {
-    flex: 1,
-  },
-
+  iconContainerSelected: { backgroundColor: GREEN_BORDER },
+  deliveryInfo: { flex: 1 },
   deliveryTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 2,
+    fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 2,
   },
-
-  deliveryTitleSelected: {
-    color: GREEN_DARK,
-  },
-
-  deliverySubtitle: {
-    fontSize: 13,
-    color: GRAY,
-  },
-
-  feeContainer: {
-    alignItems: "flex-end",
-    position: "relative",
-  },
-
-  feeText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  feeTextSelected: {
-    color: GREEN_DARK,
-  },
-
+  deliveryTitleSelected: { color: GREEN_DARK },
+  deliverySubtitle: { fontSize: 13, color: GRAY },
+  feeContainer: { alignItems: "flex-end", position: "relative" },
+  feeText: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  feeTextSelected: { color: GREEN_DARK },
   selectedDot: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: GREEN,
+    position: "absolute", top: -8, right: -8,
+    width: 20, height: 20, borderRadius: 10, backgroundColor: GREEN,
   },
-
-  // Input Styling
-  inputContainer: {
-    position: "relative",
-  },
-
+  inputContainer: { position: "relative" },
   modernInput: {
-    borderWidth: 2,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingRight: 48,
-    fontSize: 16,
-    backgroundColor: "#FFFFFF",
-    color: "#111827",
+    borderWidth: 2, borderColor: BORDER, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 12, paddingRight: 48,
+    fontSize: 16, backgroundColor: "#FFFFFF", color: "#111827",
     fontWeight: "500",
   },
-
   inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "#FEF2F2",
+    borderColor: "#EF4444", backgroundColor: "#FEF2F2",
   },
-
-  inputIcon: {
-    position: "absolute",
-    right: 16,
-    top: 16,
-  },
-
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
-  },
-
+  inputIcon: { position: "absolute", right: 16, top: 16 },
   errorText: {
-    color: "#DC2626",
-    fontSize: 12,
-    marginTop: 6,
-    fontWeight: "500",
+    color: "#DC2626", fontSize: 12, marginTop: 6, fontWeight: "500",
   },
-
-  // Pickup Card
   pickupCard: {
-    backgroundColor: "#F0F9FF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
+    backgroundColor: "#F0F9FF", borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: "#BAE6FD",
   },
-
   pickupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
+    flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8,
   },
-
-  pickupTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-
+  pickupTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
   pickupAddress: {
-    fontSize: 14,
-    color: "#374151",
-    lineHeight: 20,
-    marginBottom: 12,
+    fontSize: 14, color: "#374151", lineHeight: 20, marginBottom: 12,
   },
-
   pickupHours: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 6,
+    flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6,
   },
-
   pickupHoursText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
+    fontSize: 13, color: "#6B7280", fontWeight: "500",
   },
-
-  pickupNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  pickupNoteText: {
-    fontSize: 12,
-    color: "#D97706",
-    fontWeight: "500",
-  },
-
-  // Payment Options
-  paymentOptions: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-
+  pickupNote: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pickupNoteText: { fontSize: 12, color: "#D97706", fontWeight: "500" },
+  paymentOptions: { flexDirection: "row", gap: 12, marginBottom: 16 },
   paymentChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: GREEN_BORDER,
-    backgroundColor: "#FFFFFF",
-    gap: 8,
+    flex: 1, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", paddingVertical: 12, paddingHorizontal: 16,
+    borderRadius: 12, borderWidth: 2, borderColor: GREEN_BORDER,
+    backgroundColor: "#FFFFFF", gap: 8,
   },
-
   paymentChipActive: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
+    backgroundColor: GREEN, borderColor: GREEN,
   },
-
-  chipIcon: {
-    marginRight: 4,
-  },
-
-  chipLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
-  chipLabelActive: {
-    color: "#FFFFFF",
-  },
-
-  gcashContainer: {
-    marginTop: 16,
-  },
-
-  // Modern Button
-  modernBtn: {
-    backgroundColor: BLUE,
-    marginHorizontal: 16,
-    marginTop: 24,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: BLUE,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  btnDisabled: {
-    backgroundColor: "#93C5FD",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-
-  btnContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  btnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-
-  // Modern Toast
-  modernToast: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: GREEN,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-    gap: 8,
-  },
-
-  toastText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  bottomSpacer: {
-    height: 32,
-  },
-
-  // Payment Options
-  paymentOptions: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-
-  paymentChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: GREEN_BORDER,
-    backgroundColor: "#FFFFFF",
-    gap: 8,
-  },
-
-  paymentChipActive: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
-  },
-
-  chipIcon: {
-    marginRight: 4,
-  },
-
-  chipLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
-  chipLabelActive: {
-    color: "#FFFFFF",
-  },
-
-  gcashContainer: {
-    marginTop: 16,
-  },
-
-  // Modern Button
-  modernBtn: {
-    backgroundColor: BLUE,
-    marginHorizontal: 16,
-    marginTop: 24,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: BLUE,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  btnDisabled: {
-    backgroundColor: "#93C5FD",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-
-  btnContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  btnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-
-  // Modern Toast
-  modernToast: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: GREEN,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-    gap: 8,
-  },
-
-  toastText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  bottomSpacer: {
-    height: 32,
-  },
-
+  chipIcon: { marginRight: 4 },
+  chipLabel: { fontSize: 14, fontWeight: "600", color: GREEN },
+  chipLabelActive: { color: "#FFFFFF" },
   infoBox: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  borderWidth: 1,
-  borderColor: "#BFDBFE",
-  backgroundColor: "#EFF6FF",
-  paddingVertical: 10,
-  paddingHorizontal: 12,
-  borderRadius: 12,
-},
-infoText: {
-  flex: 1,
-  fontSize: 13,
-  color: "#1F2937",
-  fontWeight: "500",
-},
-
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderColor: "#BFDBFE", backgroundColor: "#EFF6FF",
+    paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12,
+  },
+  infoText: {
+    flex: 1, fontSize: 13, color: "#1F2937", fontWeight: "500",
+  },
+  modernBtn: {
+    backgroundColor: BLUE, marginHorizontal: 16, marginTop: 24,
+    paddingVertical: 16, borderRadius: 16, alignItems: "center",
+    justifyContent: "center",
+    shadowColor: BLUE, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  btnDisabled: {
+    backgroundColor: "#93C5FD", shadowOpacity: 0, elevation: 0,
+  },
+  btnContent: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+  },
+  loadingContainer: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+  },
+  btnText: {
+    color: "#FFFFFF", fontWeight: "800", fontSize: 16, letterSpacing: 0.5,
+  },
+  modernToast: {
+    position: "absolute", left: 16, right: 16, bottom: 24,
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 16, paddingHorizontal: 20,
+    backgroundColor: GREEN, borderRadius: 16,
+    shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 8, gap: 8,
+  },
+  toastText: {
+    color: "#FFFFFF", fontWeight: "700", fontSize: 14,
+  },
+  bottomSpacer: { height: 32 },
 });
