@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 const API_URL =
   Constants.expoConfig?.extra?.apiUrl ||
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://goagritrading-backend.onrender.com";
+  "http://localhost:5000";
 
 console.log("API_URL in app:", API_URL);
 

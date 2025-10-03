@@ -1,6 +1,7 @@
 import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
+import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
 
 /* ---------------- PayMongo E-Payment (All Methods) ---------------------- */
 export const createEPaymentOrder = async (req, res) => {
@@ -155,6 +156,7 @@ export const createEPaymentOrder = async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${Buffer.from(`${process.env.PAYMONGO_SECRET_KEY}:`).toString("base64")}`,
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         data: {
@@ -359,6 +361,50 @@ export const getOrders = async (req, res) => {
   } catch (err) {
     console.error("GET_ORDERS_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+/* ---------------- Admin: Update order status and track loyalty ---------------------- */
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    
+    if (!orderId || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Order ID and status are required" 
+      });
+    }
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Order not found" 
+      });
+    }
+    
+    // Update order status
+    order.status = status;
+    await order.save();
+    
+    // If order is completed, update loyalty points
+    if (status === "completed") {
+      await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      order
+    });
+  } catch (err) {
+    console.error("UPDATE_ORDER_STATUS_ERROR:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || "Server error" 
+    });
   }
 };
 

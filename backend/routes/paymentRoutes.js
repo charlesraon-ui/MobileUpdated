@@ -145,7 +145,9 @@ router.post("/webhook", async (req, res) => {
     const event = req.body.data;
     console.log("🔔 PayMongo webhook:", event?.attributes?.type);
 
-    if (event?.attributes?.type === "checkout_session.payment.paid") {
+    // Handle both checkout session and direct payment events
+    if (event?.attributes?.type === "checkout_session.payment.paid" || 
+        event?.attributes?.type === "payment.paid") {
       const sessionId = event.attributes.data.id;
       const order = await Order.findOne({ paymongoSessionId: sessionId });
       

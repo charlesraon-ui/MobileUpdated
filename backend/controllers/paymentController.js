@@ -14,6 +14,7 @@ const getPayMongoAuth = () => {
   return {
     Authorization: `Basic ${auth}`,
     "Content-Type": "application/json",
+    "Accept": "application/json",
   };
 };
 

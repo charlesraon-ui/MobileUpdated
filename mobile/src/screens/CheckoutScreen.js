@@ -1,3 +1,4 @@
+
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Linking from 'expo-linking';
@@ -100,6 +101,7 @@ export default function CheckoutScreen() {
     setPlacing(true);
 
     try {
+      // ✅ CALCULATE TOTALS FIRST - THIS WAS THE BUG!
       const { deliveryFee, subtotal, total } = calculateOrderTotals();
 
       // ✅ E-PAYMENT FLOW

@@ -6,6 +6,7 @@ import {
   getMyOrders,
   getOrders,
   listDelivery,
+  updateOrderStatus,
 } from "../controllers/orderController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -14,6 +15,9 @@ const router = Router();
 // public/admin
 router.post("/", createOrder);
 router.get("/:userId", getOrders);
+
+// Admin: Update order status
+router.put("/admin/:orderId/status", authMiddleware, updateOrderStatus);
 
 // 🆕 E-Payment endpoint
 router.post("/epayment", authMiddleware, createEPaymentOrder);

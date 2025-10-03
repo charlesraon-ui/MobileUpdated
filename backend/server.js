@@ -10,11 +10,13 @@ import mongoose from "mongoose";
 import "./models/Driver.js";
 import "./models/Vehicle.js";
 
+// Customer-only app - no admin routes
 import authRoutes from "./routes/authRoutes.js";
 import bundleRoutes from "./routes/bundleRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
+import loyaltyRoutes from "./routes/loyaltyRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
@@ -50,6 +52,8 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/payment", paymentRoutes); // (if you really need this alias)
 app.use("/api/bundles", bundleRoutes);
+app.use("/api/loyalty", loyaltyRoutes);
+// Customer-only app - no admin loyalty routes
 
 
 // db + start server (start AFTER DB connects)

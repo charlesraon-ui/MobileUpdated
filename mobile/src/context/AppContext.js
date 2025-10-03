@@ -317,36 +317,11 @@ const handlePlaceOrder = async () => {
   const addr = String((deliveryAddress || "").trim());
   if (!addr) return { success: false, message: "Delivery address is required" };
 
-  if (paymentMethod === "E-Payment") {
-  console.log("💳 E-Payment selected, redirecting to PayMongo...");
-  
-  const response = await createEPaymentOrder(payload);
-  console.log("✅ E-Payment response:", response.data);
-  
-  const checkoutUrl = response.data?.checkoutUrl;
-  if (!checkoutUrl) {
-    return { success: false, message: "Failed to create payment link" };
-  }
-
-  console.log("🔗 Opening PayMongo URL:", checkoutUrl);
-  
-  // Open URL in browser
-  const supported = await Linking.canOpenURL(checkoutUrl);
-  if (supported) {
-    await Linking.openURL(checkoutUrl);
-    
-    // Don't clear cart yet - wait for success callback
-    return { 
-      success: true, 
-      message: "Redirecting to payment...",
-      pending: true // Add this flag
-    };
-  } else {
-    return { success: false, message: "Cannot open payment URL" };
-  }
-}
-
   const deliveryType = "in-house";
+  
+  // Calculate total from cart items
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = cartTotal;
 
   const payload = {
     userId,
@@ -364,33 +339,38 @@ const handlePlaceOrder = async () => {
     if (paymentMethod === "E-Payment") {
       console.log("💳 E-Payment selected, redirecting to PayMongo...");
       
-      const response = await createEPaymentOrder(payload);
-      console.log("✅ E-Payment response:", response.data);
-      
-      const checkoutUrl = response.data?.checkoutUrl;
-      if (!checkoutUrl) {
-        return { success: false, message: "Failed to create payment link" };
-      }
+      try {
+        const response = await createEPaymentOrder(payload);
+        console.log("✅ E-Payment response:", response.data);
+        
+        const checkoutUrl = response.data?.payment?.checkoutUrl;
+        if (!checkoutUrl) {
+          return { success: false, message: "Failed to create payment link" };
+        }
 
-      // Open PayMongo checkout
-      console.log("🔗 Opening PayMongo URL:", checkoutUrl);
-      const canOpen = await Linking.canOpenURL(checkoutUrl);
-      
-      if (canOpen) {
-        await Linking.openURL(checkoutUrl);
+        // Open PayMongo checkout
+        console.log("🔗 Opening PayMongo URL:", checkoutUrl);
+        const canOpen = await Linking.canOpenURL(checkoutUrl);
         
-        // Clear state after redirecting
-        setCart([]);
-        setDeliveryAddress("");
-        setGcashNumber("");
-        
+        if (canOpen) {
+          await Linking.openURL(checkoutUrl);
+          
+          // Don't clear cart yet - wait for success callback
+          return { 
+            success: true, 
+            message: "Redirecting to payment...",
+            order: response.data,
+            pending: true
+          };
+        } else {
+          return { success: false, message: "Cannot open payment URL" };
+        }
+      } catch (error) {
+        console.error("E-Payment error:", error.response?.data || error.message);
         return { 
-          success: true, 
-          message: "Redirecting to payment...",
-          order: response.data 
+          success: false, 
+          message: error.response?.data?.message || "Payment processing failed. Please try again." 
         };
-      } else {
-        return { success: false, message: "Cannot open payment URL" };
       }
       
     } else {
