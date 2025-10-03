@@ -1,7 +1,7 @@
 // routes/loyaltyRoutes.js
 import express from "express";
 import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../controllers/loyaltyController.js";
-import { requireAuth } from "../middleware/authMiddleware.js";
+import { authMiddleware as requireAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
