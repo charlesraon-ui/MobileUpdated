@@ -137,6 +137,15 @@ export const createPaymentSource = (amount, type, userId, orderId) =>
 export const createEPaymentOrder = (payload) => api.post(`/api/orders/epayment`, payload);
 export const createGCashOrder   = (payload) => createEPaymentOrder(payload);
 
+/** ------------- Notifications ------------- */
+export const registerPushToken = (pushToken) =>
+  api.post(`/api/notifications/register`, { pushToken });
+
+/** ------------- Loyalty ------------- */
+export const getDigitalCard = () => api.get(`/api/loyalty/digital-card`);
+export const getLoyaltyStatus = () => api.get(`/api/loyalty/status`);
+export const issueLoyaltyCard = () => api.post(`/api/loyalty/issue-card`);
+
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string
 

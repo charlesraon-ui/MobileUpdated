@@ -28,6 +28,8 @@ import {
   setToken,
   toAbsoluteUrl,
 } from "../api/apiClient";
+import { registerPushToken } from "../api/apiClient";
+import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 
 export const AppCtx = createContext(null);
@@ -502,6 +504,14 @@ const handlePlaceOrder = async () => {
     await persistUser(u);
     setUserState(u);
 
+    // Register push token
+    try {
+      const expoToken = await registerForPushNotificationsAsync();
+      if (expoToken) await registerPushToken(expoToken);
+    } catch (e) {
+      console.warn("push token register (login) failed:", e?.message);
+    }
+
     setJustLoggedInName(u?.name || u?.email || "there");
     setJustRegistered(false);
 
@@ -517,6 +527,14 @@ const handlePlaceOrder = async () => {
     await setToken(token);
     await persistUser(u);
     setUserState(u);
+
+    // Register push token
+    try {
+      const expoToken = await registerForPushNotificationsAsync();
+      if (expoToken) await registerPushToken(expoToken);
+    } catch (e) {
+      console.warn("push token register (register) failed:", e?.message);
+    }
 
     setJustLoggedInName(u?.name || u?.email || "there");
     setJustRegistered(true);

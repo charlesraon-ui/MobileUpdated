@@ -1,8 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   Dimensions,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,14 +11,29 @@ import {
   View
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard } from "../api/apiClient";
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews } = useContext(AppCtx);
+  const [cardVisible, setCardVisible] = useState(false);
+  const [cardLoading, setCardLoading] = useState(false);
+  const [card, setCard] = useState(null);
+  const [loyalty, setLoyalty] = useState(null);
+  const [issueLoading, setIssueLoading] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) fetchMyReviews();
+    (async () => {
+      if (!isLoggedIn) return;
+      try {
+        const { data } = await getLoyaltyStatus();
+        setLoyalty(data?.loyalty || null);
+      } catch {
+        setLoyalty(null);
+      }
+    })();
   }, [isLoggedIn]);
 
   const ProfileButton = ({ title, onPress, icon, style = {} }) => (
@@ -118,11 +134,66 @@ export default function ProfileScreen() {
           title="Rewards Program"
           subtitle="Earn card after 5 purchases or ₱5000 spend"
         />
+        {/* Mechanics box */}
+        <View style={s.mechanicsBox}>
+          <Text style={s.mechanicsTitle}>Program Mechanics</Text>
+          <Text style={s.mechanicsItem}>• Earn a card after 5 purchases or ₱5000 total spend.</Text>
+          <Text style={s.mechanicsItem}>• Points: 1 point per ₱100 spent.</Text>
+          <Text style={s.mechanicsItem}>• Tiers upgrade based on accumulated points.</Text>
+          <Text style={s.mechanicsItem}>• Card discount starts at 5%.</Text>
+          <Text style={s.mechanicsItem}>• Card expires 1 year after issuance.</Text>
+        </View>
         <InfoCard
           icon="⭐"
           title="Current Status"
           subtitle={user?.loyaltyStatus || "Not yet earned"}
         />
+        {isLoggedIn && loyalty?.isEligible && !loyalty?.cardIssued && (
+          <TouchableOpacity
+            style={s.issueCardBtn}
+            activeOpacity={0.9}
+            onPress={async () => {
+              try {
+                setIssueLoading(true);
+                const { data } = await issueLoyaltyCard();
+                // After issuing, fetch card and show modal
+                setLoyalty({ ...(loyalty || {}), cardIssued: true });
+                setCardLoading(true);
+                setCardVisible(true);
+                const cardResp = await getDigitalCard();
+                setCard(cardResp?.data?.card || null);
+              } catch (e) {
+                // noop
+              } finally {
+                setCardLoading(false);
+                setIssueLoading(false);
+              }
+            }}
+          >
+            <Ionicons name="gift-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={s.issueCardText}>{issueLoading ? "Issuing..." : "Issue Card"}</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={s.viewCardBtn}
+          activeOpacity={0.85}
+          onPress={async () => {
+            if (!isLoggedIn) return;
+            setCardLoading(true);
+            setCardVisible(true);
+            try {
+              const { data } = await getDigitalCard();
+              setCard(data?.card || null);
+            } catch (e) {
+              setCard(null);
+            } finally {
+              setCardLoading(false);
+            }
+          }}
+        >
+          <Ionicons name="card-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={s.viewCardText}>View Digital Card</Text>
+        </TouchableOpacity>
       </View>
 
       {/* My Reviews */}
@@ -178,6 +249,59 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      {/* Digital Card Modal */}
+      <Modal
+        visible={cardVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCardVisible(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={s.modalSheet}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>My Loyalty Card</Text>
+              <TouchableOpacity onPress={() => setCardVisible(false)} style={s.closeBtn}>
+                <Ionicons name="close" size={20} color="#111827" />
+              </TouchableOpacity>
+            </View>
+
+            {cardLoading ? (
+              <View style={s.modalBody}>
+                <Text style={s.loadingText}>Loading...</Text>
+              </View>
+            ) : card ? (
+              <View style={s.modalBody}>
+                <View style={s.cardVisual}>
+                  <Text style={s.cardBrand}>Go Agri Trading</Text>
+                  <Text style={s.cardId}>{card.cardId}</Text>
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Type</Text>
+                    <Text style={s.cardValue}>{String(card.cardType).toUpperCase()}</Text>
+                  </View>
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Discount</Text>
+                    <Text style={s.cardValue}>{card.discountPercentage}%</Text>
+                  </View>
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Expiry</Text>
+                    <Text style={s.cardValue}>{card.expiryDate ? new Date(card.expiryDate).toLocaleDateString() : "-"}</Text>
+                  </View>
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Status</Text>
+                    <Text style={s.cardValue}>{card.isActive ? "Active" : "Inactive"}</Text>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={s.modalBody}>
+                <Text style={s.emptyCardTitle}>No digital card yet</Text>
+                <Text style={s.emptyCardText}>Earn a card after 5 purchases or ₱5000 spend.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Logout Button */}
       <View style={s.section}>
@@ -378,6 +502,47 @@ const s = StyleSheet.create({
     color: "#6B7280",
   },
 
+  // Mechanics
+  mechanicsBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  mechanicsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  mechanicsItem: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+
+  // View Card button
+  viewCardBtn: {
+    marginTop: 8,
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewCardText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
   // Reviews
   emptyState: {
     backgroundColor: "#FFFFFF",
@@ -469,6 +634,118 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#10B981",
+  },
+
+  // Issue Card button
+  issueCardBtn: {
+    marginTop: 8,
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  issueCardText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    minHeight: 260,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  modalBody: {
+    paddingVertical: 8,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingVertical: 32,
+  },
+  emptyCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
+    marginTop: 16,
+  },
+  emptyCardText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 6,
+  },
+  cardVisual: {
+    backgroundColor: "#10B981",
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 160,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  cardBrand: {
+    color: "#E6FDF4",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  cardId: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
+  },
+  cardLabel: {
+    color: "#D1FAE5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  cardValue: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
   },
 
   // Buttons

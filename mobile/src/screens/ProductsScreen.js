@@ -624,31 +624,29 @@ const renderBundlesSection = () => {
 
   return (
     <View style={styles.container}>
-              <FlatList
-          data={filteredProducts}
-          renderItem={renderProductCard}
-          keyExtractor={(item) => item._id}
-          numColumns={1}
-          ListHeaderComponent={() => (
-            <>
-              {renderHeader()}
-              {renderBundlesSection()} {/* ADD THIS */}
-            </>
-          )}
-          ListEmptyComponent={renderEmptyState}
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={["#10B981"]}
-              tintColor="#10B981"
-              progressBackgroundColor="#F8FAFC"
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-        />
+      {renderHeader()}
+      {renderBundlesSection()}
+
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderProductCard}
+        keyExtractor={(item) => item._id}
+        numColumns={1}
+        ListEmptyComponent={renderEmptyState}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#10B981"]}
+            tintColor="#10B981"
+            progressBackgroundColor="#F8FAFC"
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+      />
       {renderFilterModal()}
       {renderCartConfirmationModal()}
     </View>
