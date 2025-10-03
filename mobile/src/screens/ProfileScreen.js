@@ -23,6 +23,31 @@ export default function ProfileScreen() {
   const [loyalty, setLoyalty] = useState(null);
   const [issueLoading, setIssueLoading] = useState(false);
 
+  const getCardTheme = (tier, active) => {
+    if (!active) {
+      return {
+        bg: "#1F2937",
+        brand: "#E5E7EB",
+        label: "#9CA3AF",
+        value: "#FFFFFF",
+      };
+    }
+    switch (String(tier || "sprout").toLowerCase()) {
+      case "sprout":
+        return { bg: "#10B981", brand: "#E6FDF4", label: "#D1FAE5", value: "#FFFFFF" };
+      case "seedling":
+        return { bg: "#22C55E", brand: "#ECFDF5", label: "#BBF7D0", value: "#FFFFFF" };
+      case "cultivator":
+        return { bg: "#84CC16", brand: "#F7FEE7", label: "#D9F99D", value: "#1F2937" };
+      case "bloom":
+        return { bg: "#8B5CF6", brand: "#EEF2FF", label: "#DDD6FE", value: "#FFFFFF" };
+      case "harvester":
+        return { bg: "#F59E0B", brand: "#FFFBEB", label: "#FDE68A", value: "#1F2937" };
+      default:
+        return { bg: "#10B981", brand: "#E6FDF4", label: "#D1FAE5", value: "#FFFFFF" };
+    }
+  };
+
   useEffect(() => {
     if (isLoggedIn) fetchMyReviews();
     (async () => {
@@ -132,16 +157,17 @@ export default function ProfileScreen() {
         <InfoCard
           icon="🎁"
           title="Rewards Program"
-          subtitle="Earn card after 5 purchases or ₱5000 spend"
+          subtitle="Tiered by monthly spend (see mechanics below)"
         />
         {/* Mechanics box */}
         <View style={s.mechanicsBox}>
           <Text style={s.mechanicsTitle}>Program Mechanics</Text>
-          <Text style={s.mechanicsItem}>• Earn a card after 5 purchases or ₱5000 total spend.</Text>
-          <Text style={s.mechanicsItem}>• Points: 1 point per ₱100 spent.</Text>
-          <Text style={s.mechanicsItem}>• Tiers upgrade based on accumulated points.</Text>
-          <Text style={s.mechanicsItem}>• Card discount starts at 5%.</Text>
-          <Text style={s.mechanicsItem}>• Card expires 1 year after issuance.</Text>
+          <Text style={s.mechanicsItem}>• Minimum spend is calculated per month.</Text>
+          <Text style={s.mechanicsItem}>• Sprout — ₱5,000 monthly spend.</Text>
+          <Text style={s.mechanicsItem}>• Seedling — ₱15,000 monthly spend.</Text>
+          <Text style={s.mechanicsItem}>• Cultivator — ₱40,000 monthly spend.</Text>
+          <Text style={s.mechanicsItem}>• Bloom — ₱75,000 monthly spend.</Text>
+          <Text style={s.mechanicsItem}>• Harvester — ₱100,000 and above monthly spend.</Text>
         </View>
         <InfoCard
           icon="⭐"
@@ -270,33 +296,107 @@ export default function ProfileScreen() {
               <View style={s.modalBody}>
                 <Text style={s.loadingText}>Loading...</Text>
               </View>
-            ) : card ? (
-              <View style={s.modalBody}>
-                <View style={s.cardVisual}>
-                  <Text style={s.cardBrand}>Go Agri Trading</Text>
-                  <Text style={s.cardId}>{card.cardId}</Text>
-                  <View style={s.cardRow}>
-                    <Text style={s.cardLabel}>Type</Text>
-                    <Text style={s.cardValue}>{String(card.cardType).toUpperCase()}</Text>
-                  </View>
-                  <View style={s.cardRow}>
-                    <Text style={s.cardLabel}>Discount</Text>
-                    <Text style={s.cardValue}>{card.discountPercentage}%</Text>
-                  </View>
-                  <View style={s.cardRow}>
-                    <Text style={s.cardLabel}>Expiry</Text>
-                    <Text style={s.cardValue}>{card.expiryDate ? new Date(card.expiryDate).toLocaleDateString() : "-"}</Text>
-                  </View>
-                  <View style={s.cardRow}>
-                    <Text style={s.cardLabel}>Status</Text>
-                    <Text style={s.cardValue}>{card.isActive ? "Active" : "Inactive"}</Text>
-                  </View>
-                </View>
-              </View>
             ) : (
               <View style={s.modalBody}>
-                <Text style={s.emptyCardTitle}>No digital card yet</Text>
-                <Text style={s.emptyCardText}>Earn a card after 5 purchases or ₱5000 spend.</Text>
+                {card ? (
+                  (() => {
+                    const theme = getCardTheme(loyalty?.tier || card.cardType, card.isActive);
+                    return (
+                      <View style={s.cardContainer}>
+                        <View style={[s.cardVisual, { backgroundColor: theme.bg, width: Math.min(width - 64, 680) }]}>
+                          <View style={s.cardTopRow}>
+                            <Text style={[s.cardBrand, { color: theme.brand }]}>Go Agri Trading</Text>
+                            <View style={[s.tierBadge, { borderColor: theme.value }]}> 
+                              <Text style={[s.tierBadgeText, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
+                            </View>
+                          </View>
+                          <Text style={[s.cardId, { color: theme.value }]}>{card.cardId}</Text>
+                          <View style={s.cardRow}>
+                            <Text style={[s.cardLabel, { color: theme.label }]}>Level</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
+                          </View>
+                          <View style={s.cardRow}>
+                            <Text style={[s.cardLabel, { color: theme.label }]}>Discount</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{card.discountPercentage}%</Text>
+                          </View>
+                          <View style={s.cardRow}>
+                            <Text style={[s.cardLabel, { color: theme.label }]}>Issued</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{card.issuedDate ? new Date(card.issuedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }) : "-"}</Text>
+                          </View>
+                          <View style={s.cardRow}>
+                            <Text style={[s.cardLabel, { color: theme.label }]}>Expiry</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{card.expiryDate ? new Date(card.expiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }) : "-"}</Text>
+                          </View>
+                          <View style={s.cardRow}>
+                            <Text style={[s.cardLabel, { color: theme.label }]}>Status</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{card.isActive ? "Active" : "Inactive"}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })()
+                ) : (
+                  (() => {
+                    const theme = getCardTheme(loyalty?.tier || "Sprout", false);
+                    return (
+                      <>
+                        <View style={s.cardContainer}>
+                          <View style={[s.cardVisual, { backgroundColor: theme.bg, width: Math.min(width - 64, 680) }]}>
+                            <View style={s.cardTopRow}>
+                              <Text style={[s.cardBrand, { color: theme.brand }]}>Go Agri Trading</Text>
+                              <View style={[s.tierBadge, { borderColor: theme.value }]}> 
+                                <Text style={[s.tierBadgeText, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
+                              </View>
+                            </View>
+                            <Text style={[s.cardId, { color: theme.value }]}>LOYALTY-CARD</Text>
+                            <View style={s.cardRow}>
+                              <Text style={[s.cardLabel, { color: theme.label }]}>Level</Text>
+                              <Text style={[s.cardValue, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
+                            </View>
+                            <View style={s.cardRow}>
+                              <Text style={[s.cardLabel, { color: theme.label }]}>Discount</Text>
+                              <Text style={[s.cardValue, { color: theme.value }]}>5%</Text>
+                            </View>
+                            <View style={s.cardRow}>
+                              <Text style={[s.cardLabel, { color: theme.label }]}>Issued</Text>
+                              <Text style={[s.cardValue, { color: theme.value }]}>-</Text>
+                            </View>
+                            <View style={s.cardRow}>
+                              <Text style={[s.cardLabel, { color: theme.label }]}>Expiry</Text>
+                              <Text style={[s.cardValue, { color: theme.value }]}>-</Text>
+                            </View>
+                            <View style={s.cardRow}>
+                              <Text style={[s.cardLabel, { color: theme.label }]}>Status</Text>
+                              <Text style={[s.cardValue, { color: theme.value }]}>Not Activated</Text>
+                            </View>
+                          </View>
+                        </View>
+                        {isLoggedIn && loyalty?.isEligible && !loyalty?.cardIssued && (
+                          <TouchableOpacity
+                            style={[s.viewCardBtn, { marginTop: 12 }]}
+                            activeOpacity={0.9}
+                            onPress={async () => {
+                              try {
+                                setIssueLoading(true);
+                                await issueLoyaltyCard();
+                                setLoyalty({ ...(loyalty || {}), cardIssued: true });
+                                const { data } = await getDigitalCard();
+                                setCard(data?.card || null);
+                              } catch (e) {
+                                // noop
+                              } finally {
+                                setIssueLoading(false);
+                              }
+                            }}
+                          >
+                            <Ionicons name="flash-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                            <Text style={s.viewCardText}>{issueLoading ? "Activating..." : "Activate Now"}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    );
+                  })()
+                )}
               </View>
             )}
           </View>
@@ -657,14 +757,16 @@ const s = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalSheet: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 16,
     minHeight: 260,
+    width: "95%",
+    maxWidth: 720,
   },
   modalHeader: {
     flexDirection: "row",
@@ -718,6 +820,9 @@ const s = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
+  cardContainer: {
+    alignItems: "center",
+  },
   cardBrand: {
     color: "#E6FDF4",
     fontSize: 14,
@@ -745,6 +850,22 @@ const s = StyleSheet.create({
   cardValue: {
     color: "#FFFFFF",
     fontSize: 14,
+    fontWeight: "800",
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  tierBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  tierBadgeText: {
+    fontSize: 12,
     fontWeight: "800",
   },
 

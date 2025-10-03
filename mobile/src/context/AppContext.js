@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 import {
   addReviewApi,
@@ -48,6 +49,7 @@ export default function AppProvider({ children }) {
   const [bundleDetail, setBundleDetail] = useState(null);
   const [myReviews, setMyReviews] = useState([]);
   const [recoItems, setRecoItems] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
   // UX flags
   const [justMergedFromGuest, setJustMergedFromGuest] = useState(false);
@@ -71,6 +73,46 @@ export default function AppProvider({ children }) {
   const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
   const userId = useMemo(() => user?._id || user?.id || user?.email || "guest", [user]);
 
+  // wishlist persistence (client-side)
+  const WISHLIST_KEY = "wishlist";
+  const loadWishlist = useCallback(async () => {
+    try {
+      const json = await AsyncStorage.getItem(WISHLIST_KEY);
+      const ids = json ? JSON.parse(json) : [];
+      setWishlist(Array.isArray(ids) ? ids : []);
+    } catch (e) {
+      console.warn("loadWishlist failed:", e?.message);
+      setWishlist([]);
+    }
+  }, []);
+
+  const saveWishlist = useCallback(async (ids) => {
+    try {
+      setWishlist(ids);
+      await AsyncStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+    } catch (e) {
+      console.warn("saveWishlist failed:", e?.message);
+    }
+  }, []);
+
+  const isInWishlist = useCallback(
+    (productId) => (productId ? wishlist.includes(String(productId)) : false),
+    [wishlist]
+  );
+
+  const toggleWishlist = useCallback(
+    async (product) => {
+      const productId = typeof product === "string" ? product : product?._id;
+      if (!productId) return null;
+      const idStr = String(productId);
+      const exists = wishlist.includes(idStr);
+      const next = exists ? wishlist.filter((id) => id !== idStr) : [...wishlist, idStr];
+      await saveWishlist(next);
+      return exists ? "removed" : "added";
+    },
+    [wishlist, saveWishlist]
+  );
+
   // boot
   useEffect(() => {
     (async () => {
@@ -78,6 +120,8 @@ export default function AppProvider({ children }) {
         await getToken(); // prime axios Authorization if token exists
         const u = await readUser();
         if (u) setUserState(u);
+
+        await loadWishlist();
 
         const [prod, cats, bundlesResp] = await Promise.all([
           getProducts(),
@@ -667,6 +711,11 @@ const handlePlaceOrder = async () => {
     submitReview,
     myReviews,
     fetchMyReviews,
+
+    // wishlist
+    wishlist,
+    toggleWishlist,
+    isInWishlist,
 
     // bundles
     bundleDetail,

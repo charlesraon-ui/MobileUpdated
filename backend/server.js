@@ -22,6 +22,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import recommendRoutes from "./routes/recommendRoutes.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -53,6 +54,7 @@ app.use("/api/webhooks", webhookRoutes);
 app.use("/payment", paymentRoutes); // (if you really need this alias)
 app.use("/api/bundles", bundleRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/notifications", notificationRoutes);
 // Customer-only app - no admin loyalty routes
 
 

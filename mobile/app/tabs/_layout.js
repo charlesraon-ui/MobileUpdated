@@ -2,14 +2,12 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 import { useContext } from "react";
 import { Text, View } from "react-native";
-import AppProvider, { AppCtx } from "../../src/context/AppContext";
+import { AppCtx } from "../../src/context/AppContext";
 
 export default function TabsLayout() {
-  return (
-    <AppProvider>
-      <TabsInner />
-    </AppProvider>
-  );
+  // Root app layout already wraps with AppProvider.
+  // Keep a single provider to ensure unified cart/auth state across routes.
+  return <TabsInner />;
 }
 
 function TabsInner() {
@@ -128,6 +126,15 @@ function TabsInner() {
           title: "Orders",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="receipt-outline" color={color} size={size + 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="wishlist"
+        options={{
+          title: "Wishlist",
+          tabBarIcon: ({ color, size }) => (
+            <TabBarIcon name="heart-outline" color={color} size={size + 2} />
           ),
         }}
       />

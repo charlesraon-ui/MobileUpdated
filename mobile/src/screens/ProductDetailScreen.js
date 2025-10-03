@@ -26,6 +26,8 @@ export default function ProductDetailScreen() {
     submitReview,
     handleAddToCart,
     toAbsoluteUrl,
+    toggleWishlist,
+    isInWishlist,
   } = useContext(AppCtx);
 
   const [newRating, setNewRating] = useState(0);
@@ -309,6 +311,7 @@ export default function ProductDetailScreen() {
   }
 
   const p = productDetail;
+  const saved = isInWishlist?.(p?._id);
 
   return (
     <View style={s.container}>
@@ -326,7 +329,19 @@ export default function ProductDetailScreen() {
         <Text style={s.headerTitle} numberOfLines={1}>
           {p?.name || "Product Details"}
         </Text>
-        <View style={s.headerSpacer} />
+        <TouchableOpacity
+          onPress={async () => {
+            const action = await toggleWishlist?.(p?._id);
+            if (action === "added") alert("Added to wishlist");
+            else if (action === "removed") alert("Removed from wishlist");
+          }}
+          style={[s.headerWishlistButton, saved && s.headerWishlistActive]}
+          activeOpacity={0.8}
+        >
+          <Text style={[s.headerWishlistIcon, saved && s.headerWishlistIconActive]}>
+            {saved ? "♥" : "♡"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -599,6 +614,19 @@ const s = StyleSheet.create({
   backIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "bold" },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700", color: "#FFFFFF", marginHorizontal: 16 },
   headerSpacer: { width: 40 },
+  headerWishlistButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerWishlistActive: {
+    backgroundColor: "rgba(254,228,228,0.4)",
+  },
+  headerWishlistIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "bold" },
+  headerWishlistIconActive: { color: "#FEE2E2" },
 
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 32 },

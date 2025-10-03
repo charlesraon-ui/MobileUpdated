@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
@@ -19,11 +20,12 @@ function pickImage(product, toAbsoluteUrl) {
 }
 
 export default function ProductCard({ product, onPress, onAddToCart }) {
-  const { handleAddToCart, categoryLabelOf, toAbsoluteUrl } = useContext(AppCtx);
+  const { handleAddToCart, categoryLabelOf, toAbsoluteUrl, toggleWishlist, isInWishlist } = useContext(AppCtx);
   const [imageLoading, setImageLoading] = useState(true);
   const [scaleValue] = useState(new Animated.Value(1));
   
   const img = pickImage(product, toAbsoluteUrl);
+  const saved = isInWishlist?.(product?._id);
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -94,6 +96,21 @@ export default function ProductCard({ product, onPress, onAddToCart }) {
               <Text style={s.discountText}>-{product.discount}%</Text>
             </View>
           )}
+
+          {/* Wishlist toggle */}
+          <Pressable
+            onPress={async (e) => {
+              e.stopPropagation();
+              const action = await toggleWishlist?.(product?._id);
+              if (action === "added") Alert.alert("Added to wishlist");
+              else if (action === "removed") Alert.alert("Removed from wishlist");
+            }}
+            style={[s.wishlistButton, saved && s.wishlistActive]}
+          >
+            <Text style={[s.wishlistIcon, saved && s.wishlistIconActive]}>
+              {saved ? "♥" : "♡"}
+            </Text>
+          </Pressable>
 
           <View style={s.imageGradient} />
         </View>
@@ -259,6 +276,30 @@ const s = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
+  },
+
+  wishlistButton: {
+    position: "absolute",
+    top: 12,
+    right: 52,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  wishlistActive: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  wishlistIcon: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "700",
+  },
+  wishlistIconActive: {
+    color: "#DC2626",
   },
   
   content: {

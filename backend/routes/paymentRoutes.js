@@ -2,6 +2,8 @@
 import { Router } from "express";
 import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
+import User from "../models/User.js";
+import { sendPush } from "../controllers/notificationController.js";
 
 const router = Router();
 
@@ -31,6 +33,21 @@ router.get("/success", async (req, res) => {
     await Cart.deleteOne({ userId: order.userId });
 
     console.log("✅ Payment success for order:", orderId);
+
+    // Send push notification if user has token
+    try {
+      const user = await User.findById(order.userId).lean();
+      if (user?.pushToken) {
+        await sendPush({
+          to: user.pushToken,
+          title: "Payment Successful",
+          body: `Order #${order._id} placed successfully`,
+          data: { orderId: String(order._id) },
+        });
+      }
+    } catch (e) {
+      console.warn("push send failed:", e?.message);
+    }
     
     // ✅ Redirect to app deep link
     res.redirect(`goagritrading://payment/success?orderId=${orderId}`);
