@@ -1,7 +1,7 @@
 // src/screens/ProductsScreen.js
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,

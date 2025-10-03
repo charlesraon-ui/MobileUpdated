@@ -11,6 +11,7 @@ import "./models/Driver.js";
 import "./models/Vehicle.js";
 
 import authRoutes from "./routes/authRoutes.js";
+import bundleRoutes from "./routes/bundleRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
@@ -48,6 +49,8 @@ app.use("/api/recommendations", recommendRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/payment", paymentRoutes); // (if you really need this alias)
+app.use("/api/bundles", bundleRoutes);
+
 
 // db + start server (start AFTER DB connects)
 const start = async () => {

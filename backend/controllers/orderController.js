@@ -125,9 +125,8 @@ export const createEPaymentOrder = async (req, res) => {
     });
 
     // 3) PayMongo Checkout Session with DEEP LINKS
-    // FIX: Use deep link scheme instead of web URL for mobile app
-    const baseUrl = process.env.APP_URL || "https://your-backend.com";
-    const appScheme = "goagritrading"; // Your app's deep link scheme
+    // ✅ FIX: Use deep link scheme for mobile app
+    const appScheme = "goagritrading"; // Your app's deep link scheme from app.json
     
     const amountInCentavos = Math.round(Number(order.total) * 100);
     const lineItems = order.items.map((item) => ({
@@ -157,7 +156,7 @@ export const createEPaymentOrder = async (req, res) => {
               : ["gcash", "grab_pay", "paymaya", "card"],
             amount_total: amountInCentavos,
             currency: "PHP",
-            // FIX: Use deep link URLs for mobile app
+            // ✅ FIXED: Use deep link URLs for mobile app redirect
             success_url: `${appScheme}://payment/success?orderId=${order._id}`,
             cancel_url: `${appScheme}://payment/cancel?orderId=${order._id}`,
             reference_number: String(order._id),
@@ -501,7 +500,7 @@ export const createEPayment = async (req, res) => {
     // Return URL for the app to open
     return res.json({
       success: true,
-      payment: { checkoutUrl: session.checkout_url || session.url }, // match your provider’s key
+      payment: { checkoutUrl: session.checkout_url || session.url }, // match your provider's key
     });
   } catch (err) {
     console.error("[EPAYMENT ERROR]", err?.response?.data || err);
