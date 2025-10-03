@@ -33,7 +33,12 @@ export default function ProductsScreen() {
     searchQuery,
     setSearchQuery,
     loading,
+    user,
+    handleAddToCart: contextAddToCart
   } = useContext(AppCtx);
+  
+  // Check if user is logged in
+  const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
 
   const [refreshing, setRefreshing] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -148,7 +153,14 @@ const renderBundlesSection = () => {
 
   const goToCart = () => {
     setShowCartConfirmation(false);
-    router.push('/cart'); // Adjust route as needed
+    
+    // Check if user is authenticated before redirecting to cart
+    if (isLoggedIn) {
+      router.push('/cart');
+    } else {
+      // Redirect to login page if not authenticated
+      router.push('/login');
+    }
   };
 
   const continueShopping = () => {

@@ -60,12 +60,12 @@ export default function PaymentScreen({ route, navigation }) {
     const { url } = navState;
     
     // Check for success/failure redirect
-    if (url.includes("myapp://payment/success")) {
+    if (url.includes("goagritrading://payment/success")) {
       setCheckoutUrl(null);
       Alert.alert("Success", "Payment completed!", [
         { text: "OK", onPress: () => navigation.navigate("Orders") },
       ]);
-    } else if (url.includes("myapp://payment/failed")) {
+    } else if (url.includes("goagritrading://payment/cancel")) {
       setCheckoutUrl(null);
       Alert.alert("Failed", "Payment was not completed. Please try again.");
     }

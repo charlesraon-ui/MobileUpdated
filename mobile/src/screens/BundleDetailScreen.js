@@ -5,7 +5,7 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
-    Image,
+    Modal,
     Platform,
     ScrollView,
     StatusBar,
@@ -24,11 +24,11 @@ export default function BundleDetailScreen() {
     bundleDetail,
     fetchBundleDetail,
     handleAddBundleToCart,
-    toAbsoluteUrl,
   } = useContext(AppCtx);
 
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -54,20 +54,21 @@ export default function BundleDetailScreen() {
     try {
       setAddingToCart(true);
       await handleAddBundleToCart(bundleDetail);
-      
-      Alert.alert(
-        "Success!",
-        "Bundle items added to cart",
-        [
-          { text: "Continue Shopping", style: "cancel" },
-          { text: "View Cart", onPress: () => router.push("/cart") },
-        ]
-      );
+      setShowSuccessModal(true);
     } catch (error) {
       Alert.alert("Error", "Failed to add bundle to cart");
     } finally {
       setAddingToCart(false);
     }
+  };
+
+  const handleContinueShopping = () => {
+    setShowSuccessModal(false);
+  };
+
+  const handleViewCart = () => {
+    setShowSuccessModal(false);
+    router.push("/cart");
   };
 
   if (loading) {
@@ -98,10 +99,6 @@ export default function BundleDetailScreen() {
   }
 
   const bundle = bundleDetail;
-  const imageUrl = bundle.imageUrl
-    ? toAbsoluteUrl(bundle.imageUrl)
-    : "https://via.placeholder.com/400x300.png?text=Bundle";
-
   const discount = bundle.discount || 0;
   const savings = bundle.originalPrice
     ? bundle.originalPrice - bundle.bundlePrice
@@ -127,19 +124,16 @@ export default function BundleDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Bundle Image */}
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUrl }} style={styles.image} />
-          {discount > 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>SAVE {discount}%</Text>
-            </View>
-          )}
-        </View>
-
         {/* Bundle Info */}
         <View style={styles.infoSection}>
-          <Text style={styles.bundleName}>{bundle.name}</Text>
+          <View style={styles.bundleHeader}>
+            <Text style={styles.bundleName}>{bundle.name}</Text>
+            {discount > 0 && (
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>SAVE {discount}%</Text>
+              </View>
+            )}
+          </View>
 
           {bundle.description && (
             <Text style={styles.description}>{bundle.description}</Text>
@@ -177,16 +171,8 @@ export default function BundleDetailScreen() {
               const product = item.productId;
               if (!product) return null;
 
-              const productImage = product.imageUrl
-                ? toAbsoluteUrl(product.imageUrl)
-                : "https://via.placeholder.com/100x100.png?text=Product";
-
               return (
                 <View key={index} style={styles.itemCard}>
-                  <Image
-                    source={{ uri: productImage }}
-                    style={styles.itemImage}
-                  />
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName} numberOfLines={2}>
                       {product.name}
@@ -263,6 +249,47 @@ export default function BundleDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={handleContinueShopping}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Success Icon */}
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+            </View>
+
+            {/* Success Message */}
+            <Text style={styles.modalTitle}>Success!</Text>
+            <Text style={styles.modalMessage}>Bundle items added to cart</Text>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.continueShoppingButton}
+                onPress={handleContinueShopping}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.continueShoppingText}>Continue Shopping</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.viewCartButton}
+                onPress={handleViewCart}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="cart-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.viewCartText}>View Cart</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -361,26 +388,14 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
-  imageContainer: {
-    position: "relative",
-    width: "100%",
-    height: width * 0.75,
-    backgroundColor: "#E5E7EB",
-  },
 
-  image: {
-    width: "100%",
-    height: "100%",
-  },
 
   discountBadge: {
-    position: "absolute",
-    top: 20,
-    right: 20,
     backgroundColor: "#EF4444",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
+    alignSelf: "flex-start",
   },
 
   discountText: {
@@ -394,12 +409,20 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
+  bundleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    gap: 12,
+  },
+
   bundleName: {
     fontSize: 26,
     fontWeight: "900",
     color: "#111827",
     lineHeight: 32,
-    marginBottom: 12,
+    flex: 1,
   },
 
   description: {
@@ -481,16 +504,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  itemImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
-  },
+
 
   itemInfo: {
     flex: 1,
-    marginLeft: 12,
     justifyContent: "center",
   },
 
@@ -599,5 +616,93 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    maxWidth: 340,
+    width: "100%",
+  },
+
+  successIconContainer: {
+    marginBottom: 20,
+  },
+
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+
+  modalMessage: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+
+  continueShoppingButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+  },
+
+  continueShoppingText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#10B981",
+  },
+
+  viewCartButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  viewCartText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

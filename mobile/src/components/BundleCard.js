@@ -1,6 +1,5 @@
 import { useContext } from "react";
 import {
-    Image,
     Pressable,
     StyleSheet,
     Text,
@@ -9,13 +8,7 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
-const PLACEHOLDER = "https://via.placeholder.com/400x300.png?text=Bundle";
-
 export default function BundleCard({ bundle, onPress }) {
-  const { toAbsoluteUrl } = useContext(AppCtx);
-  const img = bundle?.imageUrl 
-    ? toAbsoluteUrl(bundle.imageUrl) 
-    : PLACEHOLDER;
 
   const itemCount = bundle?.products?.length || bundle?.items?.length || 0;
   const discount = bundle?.discount || 0;
@@ -26,9 +19,7 @@ export default function BundleCard({ bundle, onPress }) {
       activeOpacity={0.95}
       style={s.card}
     >
-      <View style={s.imageContainer}>
-        <Image source={{ uri: img }} style={s.image} resizeMode="cover" />
-        
+      <View style={s.headerContainer}>
         {discount > 0 && (
           <View style={s.discountBadge}>
             <Text style={s.discountText}>SAVE {discount}%</Text>
@@ -94,26 +85,24 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   
-  imageContainer: {
+  headerContainer: {
     position: "relative",
     width: "100%",
-    height: 160,
-  },
-  
-  image: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#f3f4f6",
+    height: 60,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexDirection: "row",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   
   discountBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
     backgroundColor: "#EF4444",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    alignSelf: "flex-start",
   },
   
   discountText: {
@@ -124,13 +113,11 @@ const s = StyleSheet.create({
   },
   
   itemsBadge: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "#10B981",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
+    alignSelf: "flex-end",
   },
   
   itemsText: {
