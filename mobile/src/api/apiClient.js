@@ -98,6 +98,7 @@ export const setCartApi = (payload) => api.post(`/api/cart`, payload);
 
 export const getOrders   = (userId) => api.get(`/api/orders/${userId}`);
 export const createOrder = (payload) => api.post(`/api/orders`, payload);
+export const createMyOrder = (payload) => api.post(`/api/orders/me`, payload);
 
 /** ------------- Bundles ------------- */
 export const getBundles = () => api.get(`/api/bundles`);

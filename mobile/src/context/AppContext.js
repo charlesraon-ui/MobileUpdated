@@ -4,6 +4,7 @@ import { Alert } from "react-native";
 import {
   addReviewApi,
   createOrder as apiCreateOrder,
+  createMyOrder,
   getCart as apiGetCart,
   getOrders as apiGetOrders,
   login as apiLogin,
@@ -319,20 +320,18 @@ const handlePlaceOrder = async () => {
 
   const deliveryType = "in-house";
   
-  // Calculate total from cart items
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = cartTotal;
-
-  const payload = {
-    userId,
-    items: cart,
-    total,
-    address: addr,
-    paymentMethod,
-    status: "Pending",
-    deliveryType,
-    gcashNumber: paymentMethod === "GCash" ? String(gcashNumber || "").trim() : undefined,
+  // Calculate delivery fee based on delivery method
+  const getDeliveryFee = (method) => {
+    if (method === "pickup") return 0;
+    if (method === "in-house") return 50;
+    if (method === "third-party") return 80;
+    return 50; // default
   };
+
+  // Calculate totals
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const deliveryFee = getDeliveryFee(deliveryType);
+  const total = cartTotal + deliveryFee;
 
   try {
     // 🎯 CHECK PAYMENT METHOD
@@ -340,7 +339,25 @@ const handlePlaceOrder = async () => {
       console.log("💳 E-Payment selected, redirecting to PayMongo...");
       
       try {
-        const response = await createEPaymentOrder(payload);
+        // Build proper payload structure for E-Payment
+        const ePaymentPayload = {
+          items: cart.map(item => ({
+            productId: item.productId || item._id,
+            name: item.name,
+            price: Number(item.price || 0),
+            imageUrl: item.imageUrl || "",
+            quantity: Number(item.quantity || 1)
+          })),
+          total: total,
+          deliveryFee: deliveryFee,
+          address: addr.trim(),
+          deliveryType: deliveryType,
+          channel: "multi" // Support all payment methods
+        };
+
+        console.log("📤 Sending E-Payment payload:", JSON.stringify(ePaymentPayload, null, 2));
+        
+        const response = await createEPaymentOrder(ePaymentPayload);
         console.log("✅ E-Payment response:", response.data);
         
         const checkoutUrl = response.data?.payment?.checkoutUrl;
@@ -374,10 +391,28 @@ const handlePlaceOrder = async () => {
       }
       
     } else {
-      // COD or GCash flow (original)
-      console.log("💵 COD/GCash payment selected");
+      // COD flow
+      console.log("💵 COD payment selected");
       
-      const resp = await apiCreateOrder(payload);
+      // Build proper payload structure for COD
+      const codPayload = {
+        items: cart.map(item => ({
+          productId: item.productId || item._id,
+          name: item.name,
+          price: Number(item.price || 0),
+          imageUrl: item.imageUrl || "",
+          quantity: Number(item.quantity || 1)
+        })),
+        total: total,
+        deliveryFee: deliveryFee,
+        address: addr.trim(),
+        deliveryType: deliveryType,
+        paymentMethod: "COD"
+      };
+
+      console.log("📤 Sending COD payload:", JSON.stringify(codPayload, null, 2));
+       
+       const resp = await createMyOrder(codPayload);
       const order =
         resp?.data?._id ? resp.data : resp?.data?.order ? resp.data.order : resp?._id ? resp : null;
       if (!order?._id) return { success: false, message: "Order creation failed." };

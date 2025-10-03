@@ -1,32 +1,147 @@
 import { Link } from "expo-router";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { 
+  Animated, 
+  Dimensions, 
+  Image, 
+  StyleSheet, 
+  Text, 
+  View,
+  StatusBar,
+  Platform
+} from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
+import GoAgriLogo from '../components/GoAgriLogo';
 
-// Use a local asset so it always works offline and on all platforms
-// If you don't have the file yet, add it to /assets/go-agri-logo.png
-const logo = require("../assets/go-agri-logo.png");
-
-// If you prefer a remote fallback, this domain is reliable:
-// const REMOTE_LOGO = "https://placehold.co/160x160/png?text=Go+Agri";
+const { width, height } = Dimensions.get('window');
 
 export default function Landing() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Logo rotation animation
+    Animated.loop(
+      Animated.timing(logoRotateAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const logoRotate = logoRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={s.container}>
-      <View style={s.logoWrap}>
-        <Image source={logo} style={s.logo} resizeMode="cover" />
+      <StatusBar barStyle="light-content" backgroundColor="#065F46" />
+      
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#065F46', '#10B981', '#34D399']}
+        style={s.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
+      {/* Floating Background Elements */}
+      <View style={s.floatingElements}>
+        <Animated.View style={[s.floatingCircle, s.circle1, { opacity: fadeAnim }]} />
+        <Animated.View style={[s.floatingCircle, s.circle2, { opacity: fadeAnim }]} />
+        <Animated.View style={[s.floatingCircle, s.circle3, { opacity: fadeAnim }]} />
       </View>
 
-      <Text style={s.title}>Go Agri Trading</Text>
-      <Text style={s.tagline}>
-        Fresh produce and local farm goods at your fingertips.
-      </Text>
+      {/* Main Content */}
+      <Animated.View 
+        style={[
+          s.content,
+          {
+            opacity: fadeAnim,
+            transform: [
+              { translateY: slideAnim },
+              { scale: scaleAnim }
+            ]
+          }
+        ]}
+      >
+        {/* Logo Section */}
+        <View style={s.logoContainer}>
+          <View style={s.logoWrap}>
+            <Animated.View style={{ transform: [{ rotate: logoRotate }] }}>
+              <GoAgriLogo width={120} height={120} />
+            </Animated.View>
+          </View>
+        </View>
 
-      <View style={s.ctaRow}>
-        <Link href="/login" style={[s.btn, s.primary]}>Login</Link>
-        <Link href="/register" style={[s.btn, s.ghost]}>Register</Link>
-      </View>
+        {/* Title and Tagline */}
+        <View style={s.textContainer}>
+          <Text style={s.title}>Go Agri Trading</Text>
+          <Text style={s.subtitle}>Agricultural Excellence</Text>
+          <Text style={s.tagline}>
+            Fresh produce and local farm goods at your fingertips.
+            Experience the future of agricultural trading.
+          </Text>
+        </View>
 
-      <Text style={s.small}>or</Text>
-      <Link href="/tabs/home" style={s.link}>Continue as guest</Link>
+        {/* Feature Highlights */}
+        <View style={s.featuresContainer}>
+          <View style={s.feature}>
+            <Text style={s.featureIcon}>🌱</Text>
+            <Text style={s.featureText}>Fresh Produce</Text>
+          </View>
+          <View style={s.feature}>
+            <Text style={s.featureIcon}>🚚</Text>
+            <Text style={s.featureText}>Fast Delivery</Text>
+          </View>
+          <View style={s.feature}>
+            <Text style={s.featureIcon}>💰</Text>
+            <Text style={s.featureText}>Best Prices</Text>
+          </View>
+        </View>
+
+        {/* CTA Buttons */}
+        <View style={s.ctaContainer}>
+          <Link href="/login" style={[s.btn, s.primary]}>
+            <Text style={s.primaryBtnText}>Get Started</Text>
+          </Link>
+          <Link href="/register" style={[s.btn, s.secondary]}>
+            <Text style={s.secondaryBtnText}>Create Account</Text>
+          </Link>
+        </View>
+
+        {/* Guest Option */}
+        <View style={s.guestContainer}>
+          <Text style={s.orText}>or</Text>
+          <Link href="/tabs/home" style={s.guestLink}>
+            <Text style={s.guestLinkText}>Continue as guest →</Text>
+          </Link>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -34,37 +149,205 @@ export default function Landing() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F0FDF4",
+    position: 'relative',
   },
-  logoWrap: {
-    width: 140,
-    height: 140,
-    borderRadius: 28,
-    backgroundColor: "#fff",
-    marginBottom: 16,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+  
+  backgroundGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
-  logo: { width: 120, height: 120 },
-  title: { fontSize: 28, fontWeight: "800", color: "#065F46" },
-  tagline: { marginTop: 8, color: "#374151", textAlign: "center" },
-  ctaRow: { flexDirection: "row", gap: 12, marginTop: 20 },
-  btn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+
+  floatingElements: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+
+  floatingCircle: {
+    position: 'absolute',
     borderRadius: 999,
-    fontWeight: "700",
-    overflow: "hidden",
-    textAlign: "center",
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  primary: { backgroundColor: "#10B981", color: "white" },
-  ghost: { backgroundColor: "white", color: "#065F46", borderWidth: 1, borderColor: "#10B981" },
-  small: { marginTop: 16, color: "#6B7280" },
-  link: { marginTop: 4, color: "#10B981", fontWeight: "700" },
+
+  circle1: {
+    width: 120,
+    height: 120,
+    top: '10%',
+    left: '10%',
+  },
+
+  circle2: {
+    width: 80,
+    height: 80,
+    top: '20%',
+    right: '15%',
+  },
+
+  circle3: {
+    width: 60,
+    height: 60,
+    bottom: '25%',
+    left: '20%',
+  },
+
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  logoContainer: {
+    marginBottom: 32,
+  },
+
+  logoWrap: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+
+  logo: { 
+    width: 140, 
+    height: 140,
+  },
+
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+
+  title: { 
+    fontSize: 36, 
+    fontWeight: '900', 
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: -1,
+  },
+
+  subtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+
+  tagline: { 
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)', 
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+    fontWeight: '500',
+  },
+
+  featuresContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+
+  feature: {
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  featureIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+
+  featureText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+  },
+
+  ctaContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    gap: 16,
+    marginBottom: 32,
+  },
+
+  btn: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  primary: { 
+    backgroundColor: '#FFFFFF',
+  },
+
+  primaryBtnText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+
+  secondary: { 
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
+
+  secondaryBtnText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  guestContainer: {
+    alignItems: 'center',
+  },
+
+  orText: { 
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+
+  guestLink: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+
+  guestLinkText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
 });

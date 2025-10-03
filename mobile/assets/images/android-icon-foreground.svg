@@ -1,0 +1,65 @@
+<svg width="432" height="432" viewBox="0 0 432 432" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Central Agricultural Symbol -->
+  <defs>
+    <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wheatGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Wheat Stalks -->
+  <g transform="translate(216, 216)">
+    <!-- Left Wheat Stalk -->
+    <g transform="translate(-50, -60) rotate(-15)">
+      <path d="M0,80 Q-4,70 0,60 Q4,50 0,40 Q-4,30 0,20 Q4,10 0,0" 
+            stroke="url(#wheatGradient)" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <!-- Wheat grains -->
+      <circle cx="-8" cy="16" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="24" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="32" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="40" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="48" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="56" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="64" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="72" r="5" fill="url(#wheatGradient)"/>
+    </g>
+    
+    <!-- Right Wheat Stalk -->
+    <g transform="translate(50, -60) rotate(15)">
+      <path d="M0,80 Q-4,70 0,60 Q4,50 0,40 Q-4,30 0,20 Q4,10 0,0" 
+            stroke="url(#wheatGradient)" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <!-- Wheat grains -->
+      <circle cx="-8" cy="16" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="24" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="32" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="40" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="48" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="56" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="-8" cy="64" r="5" fill="url(#wheatGradient)"/>
+      <circle cx="8" cy="72" r="5" fill="url(#wheatGradient)"/>
+    </g>
+    
+    <!-- Central Leaf -->
+    <g transform="translate(0, -40)">
+      <path d="M0,0 Q-30,-20 -40,-50 Q-30,-70 0,-60 Q30,-70 40,-50 Q30,-20 0,0 Z" 
+            fill="url(#leafGradient)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+      <!-- Leaf vein -->
+      <path d="M0,0 Q0,-20 0,-50" stroke="rgba(255,255,255,0.4)" stroke-width="2" fill="none"/>
+    </g>
+    
+    <!-- Bottom Leaves -->
+    <g transform="translate(-30, 20) rotate(-30)">
+      <path d="M0,0 Q-16,-10 -20,-30 Q-16,-40 0,-36 Q16,-40 20,-30 Q16,-10 0,0 Z" 
+            fill="url(#leafGradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+    </g>
+    
+    <g transform="translate(30, 20) rotate(30)">
+      <path d="M0,0 Q-16,-10 -20,-30 Q-16,-40 0,-36 Q16,-40 20,-30 Q16,-10 0,0 Z" 
+            fill="url(#leafGradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+    </g>
+  </g>
+</svg>
