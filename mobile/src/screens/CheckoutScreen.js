@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import * as apiCheck from "../api/apiClient";
-import { createGCashOrder } from "../api/apiClient";
+import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 
 const GREEN = "#10B981";
@@ -54,13 +54,6 @@ export default function CheckoutScreen() {
   isCOD,
 });
 
-const getDeliveryFee = (method) => {
-  if (method === "pickup") return 0;
-  if (method === "in-house") return 50;
-  if (method === "third-party") return 80;
-  return 0;
-};
-
 
   // --- toast ---
   const [toast, setToast] = useState("");
@@ -84,9 +77,26 @@ const getDeliveryFee = (method) => {
     }, [isLoggedIn])
   );
 
+// ✅ ADD THIS HELPER FUNCTION
+  const getDeliveryFee = (method) => {
+    if (method === "pickup") return 0;
+    if (method === "in-house") return 50;
+    if (method === "third-party") return 80;
+    return 0;
+  };
+
+  // ✅ ADD THIS HELPER FUNCTION
+  const calculateOrderTotals = () => {
+    const deliveryFee = getDeliveryFee(deliveryMethod);
+    const subtotal = cartTotal;
+    const total = subtotal + deliveryFee;
+    const amountCentavos = Math.round(total * 100);
+
+    return { deliveryFee, subtotal, total, amountCentavos };
+  };
+
   // validations
   const addrError = useMemo(() => {
-    // Only require address for in-house and third-party delivery
     if (deliveryMethod === "pickup") return "";
     
     const txt = (deliveryAddress || "").trim();
@@ -95,47 +105,40 @@ const getDeliveryFee = (method) => {
     return "";
   }, [deliveryAddress, deliveryMethod]);
 
+  const disabled = !isLoggedIn || cartTotal <= 0 || !!addrError || placing;
 
-  const disabled =
-    !isLoggedIn || cartTotal <= 0 || !!addrError || placing;
-
+  // ✅ FIXED FUNCTION - Remove duplicate code
   const onPlace = async () => {
-  if (disabled) return;
-  setPlacing(true);
+    if (disabled) return;
+    setPlacing(true);
 
-  try {
-    if (paymentMethod === "E-Payment") {
-      // Hosted checkout (e.g., PayMongo). No mobile number required here.
-      showToast("Creating payment...");
+    try {
+      if (paymentMethod === "E-Payment") {
+        showToast("Creating payment...");
 
+        const { deliveryFee, subtotal, total, amountCentavos } = calculateOrderTotals();
 
-      const deliveryFee = getDeliveryFee(deliveryMethod);
-          const amountCentavos = Math.round((cartTotal + deliveryFee) * 100); // PayMongo uses centavos
-          const payload = {
-            items: cart.map(p => ({
-              id: p._id || p.id,
-              name: p.name,
-              quantity: p.quantity || p.qty || 1,
-              amount: Math.round(Number(p.price || p.unitPrice || 0) * 100), // centavos
-            })),
-            total: cartTotal,            // still send for your own records
-            deliveryFee,                 // helpful on server
-            amount: amountCentavos,      // 👈 for PayMongo
-            address: deliveryAddress,
-            deliveryType: deliveryMethod,
-            channel: "multi",            // "gcash" | "card" | "multi" (let server choose Checkout)
-            // (optional) successUrl / cancelUrl if your backend passes them through:
-            // successUrl: "https://your.app/orders/success",
-            // cancelUrl: "https://your.app/checkout?canceled=1",
-          };
+        const payload = {
+          items: cart.map(p => ({
+            id: p._id || p.id,
+            name: p.name,
+            quantity: p.quantity || p.qty || 1,
+            amount: Math.round(Number(p.price || p.unitPrice || 0) * 100),
+          })),
+          total: subtotal,
+          deliveryFee,
+          amount: amountCentavos,
+          address: deliveryAddress,
+          deliveryType: deliveryMethod,
+          channel: "multi",
+        };
 
-      try {
-        const response = await createGCashOrder(payload);
+        const response = await createEPaymentOrder(payload);
         const checkoutUrl = response?.data?.payment?.checkoutUrl;
 
         if (response?.data?.success && checkoutUrl) {
           showToast("Redirecting to payment...");
-
+          
           const canOpen = await Linking.canOpenURL(checkoutUrl);
           if (canOpen) {
             await Linking.openURL(checkoutUrl);
@@ -150,36 +153,27 @@ const getDeliveryFee = (method) => {
         } else {
           Alert.alert("Error", response?.data?.message || "Failed to create payment");
         }
-      } catch (error) {
-        console.error("❌ E-Payment error:", error);
-        Alert.alert(
-          "Payment Error",
-          error?.response?.data?.message || error?.message || "Failed to create payment"
-        );
-      } finally {
-        setPlacing(false);
+        
+        return; // ✅ Exit early after E-Payment
       }
-      return;
-    }
 
-    // Fallback: Cash on Delivery
-    const res = await handlePlaceOrder();
-    if (res?.success) {
-      const orderId = res.order?._id || res.order?.id;
-      const shortId = String(orderId || "").slice(-6).toUpperCase();
-      showToast(`Order #${shortId} placed!`);
-      setTimeout(() => router.push("/tabs/orders"), 1000);
-    } else {
-      Alert.alert("Order Failed", res?.message || "Please try again.");
+      // ✅ COD flow - ONLY ONE OCCURRENCE
+      const res = await handlePlaceOrder();
+      if (res?.success) {
+        const orderId = res.order?._id || res.order?.id;
+        const shortId = String(orderId || "").slice(-6).toUpperCase();
+        showToast(`Order #${shortId} placed!`);
+        setTimeout(() => router.push("/tabs/orders"), 1000);
+      } else {
+        Alert.alert("Order Failed", res?.message || "Please try again.");
+      }
+    } catch (error) {
+      console.error("❌ Place order error:", error);
+      Alert.alert("Error", error?.response?.data?.message || error?.message || "Failed to place order");
+    } finally {
+      setPlacing(false);
     }
-  } catch (error) {
-    console.error("❌ Place order error:", error);
-    Alert.alert("Error", error?.response?.data?.message || error?.message || "Failed to place order");
-  } finally {
-    setPlacing(false);
-  }
-};
-
+  }; // ✅ Function ends here properly
 
   return (
     <KeyboardAvoidingView
@@ -314,41 +308,37 @@ const getDeliveryFee = (method) => {
           )}
 
           {/* Payment Section */}
-            <View style={s.sectionContainer}>
-              <View style={s.sectionHeader}>
-                <Ionicons name="card-outline" size={22} color={GREEN} />
-                <Text style={s.sectionTitle}>Payment Method</Text>
-              </View>
-              
-              <View style={s.paymentOptions}>
-                <PaymentChip
-                  icon="cash-outline"
-                  label="Cash on Delivery"
-                  active={paymentMethod === "COD"}
-                  onPress={() => {
-                    setPaymentMethod("COD");
-                  }}
-                />
-                <PaymentChip
-                  icon="wallet-outline"
-                  label="E-Payment"
-                  active={paymentMethod === "E-Payment"}
-                  onPress={() => {
-                    setPaymentMethod("E-Payment");
-                  }}
-                />
-              </View>
-
-              {/* E-Payment Info */}
-              {paymentMethod === "E-Payment" && (
-                <View style={s.infoBox}>
-                  <Ionicons name="information-circle-outline" size={20} color="#3B82F6" />
-                  <Text style={s.infoText}>
-                    Choose from GCash, GrabPay, Maya, Cards, or Online Banking
-                  </Text>
-                </View>
-              )}
+          <View style={s.sectionContainer}>
+            <View style={s.sectionHeader}>
+              <Ionicons name="card-outline" size={22} color={GREEN} />
+              <Text style={s.sectionTitle}>Payment Method</Text>
             </View>
+            
+            <View style={s.paymentOptions}>
+              <PaymentChip
+                icon="cash-outline"
+                label="Cash on Delivery"
+                active={paymentMethod === "COD"}
+                onPress={() => setPaymentMethod("COD")}
+              />
+              <PaymentChip
+                icon="wallet-outline"
+                label="E-Payment"
+                active={paymentMethod === "E-Payment"}
+                onPress={() => setPaymentMethod("E-Payment")}
+              />
+            </View>
+
+            {/* E-Payment Info */}
+            {paymentMethod === "E-Payment" && (
+              <View style={s.infoBox}>
+                <Ionicons name="information-circle-outline" size={20} color="#3B82F6" />
+                <Text style={s.infoText}>
+                  Choose from GCash, GrabPay, Maya, Cards, or Online Banking
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Place Order Button */}
