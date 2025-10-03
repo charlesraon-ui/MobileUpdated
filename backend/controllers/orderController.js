@@ -126,7 +126,6 @@ export const createEPaymentOrder = async (req, res) => {
 
     // 3) PayMongo Checkout Session with DEEP LINKS
     // ✅ FIX: Use deep link scheme for mobile app
-    const appScheme = "goagritrading"; // Your app's deep link scheme from app.json
     
     const amountInCentavos = Math.round(Number(order.total) * 100);
     const lineItems = order.items.map((item) => ({
@@ -135,6 +134,8 @@ export const createEPaymentOrder = async (req, res) => {
       name: item.name,
       quantity: item.quantity,
     }));
+
+    const backendUrl = process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com';
 
     const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
@@ -157,8 +158,8 @@ export const createEPaymentOrder = async (req, res) => {
             amount_total: amountInCentavos,
             currency: "PHP",
             // ✅ FIXED: Use deep link URLs for mobile app redirect
-            success_url: `${appScheme}://payment/success?orderId=${order._id}`,
-            cancel_url: `${appScheme}://payment/cancel?orderId=${order._id}`,
+            success_url: `${process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com'}/api/payment/success?orderId=${order._id}`,
+            cancel_url: `${process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com'}/api/payment/cancel?orderId=${order._id}`,
             reference_number: String(order._id),
             metadata: {
               userId: String(me),
