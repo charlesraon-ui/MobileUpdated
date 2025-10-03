@@ -8,7 +8,8 @@ import {
   Text, 
   View,
   StatusBar,
-  Platform
+  Platform,
+  TouchableOpacity
 } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import GoAgriLogo from '../components/GoAgriLogo';
@@ -126,19 +127,25 @@ export default function Landing() {
 
         {/* CTA Buttons */}
         <View style={s.ctaContainer}>
-          <Link href="/login" style={[s.btn, s.primary]}>
-            <Text style={s.primaryBtnText}>Get Started</Text>
+          <Link href="/login" asChild>
+            <TouchableOpacity style={[s.btn, s.primary]} activeOpacity={0.85}>
+              <Text style={s.primaryBtnText}>Get Started</Text>
+            </TouchableOpacity>
           </Link>
-          <Link href="/register" style={[s.btn, s.secondary]}>
-            <Text style={s.secondaryBtnText}>Create Account</Text>
+          <Link href="/register" asChild>
+            <TouchableOpacity style={[s.btn, s.secondary]} activeOpacity={0.85}>
+              <Text style={s.secondaryBtnText}>Create Account</Text>
+            </TouchableOpacity>
           </Link>
         </View>
 
         {/* Guest Option */}
         <View style={s.guestContainer}>
           <Text style={s.orText}>or</Text>
-          <Link href="/tabs/home" style={s.guestLink}>
-            <Text style={s.guestLinkText}>Continue as guest →</Text>
+          <Link href="/tabs/home" asChild>
+            <TouchableOpacity style={s.guestButton} activeOpacity={0.85}>
+              <Text style={s.guestButtonText}>Continue as guest</Text>
+            </TouchableOpacity>
           </Link>
         </View>
       </Animated.View>
@@ -291,6 +298,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 16,
     marginBottom: 32,
+    alignItems: 'center',
   },
 
   btn: {
@@ -304,6 +312,9 @@ const s = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    alignSelf: 'center',
+    minWidth: 220,
+    maxWidth: 360,
   },
 
   primary: { 
@@ -339,15 +350,18 @@ const s = StyleSheet.create({
     fontWeight: '500',
   },
 
-  guestLink: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+  guestButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
 
-  guestLinkText: {
+  guestButtonText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

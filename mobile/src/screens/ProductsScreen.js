@@ -226,6 +226,8 @@ const renderBundlesSection = () => {
   };
 
   const filteredProducts = getFilteredAndSortedProducts();
+  const columns = width >= 900 ? 3 : 2; // responsive grid: tablets get 3
+  const columnGap = 18; // wider gaps for more whitespace
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -462,6 +464,7 @@ const renderBundlesSection = () => {
     <Animated.View
       style={[
         styles.productCardContainer,
+        { flex: 1 },
         {
           opacity: fadeAnim,
           transform: [
@@ -482,9 +485,34 @@ const renderBundlesSection = () => {
           router.push(`/product-detail?id=${item._id}`);
         }}
         onAddToCart={() => handleAddToCart(item)}
+        compact
       />
     </Animated.View>
   );
+
+  // Featured product (large) at top; others in compact grid
+  const featuredProduct = useMemo(() => (filteredProducts && filteredProducts.length > 0 ? filteredProducts[0] : null), [filteredProducts]);
+  const gridProducts = useMemo(() => (featuredProduct ? filteredProducts.slice(1) : filteredProducts), [filteredProducts, featuredProduct]);
+
+  const renderFeaturedProduct = () => {
+    if (!featuredProduct) return null;
+    return (
+      <Animated.View
+        style={[
+          styles.featuredContainer,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+        ]}
+      >
+        <ProductCard
+          product={featuredProduct}
+          onPress={() => {
+            router.push(`/product-detail?id=${featuredProduct._id}`);
+          }}
+          onAddToCart={() => handleAddToCart(featuredProduct)}
+        />
+      </Animated.View>
+    );
+  };
 
   const renderEmptyState = () => (
     <Animated.View 
@@ -628,12 +656,15 @@ const renderBundlesSection = () => {
       {renderBundlesSection()}
 
       <FlatList
-        data={filteredProducts}
+        data={gridProducts}
         renderItem={renderProductCard}
         keyExtractor={(item) => item._id}
-        numColumns={1}
+        numColumns={columns}
+        key={`grid-${columns}`}
         ListEmptyComponent={renderEmptyState}
+        ListHeaderComponent={renderFeaturedProduct}
         contentContainerStyle={styles.listContainer}
+        columnWrapperStyle={columns > 1 ? { gap: columnGap, paddingHorizontal: 20 } : undefined}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -663,15 +694,21 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
+    featuredContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+
   headerContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   header: {
     backgroundColor: "#10B981",
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 38 : 24,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -683,11 +720,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "900",
     color: "#FFFFFF",
     letterSpacing: -0.5,
@@ -699,9 +736,9 @@ const styles = StyleSheet.create({
 
   statBadge: {
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
     alignItems: "center",
   },
 
@@ -730,9 +767,9 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
     backgroundColor: "#F8FAFC",
     gap: 12,
   },
@@ -742,9 +779,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -776,22 +813,22 @@ const styles = StyleSheet.create({
   },
 
   filterIconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   activeFiltersContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     backgroundColor: "#F8FAFC",
   },
 
@@ -799,7 +836,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#6B7280",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   activeFiltersList: {
@@ -953,8 +990,8 @@ const styles = StyleSheet.create({
   },
 
   productCardContainer: {
-    marginHorizontal: 20,
     marginBottom: 16,
+    marginTop: 4,
   },
 
   emptyContainer: {
@@ -1009,8 +1046,8 @@ const styles = StyleSheet.create({
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   clearSearchText: {
@@ -1057,7 +1094,7 @@ const styles = StyleSheet.create({
   addedProductInfo: {
     flexDirection: "row",
     backgroundColor: "#F9FAFB",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
     width: "100%",
     marginBottom: 24,
@@ -1100,7 +1137,7 @@ const styles = StyleSheet.create({
 
   continueShoppingButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#10B981",
@@ -1116,7 +1153,7 @@ const styles = StyleSheet.create({
 
   viewCartButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: "#10B981",
     alignItems: "center",
@@ -1126,8 +1163,8 @@ const styles = StyleSheet.create({
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 6,
+    elevation: 4,
   },
 
   viewCartText: {
@@ -1137,20 +1174,20 @@ const styles = StyleSheet.create({
   },
 
   bundlesSection: {
-  paddingHorizontal: 20,
-  paddingTop: 8,
-  paddingBottom: 24,
+  paddingHorizontal: 16,
+  paddingTop: 4,
+  paddingBottom: 12,
 },
 
 sectionHeader: {
   flexDirection: "row",
   alignItems: "center",
-  marginBottom: 8,
+  marginBottom: 6,
   gap: 8,
 },
 
 sectionTitle: {
-  fontSize: 22,
+  fontSize: 18,
   fontWeight: "800",
   color: "#111827",
   flex: 1,
@@ -1170,17 +1207,17 @@ bundleBadgeText: {
 },
 
 sectionSubtitle: {
-  fontSize: 14,
+  fontSize: 12,
   color: "#6B7280",
-  marginBottom: 16,
+  marginBottom: 10,
   fontStyle: "italic",
 },
 
 bundleDivider: {
   flexDirection: "row",
   alignItems: "center",
-  marginTop: 24,
-  marginBottom: 16,
+  marginTop: 16,
+  marginBottom: 12,
   gap: 12,
 },
 
@@ -1198,3 +1235,13 @@ dividerText: {
   letterSpacing: 0.5,
 },
 });
+
+
+
+
+
+
+
+
+
+

@@ -13,7 +13,7 @@ import {
 import { AppCtx } from "../context/AppContext";
 import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard } from "../api/apiClient";
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews } = useContext(AppCtx);
@@ -284,7 +284,7 @@ export default function ProfileScreen() {
         onRequestClose={() => setCardVisible(false)}
       >
         <View style={s.modalBackdrop}>
-          <View style={s.modalSheet}>
+          <View style={[s.modalSheet, { maxHeight: Math.min(height * 0.8, 720), alignSelf: 'center' }]}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>My Loyalty Card</Text>
               <TouchableOpacity onPress={() => setCardVisible(false)} style={s.closeBtn}>
@@ -297,7 +297,7 @@ export default function ProfileScreen() {
                 <Text style={s.loadingText}>Loading...</Text>
               </View>
             ) : (
-              <View style={s.modalBody}>
+              <ScrollView style={{ maxHeight: Math.min(height * 0.6, 520) }} contentContainerStyle={{ paddingVertical: 8 }}>
                 {card ? (
                   (() => {
                     const theme = getCardTheme(loyalty?.tier || card.cardType, card.isActive);
@@ -397,7 +397,7 @@ export default function ProfileScreen() {
                     );
                   })()
                 )}
-              </View>
+              </ScrollView>
             )}
           </View>
         </View>

@@ -19,7 +19,7 @@ function pickImage(product, toAbsoluteUrl) {
   return toAbsoluteUrl ? toAbsoluteUrl(first) : first;
 }
 
-export default function ProductCard({ product, onPress, onAddToCart }) {
+export default function ProductCard({ product, onPress, onAddToCart, compact = false }) {
   const { handleAddToCart, categoryLabelOf, toAbsoluteUrl, toggleWishlist, isInWishlist } = useContext(AppCtx);
   const [imageLoading, setImageLoading] = useState(true);
   const [scaleValue] = useState(new Animated.Value(1));
@@ -61,16 +61,34 @@ export default function ProductCard({ product, onPress, onAddToCart }) {
   const stockLevel = product?.stock || 0;
 
   return (
-    <Animated.View style={[s.cardContainer, { transform: [{ scale: scaleValue }] }]}>
-      <TouchableOpacity
+    <Animated.View style={[s.cardContainer, compact && { marginBottom: 12 }, { transform: [{ scale: scaleValue }] }]}>
+      <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.9}
-        style={s.card}
+        onHoverIn={() => {
+          Animated.spring(scaleValue, {
+            toValue: 1.02,
+            useNativeDriver: true,
+            friction: 7,
+          }).start();
+        }}
+        onHoverOut={() => {
+          Animated.spring(scaleValue, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 7,
+          }).start();
+        }}
+        style={({ hovered }) => [
+          s.card,
+          compact && { borderRadius: 16 },
+          compact && s.compactBorder,
+          hovered && s.cardHovered,
+        ]}
       >
         {/* Image Container */}
-        <View style={s.imageContainer}>
+        <View style={[s.imageContainer, compact && { height: 90 }]}>
           <Image 
             source={{ uri: img }} 
             style={s.image} 
@@ -116,54 +134,56 @@ export default function ProductCard({ product, onPress, onAddToCart }) {
         </View>
 
         {/* Content Container */}
-        <View style={s.content}>
+        <View style={[s.content, compact && { padding: 8 }] }>
           {/* Category and Rating Row */}
           <View style={s.topRow}>
             <View style={s.categoryBadge}>
-              <Text style={s.categoryText}>
+              <Text style={[s.categoryText, compact && { fontSize: 10 }] }>
                 {categoryLabelOf?.(product) || "Product"}
               </Text>
             </View>
             
             {averageRating && (
               <View style={s.ratingContainer}>
-                <Text style={s.starIcon}>★</Text>
-                <Text style={s.ratingText}>{averageRating}</Text>
+                <Text style={[s.starIcon, compact && { fontSize: 11 }]}>★</Text>
+                <Text style={[s.ratingText, compact && { fontSize: 11 }]}>{averageRating}</Text>
               </View>
             )}
           </View>
 
           {/* Product Name */}
-          <Text style={s.name} numberOfLines={2}>
+          <Text style={[s.name, compact && { fontSize: 13, lineHeight: 18, marginBottom: 8 }]} numberOfLines={2}>
             {product?.name || "Unnamed Product"}
           </Text>
 
           {/* Product Details */}
-          <View style={s.detailsContainer}>
-            {product?.weightKg && (
-              <View style={s.detailItem}>
-                <Text style={s.detailIcon}>⚖️</Text>
-                <Text style={s.detailText}>{product.weightKg}kg</Text>
-              </View>
-            )}
-            
-            {inStock && stockLevel <= 10 && (
-              <View style={s.detailItem}>
-                <Text style={s.detailIcon}>📦</Text>
-                <Text style={[s.detailText, stockLevel <= 5 && s.lowStockText]}>
-                  {stockLevel} left
-                </Text>
-              </View>
-            )}
-          </View>
+          {!compact && (
+            <View style={s.detailsContainer}>
+              {product?.weightKg && (
+                <View style={s.detailItem}>
+                  <Text style={s.detailIcon}>⚖️</Text>
+                  <Text style={s.detailText}>{product.weightKg}kg</Text>
+                </View>
+              )}
+              
+              {inStock && stockLevel <= 10 && (
+                <View style={s.detailItem}>
+                  <Text style={s.detailIcon}>📦</Text>
+                  <Text style={[s.detailText, stockLevel <= 5 && s.lowStockText]}>
+                    {stockLevel} left
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Price and Add to Cart Row */}
-          <View style={s.bottomRow}>
+          <View style={[s.bottomRow, compact && { marginTop: 2 }]}>
             <View style={s.priceContainer}>
-              <Text style={s.currency}>₱</Text>
-              <Text style={s.price}>{Number(product?.price || 0).toFixed(2)}</Text>
+              <Text style={[s.currency, compact && { fontSize: 12 }]}>₱</Text>
+              <Text style={[s.price, compact && { fontSize: 16 }]}>{Number(product?.price || 0).toFixed(2)}</Text>
               {product?.originalPrice && product.originalPrice > product.price && (
-                <Text style={s.originalPrice}>₱{Number(product.originalPrice).toFixed(2)}</Text>
+                <Text style={[s.originalPrice, compact && { fontSize: 12 } ]}>₱{Number(product.originalPrice).toFixed(2)}</Text>
               )}
             </View>
 
@@ -172,17 +192,18 @@ export default function ProductCard({ product, onPress, onAddToCart }) {
               disabled={!inStock}
               style={({ pressed }) => [
                 s.addButton,
+                compact && { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, minWidth: 0 },
                 pressed && s.addButtonPressed,
                 !inStock && s.addButtonDisabled
               ]}
             >
-              <Text style={[s.addButtonText, !inStock && s.addButtonTextDisabled]}>
-                {inStock ? "Add to Cart" : "Unavailable"}
+              <Text style={[s.addButtonText, compact && { fontSize: 13 }, !inStock && s.addButtonTextDisabled]}>
+                {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
               </Text>
             </Pressable>
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -202,6 +223,8 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     overflow: "hidden",
   },
+  compactBorder: { borderWidth: 1, borderColor: "#E5E7EB" },
+  cardHovered: { shadowOpacity: 0.18, shadowRadius: 14 },
   
   imageContainer: {
     position: "relative",

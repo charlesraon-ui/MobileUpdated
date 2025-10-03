@@ -74,7 +74,7 @@ export default function BundleCard({ bundle, onPress }) {
 
 const s = StyleSheet.create({
   card: {
-    marginBottom: 16,
+    marginBottom: 8,
     backgroundColor: "#fff",
     borderRadius: 16,
     elevation: 4,
@@ -88,61 +88,61 @@ const s = StyleSheet.create({
   headerContainer: {
     position: "relative",
     width: "100%",
-    height: 60,
+    height: 42,
     backgroundColor: "#f8f9fa",
     justifyContent: "space-between",
     alignItems: "flex-start",
     flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   
   discountBadge: {
     backgroundColor: "#EF4444",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
     alignSelf: "flex-start",
   },
   
   discountText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   
   itemsBadge: {
     backgroundColor: "#10B981",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
     alignSelf: "flex-end",
   },
   
   itemsText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
   },
   
   content: {
-    padding: 16,
+    padding: 12,
   },
   
   name: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
     color: "#111827",
     lineHeight: 22,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   
   description: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6b7280",
-    lineHeight: 16,
-    marginBottom: 12,
+    lineHeight: 15,
+    marginBottom: 8,
   },
   
   priceRow: {
@@ -156,7 +156,7 @@ const s = StyleSheet.create({
   },
   
   originalPrice: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#9CA3AF",
     textDecorationLine: "line-through",
     marginBottom: 2,
@@ -168,28 +168,28 @@ const s = StyleSheet.create({
   },
   
   currency: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#059669",
     fontWeight: "700",
     marginRight: 2,
   },
   
   price: {
-    fontSize: 20,
+    fontSize: 18,
     color: "#059669",
     fontWeight: "900",
   },
   
   viewButton: {
     backgroundColor: "#059669",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     elevation: 2,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   
   viewButtonPressed: {
@@ -199,7 +199,12 @@ const s = StyleSheet.create({
   
   viewButtonText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
 });
+
+
+
+
+

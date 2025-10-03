@@ -1,5 +1,5 @@
 import { Stack, useRouter } from "expo-router";
-import CartScreen from "../src/screens/CartScreen";
+import CartScreen from "../src/screens/CartScreenDetails";
 
 export default function CartRoute() {
   const router = useRouter();
@@ -19,3 +19,5 @@ export default function CartRoute() {
     </>
   );
 }
+
+
