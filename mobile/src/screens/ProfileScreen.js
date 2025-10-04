@@ -336,15 +336,18 @@ export default function ProfileScreen() {
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Issued</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.issuedDate)}</Text>
+                            {/* Removed Issued row per request */}
+                            {/* <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.issuedDate)}</Text> */}
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Expiry</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.expiryDate)}</Text>
+                            {/* Removed Expiry row per request */}
+                            {/* <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.expiryDate)}</Text> */}
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Status</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{isActive ? "Active" : "Inactive"}</Text>
+                            {/* Removed Status row per request */}
+                            {/* <Text style={[s.cardValue, { color: theme.value }]}>{isActive ? "Active" : "Inactive"}</Text> */}
                           </View>
                         </View>
                       </View>
@@ -374,15 +377,18 @@ export default function ProfileScreen() {
                             </View>
                             <View style={s.cardRow}>
                               <Text style={[s.cardLabel, { color: theme.label }]}>Issued</Text>
-                              <Text style={[s.cardValue, { color: theme.value }]}>-</Text>
+                              {/* Removed Issued row per request */}
+                              {/* <Text style={[s.cardValue, { color: theme.value }]}>-</Text> */}
                             </View>
                             <View style={s.cardRow}>
                               <Text style={[s.cardLabel, { color: theme.label }]}>Expiry</Text>
-                              <Text style={[s.cardValue, { color: theme.value }]}>-</Text>
+                              {/* Removed Expiry row per request */}
+                              {/* <Text style={[s.cardValue, { color: theme.value }]}>-</Text> */}
                             </View>
                             <View style={s.cardRow}>
                               <Text style={[s.cardLabel, { color: theme.label }]}>Status</Text>
-                              <Text style={[s.cardValue, { color: theme.value }]}>Not Activated</Text>
+                              {/* Removed Status row per request */}
+                              {/* <Text style={[s.cardValue, { color: theme.value }]}>Not Activated</Text> */}
                             </View>
                           </View>
                         </View>
