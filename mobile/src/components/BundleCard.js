@@ -77,11 +77,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: "#fff",
     borderRadius: 16,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    ...platformShadow({ color: "#000", offsetX: 0, offsetY: 2, radius: 8, opacity: 0.1, elevation: 4 }),
     overflow: "hidden",
   },
   
@@ -203,6 +199,12 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+
+
+
+
+import { platformShadow } from "../utils/shadow";
 
 
 

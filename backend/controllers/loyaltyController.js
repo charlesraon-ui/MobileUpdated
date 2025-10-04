@@ -1,6 +1,7 @@
 // controllers/loyaltyController.js
 import LoyaltyReward from "../models/LoyaltyReward.js";
 import Order from "../models/Order.js";
+import LoyaltyTier from "../models/LoyaltyTier.js";
 
 // Get loyalty status for a user
 export const getLoyaltyStatus = async (req, res) => {
@@ -124,6 +125,15 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
       loyalty = new LoyaltyReward({ userId });
     }
     
+    // Prevent double-award for the same order
+    if (orderId) {
+      const alreadyRecorded = Array.isArray(loyalty.pointsHistory)
+        && loyalty.pointsHistory.some((h) => String(h.orderId) === String(orderId));
+      if (alreadyRecorded) {
+        return loyalty;
+      }
+    }
+    
     // Update purchase count and total spent
     loyalty.purchaseCount += 1;
     loyalty.totalSpent += amount;
@@ -136,7 +146,7 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
     if (pointsEarned > 0) {
       loyalty.pointsHistory.push({
         points: pointsEarned,
-        source: "purchase",
+        source: "order_created",
         orderId: orderId,
         createdAt: new Date()
       });

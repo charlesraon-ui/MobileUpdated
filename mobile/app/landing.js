@@ -1,7 +1,6 @@
 import { Link } from "expo-router";
 import { useEffect, useRef } from "react";
 import { 
-  Animated, 
   Dimensions, 
   Image, 
   StyleSheet, 
@@ -11,52 +10,45 @@ import {
   Platform,
   TouchableOpacity
 } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, withRepeat, interpolate } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import GoAgriLogo from '../components/GoAgriLogo';
+import { platformShadow } from '../src/utils/shadow';
+import { platformTextShadow } from '../src/utils/textShadow';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Landing() {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(50);
+  const scaleAnim = useSharedValue(0.8);
+  const logoRotateAnim = useSharedValue(0);
 
   useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Entrance animations (Reanimated)
+    fadeAnim.value = withTiming(1, { duration: 1000 });
+    slideAnim.value = withTiming(0, { duration: 800 });
+    scaleAnim.value = withSpring(1, { damping: 14 });
 
-    // Logo rotation animation
-    Animated.loop(
-      Animated.timing(logoRotateAnim, {
-        toValue: 1,
-        duration: 20000,
-        useNativeDriver: true,
-      })
-    ).start();
+    // Logo rotation animation (infinite)
+    logoRotateAnim.value = withRepeat(withTiming(1, { duration: 20000 }), -1);
   }, []);
 
-  const logoRotate = logoRotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [
+      { translateY: slideAnim.value },
+      { scale: scaleAnim.value }
+    ]
+  }));
+
+  const circleOpacityStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+  }));
+
+  const logoRotateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(logoRotateAnim.value, [0, 1], [0, 360])}deg` }],
+  }));
 
   return (
     <View style={s.container}>
@@ -72,28 +64,22 @@ export default function Landing() {
 
       {/* Floating Background Elements */}
       <View style={s.floatingElements}>
-        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle1, { opacity: fadeAnim }])} />
-        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle2, { opacity: fadeAnim }])} />
-        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle3, { opacity: fadeAnim }])} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle1, circleOpacityStyle])} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle2, circleOpacityStyle])} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle3, circleOpacityStyle])} />
       </View>
 
       {/* Main Content */}
       <Animated.View 
         style={StyleSheet.flatten([
           s.content,
-          {
-            opacity: fadeAnim,
-            transform: [
-              { translateY: slideAnim },
-              { scale: scaleAnim }
-            ]
-          }
+          contentAnimatedStyle
         ])}
       >
         {/* Logo Section */}
         <View style={s.logoContainer}>
           <View style={s.logoWrap}>
-            <Animated.View style={{ transform: [{ rotate: logoRotate }] }}>
+            <Animated.View style={logoRotateStyle}>
               <GoAgriLogo width={120} height={120} />
             </Animated.View>
           </View>
@@ -219,11 +205,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    ...platformShadow({ color: '#000', offsetX: 0, offsetY: 8, radius: 16, opacity: 0.3, elevation: 12 }),
     borderWidth: 4,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
@@ -244,9 +226,7 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...platformTextShadow({ color: 'rgba(0,0,0,0.3)', offsetX: 0, offsetY: 2, blur: 4 }),
     letterSpacing: -1,
   },
 

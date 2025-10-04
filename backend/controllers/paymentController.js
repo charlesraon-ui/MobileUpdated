@@ -3,6 +3,7 @@ import axios from "axios";
 import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
+import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
 
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY;
 const PAYMONGO_API = "https://api.paymongo.com/v1";
@@ -133,11 +134,17 @@ export async function createGCashOrder(req, res) {
       address,
       paymentMethod: "GCash",
       gcashNumber,
-      status: "pending_payment",
+      status: "confirmed", // auto-confirm e-payment
       paymentStatus: "pending",
     });
 
     console.log("✅ Order created:", order._id);
+    // Award loyalty points immediately upon e-payment order creation
+    try {
+      await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+    } catch (e) {
+      console.warn("LOYALTY_UPDATE_ON_CREATE_ERROR:", e?.message || e);
+    }
 
     // 2. Create delivery record
     await Delivery.create({
@@ -514,6 +521,16 @@ const createPaymentFromSource = async (sourceId, amount) => {
         paidAt: new Date(),
       });
       console.log("✅ Order updated from webhook:", orderId);
+
+      // Award loyalty points upon payment confirmation via webhook
+      try {
+        const order = await Order.findById(orderId).lean();
+        if (order) {
+          await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+        }
+      } catch (e) {
+        console.warn("LOYALTY_UPDATE_ON_WEBHOOK_ERROR:", e?.message || e);
+      }
     }
     
     return response.data;

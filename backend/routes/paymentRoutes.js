@@ -4,6 +4,7 @@ import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { sendPush } from "../controllers/notificationController.js";
+import { updateLoyaltyAfterPurchase } from "../controllers/loyaltyController.js";
 
 const router = Router();
 
@@ -28,6 +29,13 @@ router.get("/success", async (req, res) => {
     order.paymentStatus = "paid";
     order.paidAt = new Date();
     await order.save();
+
+    // Award loyalty points upon payment confirmation (e-payment success)
+    try {
+      await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+    } catch (e) {
+      console.warn("LOYALTY_UPDATE_ON_PAYMENT_SUCCESS_ERROR:", e?.message || e);
+    }
 
     // Clear cart
     await Cart.deleteOne({ userId: order.userId });

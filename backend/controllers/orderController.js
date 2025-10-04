@@ -125,11 +125,14 @@ export const createEPaymentOrder = async (req, res) => {
       total,
       address,
       deliveryType,
-      status: "pending_payment",
+      status: "confirmed", // auto-confirm e-payment
       paymentMethod: "E-Payment",
     });
 
     console.log("✅ Order created:", order._id);
+    // Award loyalty points immediately on e-payment order creation (deduped later)
+    // Loyalty points for e-payments are awarded upon payment confirmation,
+    // not at creation time. Deduplication is handled in loyalty controller.
 
     // 2) Create linked delivery
     await Delivery.create({
@@ -295,6 +298,9 @@ export const createMyOrder = async (req, res) => {
       status: "pending",
       paymentMethod,
     });
+    
+    // For e-payments, award points on payment confirmation (success callback/webhook).
+    // For COD/delivery, points are awarded when the order is marked completed.
 
     // Create delivery
     await Delivery.create({
@@ -472,6 +478,9 @@ export const createOrder = async (req, res) => {
       status: "pending",
       paymentMethod,
     });
+    
+    // For e-payments, award points on payment confirmation (success callback/webhook).
+    // For COD/delivery, points are awarded when the order is marked completed.
 
     await Delivery.create({
       order: order._id,

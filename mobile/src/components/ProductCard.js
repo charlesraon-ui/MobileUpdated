@@ -216,15 +216,11 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    ...platformShadow({ color: "#000", offsetX: 0, offsetY: 4, radius: 12, opacity: 0.12, elevation: 6 }),
     overflow: "hidden",
   },
   compactBorder: { borderWidth: 1, borderColor: "#E5E7EB" },
-  cardHovered: { shadowOpacity: 0.18, shadowRadius: 14 },
+  cardHovered: { ...platformShadow({ color: "#000", offsetX: 0, offsetY: 4, radius: 14, opacity: 0.18, elevation: 7 }) },
   
   imageContainer: {
     position: "relative",
@@ -483,3 +479,4 @@ const s = StyleSheet.create({
     color: "#9CA3AF",
   },
 });
+import { platformShadow } from "../utils/shadow";
