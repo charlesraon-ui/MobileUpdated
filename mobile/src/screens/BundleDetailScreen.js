@@ -99,10 +99,20 @@ export default function BundleDetailScreen() {
   }
 
   const bundle = bundleDetail;
-  const discount = bundle.discount || 0;
-  const savings = bundle.originalPrice
-    ? bundle.originalPrice - bundle.bundlePrice
+  // Safely normalize numeric fields to avoid toFixed on undefined
+  const toNumber = (v, fallback = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const bundlePrice    = toNumber(bundle.bundlePrice, toNumber(bundle.price, 0));
+  const originalPrice  = Number.isFinite(Number(bundle.originalPrice))
+    ? Number(bundle.originalPrice)
+    : null;
+  const savings        = originalPrice != null && originalPrice > bundlePrice
+    ? Math.max(originalPrice - bundlePrice, 0)
     : 0;
+  const discount       = toNumber(bundle.discount, originalPrice ? Math.round((savings / originalPrice) * 100) : 0);
 
   return (
     <View style={styles.container}>
@@ -142,15 +152,15 @@ export default function BundleDetailScreen() {
           {/* Price Section */}
           <View style={styles.priceSection}>
             <View style={styles.priceContainer}>
-              {bundle.originalPrice && bundle.originalPrice > bundle.bundlePrice && (
+              {originalPrice != null && originalPrice > bundlePrice && (
                 <Text style={styles.originalPrice}>
-                  ₱{bundle.originalPrice.toFixed(2)}
+                  ₱{originalPrice.toFixed(2)}
                 </Text>
               )}
               <View style={styles.currentPriceRow}>
                 <Text style={styles.currency}>₱</Text>
                 <Text style={styles.price}>
-                  {bundle.bundlePrice.toFixed(2)}
+                  {bundlePrice.toFixed(2)}
                 </Text>
               </View>
               {savings > 0 && (
@@ -163,38 +173,49 @@ export default function BundleDetailScreen() {
 
           {/* Bundle Items */}
           <View style={styles.itemsSection}>
-            <Text style={styles.sectionTitle}>
-              What's in this bundle ({bundle.items?.length || 0} items)
-            </Text>
+            {(() => {
+              const itemsList = (Array.isArray(bundle.items) && bundle.items.length)
+                ? bundle.items
+                : (bundle.products || []);
 
-            {bundle.items?.map((item, index) => {
-              const product = item.productId;
-              if (!product) return null;
-
+              const count = itemsList.length || 0;
               return (
-                <View key={index} style={styles.itemCard}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName} numberOfLines={2}>
-                      {product.name}
-                    </Text>
-                    <Text style={styles.itemQuantity}>
-                      Quantity: {item.quantity}
-                    </Text>
-                    {product.price && (
-                      <Text style={styles.itemPrice}>
-                        ₱{product.price.toFixed(2)} each
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={styles.viewProductButton}
-                    onPress={() => router.push(`/product-detail?id=${product._id}`)}
-                  >
-                    <Ionicons name="eye-outline" size={20} color="#10B981" />
-                  </TouchableOpacity>
-                </View>
+                <>
+                  <Text style={styles.sectionTitle}>
+                    {`What's in this bundle (${count} items)`}
+                  </Text>
+
+                  {itemsList.map((item, index) => {
+                    const product = item.productId || item.product;
+                    if (!product) return null;
+
+                    return (
+                      <View key={index} style={styles.itemCard}>
+                        <View style={styles.itemInfo}>
+                          <Text style={styles.itemName} numberOfLines={2}>
+                            {product.name}
+                          </Text>
+                          <Text style={styles.itemQuantity}>
+                            Quantity: {item.quantity}
+                          </Text>
+                          {Number.isFinite(Number(product.price)) && (
+                            <Text style={styles.itemPrice}>
+                              ₱{Number(product.price).toFixed(2)} each
+                            </Text>
+                          )}
+                        </View>
+                        <TouchableOpacity
+                          style={styles.viewProductButton}
+                          onPress={() => router.push(`/product-detail?id=${product._id}`)}
+                        >
+                          <Ionicons name="eye-outline" size={20} color="#10B981" />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </>
               );
-            })}
+            })()}
           </View>
 
           {/* Stock Info */}
@@ -224,9 +245,7 @@ export default function BundleDetailScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.bottomPriceInfo}>
           <Text style={styles.bottomLabel}>Bundle Price</Text>
-          <Text style={styles.bottomPrice}>
-            ₱{bundle.bundlePrice.toFixed(2)}
-          </Text>
+          <Text style={styles.bottomPrice}>₱{bundlePrice.toFixed(2)}</Text>
         </View>
         <TouchableOpacity
           style={[

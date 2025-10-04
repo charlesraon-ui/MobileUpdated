@@ -165,7 +165,12 @@ export default function CheckoutScreen() {
       // ✅ COD FLOW
       showToast("Placing order...");
       
-      const res = await handlePlaceOrder();
+      const res = await handlePlaceOrder({
+        deliveryType: deliveryMethod,
+        address: deliveryMethod === "pickup" ? "" : deliveryAddress.trim(),
+        total,
+        deliveryFee,
+      });
       
       if (res?.success) {
         const orderId = res.order?._id || res.order?.id;

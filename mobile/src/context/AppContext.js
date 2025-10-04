@@ -357,14 +357,26 @@ export default function AppProvider({ children }) {
     await persistCart(updated);
   };
 
-  // ---------------- PLACE ORDER ----------------
-const handlePlaceOrder = async () => {
+// ---------------- PLACE ORDER ----------------
+// Accept options so checkout can pass deliveryType (e.g., "pickup") and address
+const handlePlaceOrder = async (opts = {}) => {
   if (!ensureAuthed()) return { success: false, message: "Not logged in" };
 
-  const addr = String((deliveryAddress || "").trim());
-  if (!addr) return { success: false, message: "Delivery address is required" };
+  const {
+    deliveryType: deliveryTypeInput,
+    address: addressInput,
+    total: totalInput,
+    deliveryFee: deliveryFeeInput,
+  } = opts || {};
 
-  const deliveryType = "in-house";
+  const deliveryType = String(deliveryTypeInput || "in-house");
+  const addrRaw = addressInput != null ? String(addressInput) : String((deliveryAddress || ""));
+  const addr = addrRaw.trim();
+
+  // Require address for delivery types, but allow empty for pickup
+  if (deliveryType !== "pickup" && !addr) {
+    return { success: false, message: "Delivery address is required" };
+  }
   
   // Calculate delivery fee based on delivery method
   const getDeliveryFee = (method) => {
@@ -376,8 +388,8 @@ const handlePlaceOrder = async () => {
 
   // Calculate totals
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = getDeliveryFee(deliveryType);
-  const total = cartTotal + deliveryFee;
+  const deliveryFee = Number.isFinite(Number(deliveryFeeInput)) ? Number(deliveryFeeInput) : getDeliveryFee(deliveryType);
+  const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0 ? Number(totalInput) : (cartTotal + deliveryFee);
 
   try {
     // 🎯 CHECK PAYMENT METHOD

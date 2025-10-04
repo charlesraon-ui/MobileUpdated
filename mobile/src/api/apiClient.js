@@ -49,6 +49,32 @@ export const toAbsoluteUrl = (u) => {
   }
 };
 
+/** ------------- Fallback helpers (handle older '/api/app' mounts) ------------- */
+const withFallbackGet = async (primary, fallback) => {
+  try {
+    return await api.get(primary);
+  } catch (err) {
+    const status = err?.response?.status;
+    // Retry on 404/401 or network errors
+    if (status === 404 || status === 401 || !status) {
+      return await api.get(fallback);
+    }
+    throw err;
+  }
+};
+
+const withFallbackPost = async (primary, payload, fallback) => {
+  try {
+    return await api.post(primary, payload);
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status === 404 || status === 401 || !status) {
+      return await api.post(fallback, payload);
+    }
+    throw err;
+  }
+};
+
 /** ------------- Auth / Storage ------------- */
 export const setToken = async (token) => {
   if (token) {
@@ -142,9 +168,14 @@ export const registerPushToken = (pushToken) =>
   api.post(`/api/notifications/register`, { pushToken });
 
 /** ------------- Loyalty ------------- */
-export const getDigitalCard = () => api.get(`/api/loyalty/digital-card`);
-export const getLoyaltyStatus = () => api.get(`/api/loyalty/status`);
-export const issueLoyaltyCard = () => api.post(`/api/loyalty/issue-card`);
+export const getDigitalCard = () =>
+  withFallbackGet(`/api/loyalty/digital-card`, `/api/app/loyalty/digital-card`);
+
+export const getLoyaltyStatus = () =>
+  withFallbackGet(`/api/loyalty/status`, `/api/app/loyalty/status`);
+
+export const issueLoyaltyCard = () =>
+  withFallbackPost(`/api/loyalty/issue-card`, {}, `/api/app/loyalty/issue-card`);
 
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string

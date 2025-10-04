@@ -36,6 +36,8 @@ function OrderDetailsModal({ order, visible, onClose }) {
   const getDeliveryStatusColor = (status) => {
     const statusLower = String(status || "").toLowerCase();
     switch (statusLower) {
+      case 'confirmed':
+        return GREEN;
       case 'completed':
         return GREEN;
       case 'assigned':
@@ -52,6 +54,8 @@ function OrderDetailsModal({ order, visible, onClose }) {
   const getDeliveryStatusIcon = (status) => {
     const statusLower = String(status || "").toLowerCase();
     switch (statusLower) {
+      case 'confirmed':
+        return '✅';
       case 'completed':
         return '✅';
       case 'assigned':
@@ -69,6 +73,8 @@ function OrderDetailsModal({ order, visible, onClose }) {
   const getDeliveryStatusText = (status) => {
     const statusLower = String(status || "").toLowerCase();
     switch (statusLower) {
+      case 'confirmed':
+        return 'CONFIRMED';
       case 'completed':
         return 'COMPLETED';
       case 'assigned':
@@ -346,6 +352,8 @@ export default function OrdersScreen() {
         ? "confirmed"
         : base;
     switch (status) {
+      case 'confirmed':
+        return GREEN;
       case 'completed':
         return GREEN;
       case 'assigned':
@@ -366,6 +374,8 @@ export default function OrdersScreen() {
         ? "confirmed"
         : base;
     switch (status) {
+      case 'confirmed':
+        return '✅';
       case 'completed':
         return '✅';
       case 'assigned':
@@ -387,6 +397,8 @@ export default function OrdersScreen() {
         ? "confirmed"
         : base;
     switch (status) {
+      case 'confirmed':
+        return 'Confirmed';
       case 'completed':
         return 'Completed';
       case 'assigned':
