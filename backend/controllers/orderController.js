@@ -1,19 +1,16 @@
-//mobile order controller
-
+// Updated orderController.js with inventory management
 import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
 import Product from "../models/Products.js";
-import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
+import { processOrderInventory, updateLoyaltyAfterPurchase } from "../utils/orderHelpers.js";
 
-/* ---------------- PayMongo E-Payment (All Methods) ---------------------- */
+/* ---------------- PayMongo E-Payment (with inventory) ---------------------- */
 export const createEPaymentOrder = async (req, res) => {
   try {
     const me = req.user?.userId || req.user?.id;
     if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    console.log("💳 E-Payment order request (body keys):", Object.keys(req.body || {}));
-    
     const {
       items: rawItems = [],
       deliveryType = "in-house",
@@ -23,18 +20,13 @@ export const createEPaymentOrder = async (req, res) => {
       channel = "multi",
     } = req.body || {};
 
-    // Validate PayMongo credentials
     if (!process.env.PAYMONGO_SECRET_KEY) {
-      console.error("❌ PAYMONGO_SECRET_KEY is not configured");
       return res.status(500).json({
         success: false,
-        message: "Payment system not configured. Please contact support.",
+        message: "Payment system not configured.",
       });
     }
 
-    console.log("RAW items[0]:", rawItems?.[0]);
-
-    // Helper to convert values to numbers
     const toNum = (v) => {
       if (typeof v === "number") return v;
       if (typeof v === "string") {
@@ -45,11 +37,10 @@ export const createEPaymentOrder = async (req, res) => {
       return NaN;
     };
 
-    // Normalize items and fetch weights from database
+    // Normalize items and fetch weights
     const itemsWithWeights = await Promise.all(
       (Array.isArray(rawItems) ? rawItems : []).map(async (it, idx) => {
         const qty = toNum(it?.quantity ?? it?.qty ?? 1);
-
         let pricePeso =
           it?.price != null ? toNum(it.price)
           : it?.unitPrice != null ? toNum(it.unitPrice)
@@ -59,41 +50,23 @@ export const createEPaymentOrder = async (req, res) => {
           : NaN;
 
         if (!Number.isFinite(pricePeso)) {
-          return {
-            __invalid: true,
-            __error: `items[${idx}].price/amount missing or invalid`,
-            __debug: {
-              price: it?.price,
-              unitPrice: it?.unitPrice,
-              unit_price: it?.unit_price,
-              productPrice: it?.product?.price,
-              amount: it?.amount
-            }
-          };
+          return { __invalid: true, __error: `items[${idx}].price missing` };
         }
-
         if (!Number.isFinite(qty) || qty <= 0) {
-          return {
-            __invalid: true,
-            __error: `items[${idx}].quantity must be a positive number`,
-            __debug: { quantity: it?.quantity, qty: it?.qty }
-          };
+          return { __invalid: true, __error: `items[${idx}].quantity invalid` };
         }
 
         pricePeso = Math.round(pricePeso * 100) / 100;
-
-        // Fetch weight from Product if productId exists
+        
         let weightKg = toNum(it?.weightKg ?? 0);
         const productId = it?.productId || it?.id || it?._id;
         
         if (productId && weightKg === 0) {
           try {
             const product = await Product.findById(productId).select('weightKg').lean();
-            if (product?.weightKg) {
-              weightKg = Number(product.weightKg);
-            }
+            if (product?.weightKg) weightKg = Number(product.weightKg);
           } catch (err) {
-            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
+            console.warn(`Failed to fetch weight for product ${productId}`);
           }
         }
 
@@ -103,31 +76,21 @@ export const createEPaymentOrder = async (req, res) => {
           imageUrl: it?.imageUrl || it?.image || it?.product?.imageUrl || undefined,
           price: pricePeso,
           quantity: Math.floor(qty),
-          weightKg: Math.round(weightKg * 100) / 100, // Round to 2 decimals
+          weightKg: Math.round(weightKg * 100) / 100,
         };
       })
     );
 
-    // Check for invalid items
     const bad = itemsWithWeights.find(x => x?.__invalid);
     if (bad) {
-      console.error("❌ Normalization error:", bad);
-      return res.status(400).json({
-        success: false,
-        message: bad.__error,
-        details: bad.__debug
-      });
+      return res.status(400).json({ success: false, message: bad.__error });
     }
 
     const items = itemsWithWeights;
-
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Cart is empty." });
     }
 
-    console.log("✅ NORM items[0]:", items?.[0]);
-
-    // Calculate totals including weight
     const deliveryFee =
       Number.isFinite(toNum(deliveryFeeInBody)) ? toNum(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
@@ -141,7 +104,32 @@ export const createEPaymentOrder = async (req, res) => {
       ? toNum(totalInBody)
       : Math.round((subtotal + deliveryFee) * 100) / 100;
 
-    // 1) Create order in DB (pesos + weight)
+    // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
+    try {
+      for (const item of items) {
+        if (!item.productId) continue;
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          return res.status(404).json({ 
+            success: false, 
+            message: `Product not found: ${item.name}` 
+          });
+        }
+        if (product.quantity < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}`
+          });
+        }
+      }
+    } catch (err) {
+      return res.status(500).json({ 
+        success: false, 
+        message: "Inventory check failed" 
+      });
+    }
+
+    // Create order (inventory will decrease on payment success)
     const order = await Order.create({
       userId: String(me),
       items,
@@ -155,9 +143,6 @@ export const createEPaymentOrder = async (req, res) => {
       paymentMethod: "E-Payment",
     });
 
-    console.log("✅ Order created:", order._id, "Total weight:", totalWeight, "kg");
-
-    // 2) Create linked delivery
     await Delivery.create({
       order: order._id,
       type: deliveryType,
@@ -165,7 +150,7 @@ export const createEPaymentOrder = async (req, res) => {
       status: "pending",
     });
 
-    // 3) PayMongo Checkout Session
+    // PayMongo Checkout Session
     const amountInCentavos = Math.round(Number(order.total) * 100);
     const lineItems = order.items.map((item) => ({
       currency: "PHP",
@@ -176,7 +161,6 @@ export const createEPaymentOrder = async (req, res) => {
 
     const backendUrl = process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com';
 
-    // Create PayMongo checkout session
     const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
@@ -214,14 +198,9 @@ export const createEPaymentOrder = async (req, res) => {
     const paymongoData = await paymongoResponse.json();
     
     if (!paymongoResponse.ok) {
-      console.error("❌ PayMongo error:", JSON.stringify(paymongoData, null, 2));
       return res.status(paymongoResponse.status).json({
         success: false,
-        message:
-          paymongoData?.errors?.[0]?.detail ||
-          paymongoData?.errors?.[0]?.title ||
-          "PayMongo API error",
-        provider: paymongoData,
+        message: paymongoData?.errors?.[0]?.detail || "PayMongo API error",
       });
     }
 
@@ -235,11 +214,9 @@ export const createEPaymentOrder = async (req, res) => {
       });
     }
 
-    // 4) Save session id
     order.paymongoSessionId = session.id;
     await order.save();
 
-    // 5) Respond for the app
     return res.status(201).json({
       success: true,
       payment: { checkoutUrl },
@@ -258,7 +235,7 @@ export const createEPaymentOrder = async (req, res) => {
   }
 };
 
-/* ---------------- Authenticated: create order for current user ---------------------- */
+/* ---------------- Create My Order (COD with inventory) ---------------------- */
 export const createMyOrder = async (req, res) => {
   try {
     const me = req.user?.userId;
@@ -278,11 +255,9 @@ export const createMyOrder = async (req, res) => {
       rawItems.map(async (it, idx) => {
         const qty = Number(it?.quantity ?? it?.qty ?? 1);
         const pricePeso =
-          it?.price != null
-            ? Number(it.price)
-            : it?.amount != null
-            ? Number(it.amount) / 100
-            : NaN;
+          it?.price != null ? Number(it.price)
+          : it?.amount != null ? Number(it.amount) / 100
+          : NaN;
 
         if (!Number.isFinite(pricePeso)) {
           throw new Error(`items[${idx}].price/amount missing or invalid`);
@@ -291,18 +266,15 @@ export const createMyOrder = async (req, res) => {
           throw new Error(`items[${idx}].quantity must be > 0`);
         }
 
-        // Fetch weight from Product if productId exists
         let weightKg = Number(it?.weightKg ?? 0);
         const productId = it.productId || it.id || it._id;
         
         if (productId && weightKg === 0) {
           try {
             const product = await Product.findById(productId).select('weightKg').lean();
-            if (product?.weightKg) {
-              weightKg = Number(product.weightKg);
-            }
+            if (product?.weightKg) weightKg = Number(product.weightKg);
           } catch (err) {
-            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
+            console.warn(`Failed to fetch weight for product ${productId}`);
           }
         }
 
@@ -319,7 +291,6 @@ export const createMyOrder = async (req, res) => {
 
     const items = itemsWithWeights;
 
-    // Totals (PESOS + Weight)
     const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
     const totalWeight = items.reduce((s, i) => s + (i.weightKg || 0) * i.quantity, 0);
     
@@ -332,6 +303,9 @@ export const createMyOrder = async (req, res) => {
     const total = Number.isFinite(Number(totalInBody)) && Number(totalInBody) > 0
       ? Number(totalInBody)
       : Math.round((subtotal + deliveryFee) * 100) / 100;
+
+    // ⭐ DECREASE INVENTORY
+    await processOrderInventory(items);
 
     // Create order
     const order = await Order.create({
@@ -347,7 +321,6 @@ export const createMyOrder = async (req, res) => {
       paymentMethod,
     });
 
-    // Create delivery
     await Delivery.create({
       order: order._id,
       type: deliveryType,
@@ -355,10 +328,8 @@ export const createMyOrder = async (req, res) => {
       status: "pending",
     });
 
-    // Clear cart
     await Cart.deleteOne({ userId: String(me) });
 
-    // Populate user details before sending response
     const populatedOrder = await Order.findById(order._id)
       .populate("userId", "name email address loyaltyPoints loyaltyTier")
       .populate("items.productId", "name price category weightKg");
@@ -370,59 +341,7 @@ export const createMyOrder = async (req, res) => {
   }
 };
 
-/* ---------------- Authenticated: list my orders + delivery -------------------------- */
-export const getMyOrders = async (req, res) => {
-  try {
-    const me = req.user?.userId;
-    if (!me) return res.status(401).json({ message: "Unauthorized" });
-
-    // Get my orders with populated user
-    const orders = await Order.find({ userId: String(me) })
-      .sort({ createdAt: -1 })
-      .populate("userId", "name email address loyaltyPoints loyaltyTier")
-      .populate("items.productId", "name price category weightKg")
-      .lean();
-
-    // Get deliveries linked to my orders
-    const orderIds = orders.map(o => o._id);
-    const deliveries = await Delivery.find({ order: { $in: orderIds } })
-      .select("order type status deliveryAddress assignedDriver assignedVehicle createdAt")
-      .populate("assignedDriver", "name phone avatarUrl")
-      .populate("assignedVehicle", "plate capacityKg model")
-      .lean();
-
-    // Map deliveries by orderId
-    const deliveriesByOrder = Object.fromEntries(deliveries.map(d => [String(d.order), d]));
-
-    // Merge order + delivery
-    const ordersWithDelivery = orders.map(o => ({
-      ...o,
-      delivery: deliveriesByOrder[String(o._id)] || null,
-    }));
-
-    res.status(200).json(ordersWithDelivery);
-  } catch (err) {
-    console.error("GET_MY_ORDERS_ERROR:", err);
-    res.status(500).json({ message: err.message || "Server error" });
-  }
-};
-
-/* ---------------- Admin/Service: list orders of a specific user --------------------- */
-export const getOrders = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const orders = await Order.find({ userId: String(userId) })
-      .sort({ createdAt: -1 })
-      .populate("userId", "name email address loyaltyPoints loyaltyTier")
-      .populate("items.productId", "name price category weightKg");
-    res.status(200).json(orders);
-  } catch (err) {
-    console.error("GET_ORDERS_ERROR:", err);
-    res.status(500).json({ message: err.message || "Server error" });
-  }
-};
-
-/* ---------------- Admin: Update order status and track loyalty ---------------------- */
+/* ---------------- Admin: Update Order Status (with loyalty) ---------------------- */
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -444,14 +363,28 @@ export const updateOrderStatus = async (req, res) => {
         message: "Order not found" 
       });
     }
-    
-    // Update order status
+
+    const previousStatus = order.status;
     order.status = status;
+    
+    // ⭐ Handle inventory for payment success
+    if (status === "pending" && previousStatus === "pending_payment") {
+      try {
+        await processOrderInventory(order.items);
+        console.log(`✅ Inventory decreased for order ${orderId} on payment success`);
+      } catch (invErr) {
+        return res.status(400).json({
+          success: false,
+          message: invErr.message || "Inventory update failed"
+        });
+      }
+    }
+    
     await order.save();
     
-    // If order is completed, update loyalty points
+    // ⭐ Award loyalty points on completion
     if (status === "completed") {
-      await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+      await updateLoyaltyAfterPurchase(order.userId._id, order.total, order._id);
     }
     
     res.status(200).json({
@@ -468,7 +401,7 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-/* ---------------- Admin/Service: create order for any user -------------------------- */
+/* ---------------- Admin: Create Order (with inventory) ---------------------- */
 export const createOrder = async (req, res) => {
   try {
     const {
@@ -485,16 +418,14 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "userId is required" });
     }
 
-    // Normalize items and fetch weights
+    // Normalize items
     const itemsWithWeights = await Promise.all(
       rawItems.map(async (it, idx) => {
         const qty = Number(it?.quantity ?? it?.qty ?? 1);
         const pricePeso =
-          it?.price != null
-            ? Number(it.price)
-            : it?.amount != null
-            ? Number(it.amount) / 100
-            : NaN;
+          it?.price != null ? Number(it.price)
+          : it?.amount != null ? Number(it.amount) / 100
+          : NaN;
 
         if (!Number.isFinite(pricePeso)) {
           throw new Error(`items[${idx}].price/amount missing or invalid`);
@@ -503,18 +434,15 @@ export const createOrder = async (req, res) => {
           throw new Error(`items[${idx}].quantity must be > 0`);
         }
 
-        // Fetch weight from Product if productId exists
         let weightKg = Number(it?.weightKg ?? 0);
         const productId = it.productId || it.id || it._id;
         
         if (productId && weightKg === 0) {
           try {
             const product = await Product.findById(productId).select('weightKg').lean();
-            if (product?.weightKg) {
-              weightKg = Number(product.weightKg);
-            }
+            if (product?.weightKg) weightKg = Number(product.weightKg);
           } catch (err) {
-            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
+            console.warn(`Failed to fetch weight for product ${productId}`);
           }
         }
 
@@ -544,6 +472,9 @@ export const createOrder = async (req, res) => {
       ? Number(totalInBody)
       : Math.round((subtotal + deliveryFee) * 100) / 100;
 
+    // ⭐ DECREASE INVENTORY
+    await processOrderInventory(items);
+
     const order = await Order.create({
       userId: String(userId),
       items,
@@ -564,10 +495,8 @@ export const createOrder = async (req, res) => {
       status: "pending",
     });
 
-    // Clear the user's cart
     await Cart.deleteOne({ userId: String(userId) });
 
-    // Populate user details before sending response
     const populatedOrder = await Order.findById(order._id)
       .populate("userId", "name email address loyaltyPoints loyaltyTier")
       .populate("items.productId", "name price category weightKg");
@@ -578,46 +507,3 @@ export const createOrder = async (req, res) => {
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
-
-/* ---------------- Deliveries list (admin/driver/user) ------------------------------- */
-export const listDelivery = async (req, res) => {
-  try {
-    const { status, type, mine, from, to } = req.query;
-
-    const q = {};
-    if (status) q.status = status;
-    if (type) q.type = type;
-    if (mine === "1" && req.user?.userId) {
-      const myOrders = await Order.find({ userId: String(req.user.userId) }).select("_id").lean();
-      q.order = { $in: myOrders.map(o => o._id) };
-    }
-    if (from || to) {
-      q.createdAt = {};
-      if (from) q.createdAt.$gte = new Date(from);
-      if (to) q.createdAt.$lte = new Date(to);
-    }
-
-    const deliveries = await Delivery.find(q)
-      .populate({
-        path: "order",
-        select: "userId items total totalWeight address status deliveryType createdAt",
-        populate: {
-          path: "userId",
-          select: "name email address loyaltyPoints loyaltyTier"
-        }
-      })
-      .populate("assignedDriver", "name phone avatarUrl")
-      .populate("assignedVehicle", "plate capacityKg model")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    res.status(200).json(deliveries);
-  } catch (err) {
-    console.error("LIST_DELIVERY_ERROR:", err);
-    res.status(500).json({ message: err.message || "Server error" });
-  }
-};
-
-/* ---------------- Aliases ----------------------------------------------------------- */
-export { getMyOrders as listMyOrders, getOrders as listOrders };
-
