@@ -59,10 +59,10 @@ export default function BundleCard({ bundle, onPress }) {
 
           <Pressable
             onPress={onPress}
-            style={({ pressed }) => [
+            style={({ pressed }) => StyleSheet.flatten([
               s.viewButton,
               pressed && s.viewButtonPressed
-            ]}
+            ])}
           >
             <Text style={s.viewButtonText}>View Bundle</Text>
           </Pressable>

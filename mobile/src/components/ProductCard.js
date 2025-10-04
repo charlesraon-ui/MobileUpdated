@@ -80,12 +80,12 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             friction: 7,
           }).start();
         }}
-        style={({ hovered }) => [
+        style={({ hovered }) => StyleSheet.flatten([
           s.card,
           compact && { borderRadius: 16 },
           compact && s.compactBorder,
           hovered && s.cardHovered,
-        ]}
+        ])}
       >
         {/* Image Container */}
         <View style={[s.imageContainer, compact && { height: 90 }]}>
@@ -190,13 +190,13 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             <Pressable
               onPress={handleAddToCartPress}
               disabled={!inStock}
-              style={({ pressed }) => [
-                s.addButton,
-                compact && { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, minWidth: 0 },
-                pressed && s.addButtonPressed,
-                !inStock && s.addButtonDisabled
-              ]}
-            >
+            style={({ pressed }) => StyleSheet.flatten([
+              s.addButton,
+              compact && { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, minWidth: 0 },
+              pressed && s.addButtonPressed,
+              !inStock && s.addButtonDisabled
+            ])}
+          >
               <Text style={[s.addButtonText, compact && { fontSize: 13 }, !inStock && s.addButtonTextDisabled]}>
                 {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
               </Text>

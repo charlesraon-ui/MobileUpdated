@@ -72,14 +72,14 @@ export default function Landing() {
 
       {/* Floating Background Elements */}
       <View style={s.floatingElements}>
-        <Animated.View style={[s.floatingCircle, s.circle1, { opacity: fadeAnim }]} />
-        <Animated.View style={[s.floatingCircle, s.circle2, { opacity: fadeAnim }]} />
-        <Animated.View style={[s.floatingCircle, s.circle3, { opacity: fadeAnim }]} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle1, { opacity: fadeAnim }])} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle2, { opacity: fadeAnim }])} />
+        <Animated.View style={StyleSheet.flatten([s.floatingCircle, s.circle3, { opacity: fadeAnim }])} />
       </View>
 
       {/* Main Content */}
       <Animated.View 
-        style={[
+        style={StyleSheet.flatten([
           s.content,
           {
             opacity: fadeAnim,
@@ -88,7 +88,7 @@ export default function Landing() {
               { scale: scaleAnim }
             ]
           }
-        ]}
+        ])}
       >
         {/* Logo Section */}
         <View style={s.logoContainer}>
@@ -128,12 +128,12 @@ export default function Landing() {
         {/* CTA Buttons */}
         <View style={s.ctaContainer}>
           <Link href="/login" asChild>
-            <TouchableOpacity style={[s.btn, s.primary]} activeOpacity={0.85}>
+            <TouchableOpacity style={StyleSheet.flatten([s.btn, s.primary])} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Get Started</Text>
             </TouchableOpacity>
           </Link>
           <Link href="/register" asChild>
-            <TouchableOpacity style={[s.btn, s.secondary]} activeOpacity={0.85}>
+            <TouchableOpacity style={StyleSheet.flatten([s.btn, s.secondary])} activeOpacity={0.85}>
               <Text style={s.secondaryBtnText}>Create Account</Text>
             </TouchableOpacity>
           </Link>
