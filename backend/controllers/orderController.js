@@ -1,6 +1,9 @@
+//mobile order controller
+
 import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
+import Product from "../models/Products.js";
 import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
 
 /* ---------------- PayMongo E-Payment (All Methods) ---------------------- */
@@ -42,53 +45,71 @@ export const createEPaymentOrder = async (req, res) => {
       return NaN;
     };
 
-    // Normalize items
-    const items = (Array.isArray(rawItems) ? rawItems : []).map((it, idx) => {
-      const qty = toNum(it?.quantity ?? it?.qty ?? 1);
+    // Normalize items and fetch weights from database
+    const itemsWithWeights = await Promise.all(
+      (Array.isArray(rawItems) ? rawItems : []).map(async (it, idx) => {
+        const qty = toNum(it?.quantity ?? it?.qty ?? 1);
 
-      let pricePeso =
-        it?.price != null ? toNum(it.price)
-        : it?.unitPrice != null ? toNum(it.unitPrice)
-        : it?.unit_price != null ? toNum(it.unit_price)
-        : it?.product?.price != null ? toNum(it.product.price)
-        : it?.amount != null ? toNum(it.amount) / 100
-        : NaN;
+        let pricePeso =
+          it?.price != null ? toNum(it.price)
+          : it?.unitPrice != null ? toNum(it.unitPrice)
+          : it?.unit_price != null ? toNum(it.unit_price)
+          : it?.product?.price != null ? toNum(it.product.price)
+          : it?.amount != null ? toNum(it.amount) / 100
+          : NaN;
 
-      if (!Number.isFinite(pricePeso)) {
-        return {
-          __invalid: true,
-          __error: `items[${idx}].price/amount missing or invalid`,
-          __debug: {
-            price: it?.price,
-            unitPrice: it?.unitPrice,
-            unit_price: it?.unit_price,
-            productPrice: it?.product?.price,
-            amount: it?.amount
+        if (!Number.isFinite(pricePeso)) {
+          return {
+            __invalid: true,
+            __error: `items[${idx}].price/amount missing or invalid`,
+            __debug: {
+              price: it?.price,
+              unitPrice: it?.unitPrice,
+              unit_price: it?.unit_price,
+              productPrice: it?.product?.price,
+              amount: it?.amount
+            }
+          };
+        }
+
+        if (!Number.isFinite(qty) || qty <= 0) {
+          return {
+            __invalid: true,
+            __error: `items[${idx}].quantity must be a positive number`,
+            __debug: { quantity: it?.quantity, qty: it?.qty }
+          };
+        }
+
+        pricePeso = Math.round(pricePeso * 100) / 100;
+
+        // Fetch weight from Product if productId exists
+        let weightKg = toNum(it?.weightKg ?? 0);
+        const productId = it?.productId || it?.id || it?._id;
+        
+        if (productId && weightKg === 0) {
+          try {
+            const product = await Product.findById(productId).select('weightKg').lean();
+            if (product?.weightKg) {
+              weightKg = Number(product.weightKg);
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
           }
-        };
-      }
+        }
 
-      if (!Number.isFinite(qty) || qty <= 0) {
         return {
-          __invalid: true,
-          __error: `items[${idx}].quantity must be a positive number`,
-          __debug: { quantity: it?.quantity, qty: it?.qty }
+          productId,
+          name: it?.name || it?.productName || it?.product?.name || "Item",
+          imageUrl: it?.imageUrl || it?.image || it?.product?.imageUrl || undefined,
+          price: pricePeso,
+          quantity: Math.floor(qty),
+          weightKg: Math.round(weightKg * 100) / 100, // Round to 2 decimals
         };
-      }
-
-      pricePeso = Math.round(pricePeso * 100) / 100;
-
-      return {
-        productId: it?.productId || it?.id || it?._id || undefined,
-        name: it?.name || it?.productName || it?.product?.name || "Item",
-        imageUrl: it?.imageUrl || it?.image || it?.product?.imageUrl || undefined,
-        price: pricePeso,
-        quantity: Math.floor(qty),
-      };
-    });
+      })
+    );
 
     // Check for invalid items
-    const bad = items.find(x => x?.__invalid);
+    const bad = itemsWithWeights.find(x => x?.__invalid);
     if (bad) {
       console.error("❌ Normalization error:", bad);
       return res.status(400).json({
@@ -98,13 +119,15 @@ export const createEPaymentOrder = async (req, res) => {
       });
     }
 
+    const items = itemsWithWeights;
+
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Cart is empty." });
     }
 
     console.log("✅ NORM items[0]:", items?.[0]);
 
-    // Calculate totals
+    // Calculate totals including weight
     const deliveryFee =
       Number.isFinite(toNum(deliveryFeeInBody)) ? toNum(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
@@ -112,27 +135,27 @@ export const createEPaymentOrder = async (req, res) => {
       : 50;
 
     const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
+    const totalWeight = items.reduce((s, it) => s + Number(it.weightKg || 0) * Number(it.quantity), 0);
+    
     const total = Number.isFinite(toNum(totalInBody)) && toNum(totalInBody) > 0
       ? toNum(totalInBody)
       : Math.round((subtotal + deliveryFee) * 100) / 100;
 
-    // 1) Create order in DB (pesos)
+    // 1) Create order in DB (pesos + weight)
     const order = await Order.create({
       userId: String(me),
       items,
       subtotal,
       deliveryFee,
       total,
+      totalWeight: Math.round(totalWeight * 100) / 100,
       address,
       deliveryType,
-      status: "confirmed", // auto-confirm e-payment
+      status: "pending_payment",
       paymentMethod: "E-Payment",
     });
 
-    console.log("✅ Order created:", order._id);
-    // Award loyalty points immediately on e-payment order creation (deduped later)
-    // Loyalty points for e-payments are awarded upon payment confirmation,
-    // not at creation time. Deduplication is handled in loyalty controller.
+    console.log("✅ Order created:", order._id, "Total weight:", totalWeight, "kg");
 
     // 2) Create linked delivery
     await Delivery.create({
@@ -180,6 +203,7 @@ export const createEPaymentOrder = async (req, res) => {
               userId: String(me),
               deliveryType,
               deliveryFee: String(deliveryFee),
+              totalWeight: String(totalWeight),
               address,
             },
           },
@@ -221,6 +245,7 @@ export const createEPaymentOrder = async (req, res) => {
       payment: { checkoutUrl },
       orderId: order._id,
       sessionId: session.id,
+      totalWeight: order.totalWeight,
       message: "E-Payment checkout created",
     });
 
@@ -248,34 +273,56 @@ export const createMyOrder = async (req, res) => {
       paymentMethod = "COD",
     } = req.body || {};
 
-    // Normalize items -> ensure price (PESOS) & quantity
-    const items = rawItems.map((it, idx) => {
-      const qty = Number(it?.quantity ?? it?.qty ?? 1);
-      const pricePeso =
-        it?.price != null
-          ? Number(it.price)
-          : it?.amount != null
-          ? Number(it.amount) / 100 // convert centavos to pesos
-          : NaN;
+    // Normalize items and fetch weights
+    const itemsWithWeights = await Promise.all(
+      rawItems.map(async (it, idx) => {
+        const qty = Number(it?.quantity ?? it?.qty ?? 1);
+        const pricePeso =
+          it?.price != null
+            ? Number(it.price)
+            : it?.amount != null
+            ? Number(it.amount) / 100
+            : NaN;
 
-      if (!Number.isFinite(pricePeso)) {
-        throw new Error(`items[${idx}].price/amount missing or invalid`);
-      }
-      if (!Number.isFinite(qty) || qty <= 0) {
-        throw new Error(`items[${idx}].quantity must be > 0`);
-      }
+        if (!Number.isFinite(pricePeso)) {
+          throw new Error(`items[${idx}].price/amount missing or invalid`);
+        }
+        if (!Number.isFinite(qty) || qty <= 0) {
+          throw new Error(`items[${idx}].quantity must be > 0`);
+        }
 
-      return {
-        productId: it.productId || it.id || it._id,
-        name: it.name || "Item",
-        imageUrl: it.imageUrl || it.image,
-        price: Math.round(pricePeso * 100) / 100, // PESOS rounded to 2dp
-        quantity: Math.floor(qty),
-      };
-    });
+        // Fetch weight from Product if productId exists
+        let weightKg = Number(it?.weightKg ?? 0);
+        const productId = it.productId || it.id || it._id;
+        
+        if (productId && weightKg === 0) {
+          try {
+            const product = await Product.findById(productId).select('weightKg').lean();
+            if (product?.weightKg) {
+              weightKg = Number(product.weightKg);
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
+          }
+        }
 
-    // Totals (PESOS)
+        return {
+          productId,
+          name: it.name || "Item",
+          imageUrl: it.imageUrl || it.image,
+          price: Math.round(pricePeso * 100) / 100,
+          quantity: Math.floor(qty),
+          weightKg: Math.round(weightKg * 100) / 100,
+        };
+      })
+    );
+
+    const items = itemsWithWeights;
+
+    // Totals (PESOS + Weight)
     const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const totalWeight = items.reduce((s, i) => s + (i.weightKg || 0) * i.quantity, 0);
+    
     const deliveryFee =
       Number.isFinite(Number(deliveryFeeInBody)) ? Number(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
@@ -293,14 +340,12 @@ export const createMyOrder = async (req, res) => {
       subtotal,
       deliveryFee,
       total,
+      totalWeight: Math.round(totalWeight * 100) / 100,
       address,
       deliveryType,
       status: "pending",
       paymentMethod,
     });
-    
-    // For e-payments, award points on payment confirmation (success callback/webhook).
-    // For COD/delivery, points are awarded when the order is marked completed.
 
     // Create delivery
     await Delivery.create({
@@ -313,7 +358,12 @@ export const createMyOrder = async (req, res) => {
     // Clear cart
     await Cart.deleteOne({ userId: String(me) });
 
-    res.status(201).json(order);
+    // Populate user details before sending response
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "name email address loyaltyPoints loyaltyTier")
+      .populate("items.productId", "name price category weightKg");
+
+    res.status(201).json(populatedOrder);
   } catch (err) {
     console.error("CREATE_MY_ORDER_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
@@ -326,10 +376,11 @@ export const getMyOrders = async (req, res) => {
     const me = req.user?.userId;
     if (!me) return res.status(401).json({ message: "Unauthorized" });
 
-    // Get my orders
+    // Get my orders with populated user
     const orders = await Order.find({ userId: String(me) })
       .sort({ createdAt: -1 })
-      .populate("items.productId", "name price category")
+      .populate("userId", "name email address loyaltyPoints loyaltyTier")
+      .populate("items.productId", "name price category weightKg")
       .lean();
 
     // Get deliveries linked to my orders
@@ -362,7 +413,8 @@ export const getOrders = async (req, res) => {
     const { userId } = req.params;
     const orders = await Order.find({ userId: String(userId) })
       .sort({ createdAt: -1 })
-      .populate("items.productId", "name price category");
+      .populate("userId", "name email address loyaltyPoints loyaltyTier")
+      .populate("items.productId", "name price category weightKg");
     res.status(200).json(orders);
   } catch (err) {
     console.error("GET_ORDERS_ERROR:", err);
@@ -383,7 +435,9 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
     
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId)
+      .populate("userId", "name email address loyaltyPoints loyaltyTier");
+      
     if (!order) {
       return res.status(404).json({ 
         success: false, 
@@ -431,32 +485,55 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "userId is required" });
     }
 
-    const items = rawItems.map((it, idx) => {
-      const qty = Number(it?.quantity ?? it?.qty ?? 1);
-      const pricePeso =
-        it?.price != null
-          ? Number(it.price)
-          : it?.amount != null
-          ? Number(it.amount) / 100
-          : NaN;
+    // Normalize items and fetch weights
+    const itemsWithWeights = await Promise.all(
+      rawItems.map(async (it, idx) => {
+        const qty = Number(it?.quantity ?? it?.qty ?? 1);
+        const pricePeso =
+          it?.price != null
+            ? Number(it.price)
+            : it?.amount != null
+            ? Number(it.amount) / 100
+            : NaN;
 
-      if (!Number.isFinite(pricePeso)) {
-        throw new Error(`items[${idx}].price/amount missing or invalid`);
-      }
-      if (!Number.isFinite(qty) || qty <= 0) {
-        throw new Error(`items[${idx}].quantity must be > 0`);
-      }
+        if (!Number.isFinite(pricePeso)) {
+          throw new Error(`items[${idx}].price/amount missing or invalid`);
+        }
+        if (!Number.isFinite(qty) || qty <= 0) {
+          throw new Error(`items[${idx}].quantity must be > 0`);
+        }
 
-      return {
-        productId: it.productId || it.id || it._id,
-        name: it.name || "Item",
-        imageUrl: it.imageUrl || it.image,
-        price: Math.round(pricePeso * 100) / 100,
-        quantity: Math.floor(qty),
-      };
-    });
+        // Fetch weight from Product if productId exists
+        let weightKg = Number(it?.weightKg ?? 0);
+        const productId = it.productId || it.id || it._id;
+        
+        if (productId && weightKg === 0) {
+          try {
+            const product = await Product.findById(productId).select('weightKg').lean();
+            if (product?.weightKg) {
+              weightKg = Number(product.weightKg);
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch weight for product ${productId}:`, err.message);
+          }
+        }
+
+        return {
+          productId,
+          name: it.name || "Item",
+          imageUrl: it.imageUrl || it.image,
+          price: Math.round(pricePeso * 100) / 100,
+          quantity: Math.floor(qty),
+          weightKg: Math.round(weightKg * 100) / 100,
+        };
+      })
+    );
+
+    const items = itemsWithWeights;
 
     const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const totalWeight = items.reduce((s, i) => s + (i.weightKg || 0) * i.quantity, 0);
+    
     const deliveryFee =
       Number.isFinite(Number(deliveryFeeInBody)) ? Number(deliveryFeeInBody)
       : deliveryType === "pickup" ? 0
@@ -473,14 +550,12 @@ export const createOrder = async (req, res) => {
       subtotal,
       deliveryFee,
       total,
+      totalWeight: Math.round(totalWeight * 100) / 100,
       address,
       deliveryType,
       status: "pending",
       paymentMethod,
     });
-    
-    // For e-payments, award points on payment confirmation (success callback/webhook).
-    // For COD/delivery, points are awarded when the order is marked completed.
 
     await Delivery.create({
       order: order._id,
@@ -489,10 +564,15 @@ export const createOrder = async (req, res) => {
       status: "pending",
     });
 
-    // Optional: clear the user's cart if this came from their cart
+    // Clear the user's cart
     await Cart.deleteOne({ userId: String(userId) });
 
-    res.status(201).json(order);
+    // Populate user details before sending response
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "name email address loyaltyPoints loyaltyTier")
+      .populate("items.productId", "name price category weightKg");
+
+    res.status(201).json(populatedOrder);
   } catch (err) {
     console.error("CREATE_ORDER_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
@@ -508,7 +588,6 @@ export const listDelivery = async (req, res) => {
     if (status) q.status = status;
     if (type) q.type = type;
     if (mine === "1" && req.user?.userId) {
-      // filter by orders that belong to this user
       const myOrders = await Order.find({ userId: String(req.user.userId) }).select("_id").lean();
       q.order = { $in: myOrders.map(o => o._id) };
     }
@@ -519,7 +598,14 @@ export const listDelivery = async (req, res) => {
     }
 
     const deliveries = await Delivery.find(q)
-      .populate("order", "userId items total address status deliveryType createdAt")
+      .populate({
+        path: "order",
+        select: "userId items total totalWeight address status deliveryType createdAt",
+        populate: {
+          path: "userId",
+          select: "name email address loyaltyPoints loyaltyTier"
+        }
+      })
       .populate("assignedDriver", "name phone avatarUrl")
       .populate("assignedVehicle", "plate capacityKg model")
       .sort({ createdAt: -1 })
@@ -535,49 +621,3 @@ export const listDelivery = async (req, res) => {
 /* ---------------- Aliases ----------------------------------------------------------- */
 export { getMyOrders as listMyOrders, getOrders as listOrders };
 
-export const createEPayment = async (req, res) => {
-  try {
-    console.log("[EPAYMENT] user:", req.user?.id);
-    console.log("[EPAYMENT] body:", JSON.stringify(req.body, null, 2));
-
-    const { items = [], amount, deliveryFee = 0, address, deliveryType, channel = "multi" } = req.body;
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: "items[] required" });
-    }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: "amount (centavos) required" });
-    }
-
-    // Example: create PayMongo Checkout Session (pseudo; adjust to your SDK)
-    const session = await createCheckoutSession({
-      line_items: items.map(i => ({
-        name: i.name || "Item",
-        amount: i.amount,      // centavos per item
-        quantity: i.quantity || 1,
-        currency: "PHP",
-      })),
-      amount,                  // total centavos (or let PayMongo compute)
-      channel,                 // "gcash" | "multi"
-      metadata: {
-        userId: req.user?.id || "",
-        deliveryType,
-        deliveryFee,
-        address,
-      },
-      success_url: `${baseUrl}/payment/success?orderId=${order._id}`,
-      cancel_url: `${baseUrl}/payment/cancel?orderId=${order._id}`,
-    });
-
-    // Return URL for the app to open
-    return res.json({
-      success: true,
-      payment: { checkoutUrl: session.checkout_url || session.url }, // match your provider's key
-    });
-  } catch (err) {
-    console.error("[EPAYMENT ERROR]", err?.response?.data || err);
-    return res.status(500).json({
-      success: false,
-      message: err?.response?.data?.message || err?.message || "Failed to create e-payment session",
-    });
-  }
-};
