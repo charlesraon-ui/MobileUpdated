@@ -45,7 +45,22 @@ export async function login(req, res) {
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    // Support legacy records: prefer passwordHash, but fall back to `password` if present
+    const hash = user.passwordHash || user.password || "";
+    let ok = false;
+    try {
+      // If hash looks like bcrypt (starts with $2), compare using bcrypt
+      if (typeof hash === "string" && hash.startsWith("$2")) {
+        ok = await bcrypt.compare(password, hash);
+      } else {
+        // Fallback: plain equality (legacy plaintext); consider migrating immediately
+        ok = typeof hash === "string" && hash.length > 0 && password === hash;
+      }
+    } catch (cmpErr) {
+      console.error("LOGIN_COMPARE_ERROR:", cmpErr?.message || cmpErr);
+      return res.status(500).json({ message: "Auth compare failed" });
+    }
+
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {

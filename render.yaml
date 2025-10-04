@@ -8,6 +8,7 @@ services:
       corepack enable || true   # no-op if not available
       npm install --legacy-peer-deps
     startCommand: npm start     # must exist in backend/package.json
+    healthCheckPath: /healthz
     autoDeploy: true
     envVars:
       - key: NODE_ENV
