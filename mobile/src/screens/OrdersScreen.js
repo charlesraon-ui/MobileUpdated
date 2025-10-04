@@ -26,8 +26,12 @@ const RED = "#EF4444";
 function OrderDetailsModal({ order, visible, onClose }) {
   if (!order) return null;
 
-  // ✅ Get delivery status from order.delivery
-  const deliveryStatus = order.delivery?.status || order.status || "pending";
+  // ✅ Compute UI status: if E-Payment and order is pending, show confirmed
+  const baseStatus = order.delivery?.status || order.status || "pending";
+  const deliveryStatus =
+    String(order.paymentMethod || "").toLowerCase() === "e-payment" && String(baseStatus).toLowerCase() === "pending"
+      ? "confirmed"
+      : baseStatus;
 
   const getDeliveryStatusColor = (status) => {
     const statusLower = String(status || "").toLowerCase();
@@ -336,7 +340,11 @@ export default function OrdersScreen() {
 
   // ✅ Updated to use delivery.status instead of order.status
   const getDeliveryStatusColor = (order) => {
-    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
     switch (status) {
       case 'completed':
         return GREEN;
@@ -352,7 +360,11 @@ export default function OrdersScreen() {
   };
 
   const getDeliveryStatusIcon = (order) => {
-    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
     switch (status) {
       case 'completed':
         return '✅';
@@ -369,7 +381,11 @@ export default function OrdersScreen() {
   };
 
   const getDeliveryStatusText = (order) => {
-    const status = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
     switch (status) {
       case 'completed':
         return 'Completed';
