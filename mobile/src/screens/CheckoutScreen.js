@@ -119,7 +119,9 @@ export default function CheckoutScreen() {
           })),
           total: total,
           deliveryFee: deliveryFee,
-          address: deliveryAddress.trim(),
+          address: deliveryMethod === "pickup"
+            ? "Poblacion 1, Moncada\nTarlac, Philippines"
+            : deliveryAddress.trim(),
           deliveryType: deliveryMethod,
           channel: "multi" // Support all payment methods
         };
@@ -167,7 +169,9 @@ export default function CheckoutScreen() {
       
       const res = await handlePlaceOrder({
         deliveryType: deliveryMethod,
-        address: deliveryMethod === "pickup" ? "" : deliveryAddress.trim(),
+        address: deliveryMethod === "pickup"
+          ? "Poblacion 1, Moncada\nTarlac, Philippines"
+          : deliveryAddress.trim(),
         total,
         deliveryFee,
       });
@@ -316,8 +320,8 @@ export default function CheckoutScreen() {
                   <Text style={s.pickupTitle}>Pickup Location</Text>
                 </View>
                 <Text style={s.pickupAddress}>
-                  123 Main Street, Barangay San Antonio{'\n'}
-                  Paranaque City, Metro Manila
+                  Poblacion 1, Moncada{'\n'}
+                  Tarlac, Philippines
                 </Text>
                 <View style={s.pickupHours}>
                   <Ionicons name="time-outline" size={16} color="#6B7280" />

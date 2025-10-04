@@ -1,11 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-/**
- * Configure your backend URL here (or read from process.env.EXPO_PUBLIC_API_URL)
- * Example: http://192.168.1.100:5000
- */
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:5000"; // 10.0.2.2 for Android emulator
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../api/apiClient";
 
 const CART_KEY = "goat_cart_v1";
 
@@ -40,29 +34,23 @@ export async function clearCart() {
   }
 }
 
-// ---- Backend API calls ----
+// ---- Backend API calls (centralized base via axios client) ----
 export async function fetchCart(userId) {
   try {
-    const res = await fetch(`${API_URL}/api/cart/${userId}`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch cart: ${res.status}`);
-    }
-    return await res.json();
+    const res = await api.get(`/api/cart/${userId}`);
+    return res.data;
   } catch (e) {
-    console.warn("fetchCart error:", e.message);
+    console.warn("fetchCart error:", e?.message || e);
     throw e;
   }
 }
 
 export async function fetchOrdersFor(userId) {
   try {
-    const res = await fetch(`${API_URL}/api/orders/${userId}`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch orders: ${res.status}`);
-    }
-    return await res.json();
+    const res = await api.get(`/api/orders/${userId}`);
+    return res.data;
   } catch (e) {
-    console.warn("fetchOrdersFor error:", e.message);
+    console.warn("fetchOrdersFor error:", e?.message || e);
     throw e;
   }
 }
@@ -76,26 +64,17 @@ export async function fetchOrdersFor(userId) {
  */
 export async function placeOrder({ items, total, address, paymentMethod, gcashNumber, userId, token }) {
   try {
-    const res = await fetch(`${API_URL}/api/orders`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ items, total, address, paymentMethod, gcashNumber, userId }),
-    });
+    const payload = { items, total, address, paymentMethod, gcashNumber, userId };
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    const res = await api.post(`/api/orders`, payload, config);
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Order failed with ${res.status}`);
-    }
-
-    const data = await res.json();
+    const data = res.data;
     // if successful, clear local cart
     await clearCart();
     return data;
   } catch (e) {
-    console.warn("placeOrder error:", e.message);
+    const msg = e?.response?.data?.message || e?.message || "Order failed";
+    console.warn("placeOrder error:", msg);
     throw e;
   }
 }

@@ -1,6 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
-import { API_ORIGIN } from "./apiClient";
+import { API_URL } from "./apiClient";
+
+// Compute origin from API_URL for WebSocket connections
+const ORIGIN = (() => {
+  try {
+    return new URL(API_URL).origin;
+  } catch {
+    return String(API_URL).replace(/\/+$/, "");
+  }
+})();
 
 let socket = null;
 
@@ -9,17 +18,17 @@ export const connectSocket = async () => {
 
   const token = await AsyncStorage.getItem("pos-token");
 
-  socket = io(API_ORIGIN, {
-    transports: ["websocket"], // 👈 required for React Native
-    auth: { token },           // 👈 send JWT if your backend checks it
+  socket = io(ORIGIN, {
+    transports: ["websocket"], //  required for React Native
+    auth: { token },           //  send JWT if your backend checks it
   });
 
   socket.on("connect", () => {
-    console.log("✅ RN connected to WS:", socket.id);
+    console.log(" RN connected to WS:", socket.id);
   });
 
   socket.on("disconnect", (reason) => {
-    console.log("❌ RN disconnected:", reason);
+    console.log(" RN disconnected:", reason);
   });
 
   return socket;

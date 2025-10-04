@@ -2,17 +2,17 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Modal,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
@@ -99,20 +99,22 @@ export default function BundleDetailScreen() {
   }
 
   const bundle = bundleDetail;
-  // Safely normalize numeric fields to avoid toFixed on undefined
-  const toNumber = (v, fallback = 0) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
+  const discount = Number(bundle?.discount || 0);
+  const currentPrice = Number(bundle?.price ?? bundle?.bundlePrice ?? 0);
+  const originalPrice = Number(bundle?.originalPrice ?? 0);
+  const savings = originalPrice > currentPrice ? originalPrice - currentPrice : 0;
 
-  const bundlePrice    = toNumber(bundle.bundlePrice, toNumber(bundle.price, 0));
-  const originalPrice  = Number.isFinite(Number(bundle.originalPrice))
-    ? Number(bundle.originalPrice)
-    : null;
-  const savings        = originalPrice != null && originalPrice > bundlePrice
-    ? Math.max(originalPrice - bundlePrice, 0)
-    : 0;
-  const discount       = toNumber(bundle.discount, originalPrice ? Math.round((savings / originalPrice) * 100) : 0);
+  // Support both current `items.productId` and legacy `products.product`
+  const itemsFromProducts = Array.isArray(bundle?.products)
+    ? bundle.products.map((it) => ({
+        productId: it.product || it.productId || null,
+        quantity: Number(it.quantity || 1),
+      }))
+    : [];
+  const itemList = Array.isArray(bundle?.items) && bundle.items.length
+    ? bundle.items
+    : itemsFromProducts;
+  const itemCount = itemList.length;
 
   return (
     <View style={styles.container}>
@@ -152,15 +154,13 @@ export default function BundleDetailScreen() {
           {/* Price Section */}
           <View style={styles.priceSection}>
             <View style={styles.priceContainer}>
-              {originalPrice != null && originalPrice > bundlePrice && (
-                <Text style={styles.originalPrice}>
-                  ₱{originalPrice.toFixed(2)}
-                </Text>
+              {originalPrice > currentPrice && (
+                <Text style={styles.originalPrice}>₱{originalPrice.toFixed(2)}</Text>
               )}
               <View style={styles.currentPriceRow}>
                 <Text style={styles.currency}>₱</Text>
                 <Text style={styles.price}>
-                  {bundlePrice.toFixed(2)}
+                  {currentPrice.toFixed(2)}
                 </Text>
               </View>
               {savings > 0 && (
@@ -173,49 +173,27 @@ export default function BundleDetailScreen() {
 
           {/* Bundle Items */}
           <View style={styles.itemsSection}>
-            {(() => {
-              const itemsList = (Array.isArray(bundle.items) && bundle.items.length)
-                ? bundle.items
-                : (bundle.products || []);
+            <Text style={styles.sectionTitle}>
+              What's in this bundle ({itemCount} items)
+            </Text>
 
-              const count = itemsList.length || 0;
+            {itemList.map((item, index) => {
+              const product = item.productId || item.product;
+              const name = typeof product === 'object' ? product?.name : String(product || '').slice(0, 12);
+
               return (
-                <>
-                  <Text style={styles.sectionTitle}>
-                    {`What's in this bundle (${count} items)`}
-                  </Text>
-
-                  {itemsList.map((item, index) => {
-                    const product = item.productId || item.product;
-                    if (!product) return null;
-
-                    return (
-                      <View key={index} style={styles.itemCard}>
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.itemName} numberOfLines={2}>
-                            {product.name}
-                          </Text>
-                          <Text style={styles.itemQuantity}>
-                            Quantity: {item.quantity}
-                          </Text>
-                          {Number.isFinite(Number(product.price)) && (
-                            <Text style={styles.itemPrice}>
-                              ₱{Number(product.price).toFixed(2)} each
-                            </Text>
-                          )}
-                        </View>
-                        <TouchableOpacity
-                          style={styles.viewProductButton}
-                          onPress={() => router.push(`/product-detail?id=${product._id}`)}
-                        >
-                          <Ionicons name="eye-outline" size={20} color="#10B981" />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </>
+                <View key={index} style={styles.itemCard}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName} numberOfLines={2}>
+                      {name || 'Product'}
+                    </Text>
+                    <Text style={styles.itemQuantity}>
+                      Quantity: {item.quantity}
+                    </Text>
+                  </View>
+                </View>
               );
-            })()}
+            })}
           </View>
 
           {/* Stock Info */}
@@ -245,7 +223,7 @@ export default function BundleDetailScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.bottomPriceInfo}>
           <Text style={styles.bottomLabel}>Bundle Price</Text>
-          <Text style={styles.bottomPrice}>₱{bundlePrice.toFixed(2)}</Text>
+          <Text style={styles.bottomPrice}>₱{currentPrice.toFixed(2)}</Text>
         </View>
         <TouchableOpacity
           style={[

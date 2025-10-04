@@ -60,6 +60,7 @@ export default function ProductsScreen() {
   });
 
   const filteredBundles = useMemo(() => {
+  console.log('Processing bundles:', bundles);
   const q = (searchQuery || "").toLowerCase();
   return (bundles || []).filter((b) => {
     const name = (b?.name || "").toLowerCase();

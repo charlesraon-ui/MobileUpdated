@@ -196,6 +196,8 @@ const s = StyleSheet.create({
 
   logoContainer: {
     marginBottom: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   logoWrap: {
@@ -205,6 +207,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
     ...platformShadow({ color: '#000', offsetX: 0, offsetY: 8, radius: 16, opacity: 0.3, elevation: 12 }),
     borderWidth: 4,
     borderColor: 'rgba(255, 255, 255, 0.3)',
@@ -345,3 +348,5 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+

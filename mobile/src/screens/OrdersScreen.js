@@ -176,11 +176,17 @@ function OrderDetailsModal({ order, visible, onClose }) {
             </View>
           )}
 
-          {/* Delivery Address */}
+          {/* Address (shows pickup address if type is pickup) */}
           <View style={s.detailSection}>
-            <Text style={s.detailSectionTitle}>📍 Delivery Address</Text>
+            <Text style={s.detailSectionTitle}>
+              📍 {String(order?.delivery?.type || order?.deliveryType || '').toLowerCase() === 'pickup' ? 'Pickup Address' : 'Delivery Address'}
+            </Text>
             <View style={s.addressCard}>
-              <Text style={s.addressText}>{order.address || 'No address provided'}</Text>
+              <Text style={s.addressText}>
+                {String(order?.delivery?.type || order?.deliveryType || '').toLowerCase() === 'pickup'
+                  ? (order.address || 'Poblacion 1, Moncada\nTarlac, Philippines')
+                  : (order.address || 'No address provided')}
+              </Text>
             </View>
           </View>
 

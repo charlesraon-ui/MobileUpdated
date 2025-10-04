@@ -23,6 +23,18 @@ export default function ProfileScreen() {
   const [loyalty, setLoyalty] = useState(null);
   const [issueLoading, setIssueLoading] = useState(false);
 
+  // Safely format dates coming from backend, avoiding RangeError on invalid values
+  const formatDateSafe = (input) => {
+    if (!input) return "-";
+    try {
+      const d = new Date(input);
+      if (isNaN(d.getTime())) return "-";
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+    } catch {
+      return "-";
+    }
+  };
+
   const getCardTheme = (tier, active) => {
     if (!active) {
       return {
@@ -300,7 +312,8 @@ export default function ProfileScreen() {
               <ScrollView style={{ maxHeight: Math.min(height * 0.6, 520) }} contentContainerStyle={{ paddingVertical: 8 }}>
                 {card ? (
                   (() => {
-                    const theme = getCardTheme(loyalty?.tier || card.cardType, card.isActive);
+                    const isActive = Boolean(card?.isActive);
+                    const theme = getCardTheme(loyalty?.tier || card.cardType, isActive);
                     return (
                       <View style={s.cardContainer}>
                         <View style={[s.cardVisual, { backgroundColor: theme.bg, width: Math.min(width - 64, 680) }]}>
@@ -310,26 +323,28 @@ export default function ProfileScreen() {
                               <Text style={[s.tierBadgeText, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
                             </View>
                           </View>
-                          <Text style={[s.cardId, { color: theme.value }]}>{card.cardId}</Text>
+                          <Text style={[s.cardId, { color: theme.value }]}>{card.cardId || "LOYALTY-CARD"}</Text>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Level</Text>
                             <Text style={[s.cardValue, { color: theme.value }]}>{String((loyalty?.tier || "Sprout")).toUpperCase()}</Text>
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Discount</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{card.discountPercentage}%</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{
+                              card?.discountPercentage != null ? `${card.discountPercentage}%` : "-"
+                            }</Text>
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Issued</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{card.issuedDate ? new Date(card.issuedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }) : "-"}</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.issuedDate)}</Text>
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Expiry</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{card.expiryDate ? new Date(card.expiryDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }) : "-"}</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{formatDateSafe(card?.expiryDate)}</Text>
                           </View>
                           <View style={s.cardRow}>
                             <Text style={[s.cardLabel, { color: theme.label }]}>Status</Text>
-                            <Text style={[s.cardValue, { color: theme.value }]}>{card.isActive ? "Active" : "Inactive"}</Text>
+                            <Text style={[s.cardValue, { color: theme.value }]}>{isActive ? "Active" : "Inactive"}</Text>
                           </View>
                         </View>
                       </View>
