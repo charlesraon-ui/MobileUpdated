@@ -1,6 +1,7 @@
 // backend/utils/orderHelpers.js
-// Compatibility helpers for older controllers that import this module.
-// These functions are intentionally generic and side-effect free.
+// Compatibility helpers for controllers that import this module.
+// These functions are intentionally generic.
+import Product from "../models/Products.js";
 
 /** Safely convert a value to a number (supports strings with commas/spaces). */
 export function toNum(v) {
@@ -93,6 +94,34 @@ export function validateItems(items = []) {
   return { ok: errors.length === 0, errors, items: normalized };
 }
 
+/**
+ * Decrease inventory for each item in an order.
+ * Uses an atomic update to ensure quantity never goes below zero.
+ * Throws a helpful error if stock is insufficient.
+ */
+export async function processOrderInventory(items = []) {
+  const list = Array.isArray(items) ? items : [];
+  for (const it of list) {
+    const pid = it?.productId;
+    const qtyRaw = it?.quantity;
+    const qty = Math.floor(Number(qtyRaw || 0));
+    if (!pid || !qty || qty <= 0) continue;
+
+    const updated = await Product.findOneAndUpdate(
+      { _id: pid, quantity: { $gte: qty } },
+      { $inc: { quantity: -qty } },
+      { new: true }
+    );
+
+    if (!updated) {
+      const p = await Product.findById(pid).select("name quantity").lean();
+      const name = p?.name || "Product";
+      const available = Number(p?.quantity || 0);
+      throw new Error(`Insufficient stock for ${name}. Available: ${available}, Requested: ${qty}`);
+    }
+  }
+}
+
 /** Default export for flexibility (supports default or named imports). */
-const orderHelpers = { toNum, normalizeItems, computeTotals, validateItems };
+const orderHelpers = { toNum, normalizeItems, computeTotals, validateItems, processOrderInventory };
 export default orderHelpers;

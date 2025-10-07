@@ -3,7 +3,8 @@ import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
 import Product from "../models/Products.js";
-import { processOrderInventory, updateLoyaltyAfterPurchase } from "../utils/orderHelpers.js";
+import { processOrderInventory } from "../utils/orderHelpers.js";
+import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
 
 /* ---------------- PayMongo E-Payment (with inventory) ---------------------- */
 export const createEPaymentOrder = async (req, res) => {
@@ -504,6 +505,44 @@ export const createOrder = async (req, res) => {
     res.status(201).json(populatedOrder);
   } catch (err) {
     console.error("CREATE_ORDER_ERROR:", err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+/* ---------------- List Orders by userId (public/admin) ---------------------- */
+export const getOrders = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const orders = await Order.find({ userId: String(userId) })
+      .sort({ createdAt: -1 })
+      .populate("items.productId", "name price category weightKg")
+      .lean();
+
+    res.json(orders || []);
+  } catch (err) {
+    console.error("GET_ORDERS_ERROR:", err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+/* ---------------- List Orders for current user (protected) ------------------ */
+export const getMyOrders = async (req, res) => {
+  try {
+    const me = req.user?.userId || req.user?.id;
+    if (!me) return res.status(401).json({ message: "Unauthorized" });
+
+    const orders = await Order.find({ userId: String(me) })
+      .sort({ createdAt: -1 })
+      .populate("items.productId", "name price category weightKg")
+      .lean();
+
+    res.json(orders || []);
+  } catch (err) {
+    console.error("GET_MY_ORDERS_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };

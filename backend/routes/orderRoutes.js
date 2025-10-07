@@ -5,7 +5,6 @@ import {
   createOrder,
   getMyOrders,
   getOrders,
-  listDelivery,
   updateOrderStatus,
 } from "../controllers/orderController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
@@ -27,6 +26,6 @@ router.post("/me", authMiddleware, createMyOrder);
 router.get("/me/list", authMiddleware, getMyOrders);
 
 // deliveries
-router.get("/", authMiddleware, listDelivery);
+// Note: deliveries are served via /api/delivery routes
 
 export default router;
