@@ -76,10 +76,11 @@ export default function CartScreen({ navigation }) {
           <View style={s.quantitySection}>
             <View style={s.modernStepper}>
               <TouchableOpacity
-                style={s.modernStepBtn}
+                style={[s.modernStepBtn, qty <= 1 && s.disabledStepBtn]}
                 onPress={() => decrementCartQty(item.productId)}
+                disabled={qty <= 1}
               >
-                <Ionicons name="remove" size={16} color="#10B981" />
+                <Ionicons name="remove" size={16} color={qty <= 1 ? "#D1D5DB" : "#10B981"} />
               </TouchableOpacity>
               
               <View style={s.modernQtyBox}>
