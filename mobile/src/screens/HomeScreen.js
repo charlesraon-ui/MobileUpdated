@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { Colors, Radii } from "../../constants/theme";
 
 const { width } = Dimensions.get('window');
 
@@ -179,7 +180,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
       
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -359,12 +360,18 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.light.surface,
+  },
+  // Center content and limit max width on wide screens
+  pageWrap: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 1200,
   },
   
   // Header
   header: {
-    backgroundColor: "#10B981",
+    backgroundColor: Colors.light.accent,
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 24,
@@ -458,7 +465,7 @@ const styles = StyleSheet.create({
 
   // Search
   searchSection: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.card,
     paddingHorizontal: 20,
     paddingVertical: 20,
     shadowColor: "#000",
@@ -471,12 +478,12 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 16,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radii.lg,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.light.border,
   },
   
   searchIcon: {
@@ -486,16 +493,16 @@ const styles = StyleSheet.create({
   
   searchPlaceholder: {
     fontSize: 16,
-    color: "#9CA3AF",
+    color: Colors.light.muted,
     flex: 1,
     fontWeight: "500",
   },
   
   searchButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: Colors.light.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: Radii.md,
   },
   
   searchButtonText: {
@@ -506,7 +513,7 @@ const styles = StyleSheet.create({
 
   // Sections
   section: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.card,
     marginTop: 8,
     paddingHorizontal: 20,
     paddingVertical: 24,
@@ -527,13 +534,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#111827",
+    color: Colors.light.text,
     letterSpacing: -0.3,
   },
   
   seeAllText: {
     fontSize: 16,
-    color: "#10B981",
+    color: Colors.light.accent,
     fontWeight: "600",
   },
 
@@ -548,7 +555,7 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: (width - 64) / 3, // 3 columns with gaps
     aspectRatio: 1.2,
-    borderRadius: 16,
+    borderRadius: Radii.lg,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -588,8 +595,8 @@ const styles = StyleSheet.create({
   
   productCard: {
     width: 160,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    backgroundColor: Colors.light.card,
+    borderRadius: Radii.lg,
     marginRight: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -600,8 +607,8 @@ const styles = StyleSheet.create({
   
   productImageContainer: {
     height: 120,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
     overflow: "hidden",
   },
   
@@ -613,7 +620,7 @@ const styles = StyleSheet.create({
   productImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.light.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -629,7 +636,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#111827",
+    color: Colors.light.text,
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -643,7 +650,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#10B981",
+    color: Colors.light.accent,
   },
   
   ratingBadge: {
@@ -666,11 +673,11 @@ const styles = StyleSheet.create({
   },
   
   featureCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 16,
+    backgroundColor: Colors.light.surface,
+    borderRadius: Radii.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.light.border,
   },
   
   featureContent: {

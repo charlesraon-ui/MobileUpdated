@@ -47,6 +47,11 @@ export default function CartScreen({ navigation }) {
 
   const goToCheckout = () => router.push("/checkout");
 
+  const goToProductDetail = (item) => {
+    const id = item?.productId || item?._id;
+    if (id) router.push(`/product-detail?id=${id}`);
+  };
+
   const renderItem = ({ item }) => {
     const qty = Number(item.quantity || 0);
     const price = Number(item.price || 0);
@@ -55,12 +60,14 @@ export default function CartScreen({ navigation }) {
     return (
       <View style={s.modernItemCard}>
         <View style={s.itemContent}>
-          <View style={s.imageContainer}>
+          <TouchableOpacity style={s.imageContainer} onPress={() => goToProductDetail(item)} activeOpacity={0.8}>
             <Image source={{ uri: img }} style={s.modernThumb} />
-          </View>
+          </TouchableOpacity>
           
           <View style={s.itemDetails}>
-            <Text style={s.modernItemName} numberOfLines={2}>{item.name}</Text>
+            <TouchableOpacity onPress={() => goToProductDetail(item)} activeOpacity={0.7}>
+              <Text style={s.modernItemName} numberOfLines={2}>{item.name}</Text>
+            </TouchableOpacity>
             <Text style={s.modernItemPrice}>
               ₱{price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
             </Text>

@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { Colors, Radii } from "../../constants/theme";
 
 const { width } = Dimensions.get("window");
 
@@ -74,7 +75,7 @@ export default function BundleDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color={Colors.light.accent} />
         <Text style={styles.loadingText}>Loading bundle...</Text>
       </View>
     );
@@ -83,7 +84,7 @@ export default function BundleDetailScreen() {
   if (!bundleDetail) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={64} color={Colors.light.danger} />
         <Text style={styles.errorTitle}>Bundle Not Found</Text>
         <Text style={styles.errorSubtitle}>
           This bundle may no longer be available
@@ -258,7 +259,7 @@ export default function BundleDetailScreen() {
           <View style={styles.modalContent}>
             {/* Success Icon */}
             <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={64} color={Colors.light.accent} />
             </View>
 
             {/* Success Message */}
@@ -294,20 +295,20 @@ export default function BundleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.light.surface,
   },
 
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.light.surface,
   },
 
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#6B7280",
+    color: Colors.light.muted,
     fontWeight: "600",
   },
 
@@ -315,30 +316,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Colors.light.surface,
     paddingHorizontal: 40,
   },
 
   errorTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#111827",
+    color: Colors.light.text,
     marginTop: 16,
     marginBottom: 8,
   },
 
   errorSubtitle: {
     fontSize: 16,
-    color: "#6B7280",
+    color: Colors.light.muted,
     textAlign: "center",
     marginBottom: 24,
   },
 
   backButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: Colors.light.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: Radii.md,
   },
 
   backButtonText: {
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#10B981",
+    backgroundColor: Colors.light.accent,
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -388,10 +389,10 @@ const styles = StyleSheet.create({
 
 
   discountBadge: {
-    backgroundColor: "#EF4444",
+    backgroundColor: Colors.light.danger,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: Radii.md,
     alignSelf: "flex-start",
   },
 
@@ -417,22 +418,22 @@ const styles = StyleSheet.create({
   bundleName: {
     fontSize: 26,
     fontWeight: "900",
-    color: "#111827",
+    color: Colors.light.text,
     lineHeight: 32,
     flex: 1,
   },
 
   description: {
     fontSize: 15,
-    color: "#6B7280",
+    color: Colors.light.muted,
     lineHeight: 22,
     marginBottom: 20,
   },
 
   priceSection: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.card,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: Radii.lg,
     marginBottom: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -460,14 +461,14 @@ const styles = StyleSheet.create({
 
   currency: {
     fontSize: 24,
-    color: "#10B981",
+    color: Colors.light.accent,
     fontWeight: "700",
     marginRight: 4,
   },
 
   price: {
     fontSize: 36,
-    color: "#10B981",
+    color: Colors.light.accent,
     fontWeight: "900",
   },
 
@@ -484,15 +485,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#111827",
+    color: Colors.light.text,
     marginBottom: 16,
   },
 
   itemCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.card,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: Radii.md,
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -511,19 +512,19 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: Colors.light.text,
     marginBottom: 4,
   },
 
   itemQuantity: {
     fontSize: 13,
-    color: "#6B7280",
+    color: Colors.light.muted,
     marginBottom: 2,
   },
 
   itemPrice: {
     fontSize: 14,
-    color: "#10B981",
+    color: Colors.light.accent,
     fontWeight: "700",
   },
 

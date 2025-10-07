@@ -10,8 +10,20 @@ import {
   Alert,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { platformShadow } from "../utils/shadow";
+import { Colors, Radii } from "../../constants/theme";
 
 const PLACEHOLDER = "https://via.placeholder.com/400x300.png?text=No+Image";
+const C = Colors.light;
+
+function formatPrice(n) {
+  const num = Number(n || 0);
+  try {
+    return num.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch {
+    return num.toFixed(2);
+  }
+}
 
 function pickImage(product, toAbsoluteUrl) {
   const first = product?.imageUrl || product?.images?.[0] || null;
@@ -26,6 +38,10 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   
   const img = pickImage(product, toAbsoluteUrl);
   const saved = isInWishlist?.(product?._id);
+
+  const createdAt = product?.createdAt ? new Date(product.createdAt) : null;
+  const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 14 : false;
+  const isOnSale = (product?.originalPrice && product.originalPrice > product.price) || !!product?.discount;
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -56,6 +72,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   const averageRating = product?.reviews?.length 
     ? (product.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / product.reviews.length).toFixed(1)
     : null;
+  const reviewCount = Array.isArray(product?.reviews) ? product.reviews.length : 0;
 
   const inStock = product?.stock > 0;
   const stockLevel = product?.stock || 0;
@@ -82,13 +99,13 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
         }}
         style={({ hovered }) => StyleSheet.flatten([
           s.card,
-          compact && { borderRadius: 16 },
+          compact && [s.compactCard, { borderRadius: Radii.lg }],
           compact && s.compactBorder,
           hovered && s.cardHovered,
         ])}
       >
         {/* Image Container */}
-        <View style={[s.imageContainer, compact && { height: 90 }]}>
+        <View style={[s.imageContainer, compact && s.compactImageHeight]}>
           <Image 
             source={{ uri: img }} 
             style={s.image} 
@@ -108,10 +125,20 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               <Text style={s.outOfStockText}>Out of Stock</Text>
             </View>
           )}
-
-          {product?.discount && (
-            <View style={s.discountBadge}>
-              <Text style={s.discountText}>-{product.discount}%</Text>
+          {/* Badges: NEW / SALE / IN STOCK */}
+          {isNew && (
+            <View style={[s.infoBadge, { top: 12, left: 12, backgroundColor: "#DBEAFE", borderColor: "#93C5FD" }]}>
+              <Text style={[s.infoBadgeText, { color: "#1D4ED8" }]}>NEW</Text>
+            </View>
+          )}
+          {isOnSale && (
+            <View style={[s.infoBadge, { top: isNew ? 42 : 12, left: 12, backgroundColor: "#FEE2E2", borderColor: "#FCA5A5" }]}>
+              <Text style={[s.infoBadgeText, { color: "#DC2626" }]}>SALE</Text>
+            </View>
+          )}
+          {inStock && (
+            <View style={[s.infoBadge, { top: isNew ? (isOnSale ? 72 : 42) : (isOnSale ? 42 : 12), left: 12, backgroundColor: "#DCFCE7", borderColor: "#86EFAC" }]}>
+              <Text style={[s.infoBadgeText, { color: "#16A34A" }]}>IN STOCK</Text>
             </View>
           )}
 
@@ -146,13 +173,16 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             {averageRating && (
               <View style={s.ratingContainer}>
                 <Text style={[s.starIcon, compact && { fontSize: 11 }]}>★</Text>
-                <Text style={[s.ratingText, compact && { fontSize: 11 }]}>{averageRating}</Text>
+                <Text style={[s.ratingText, compact && { fontSize: 11 }]}>
+                  {averageRating}
+                  {reviewCount > 0 ? ` (${reviewCount})` : ""}
+                </Text>
               </View>
             )}
           </View>
 
           {/* Product Name */}
-          <Text style={[s.name, compact && { fontSize: 13, lineHeight: 18, marginBottom: 8 }]} numberOfLines={2}>
+          <Text style={[s.name, compact && s.compactName]} numberOfLines={2}>
             {product?.name || "Unnamed Product"}
           </Text>
 
@@ -178,12 +208,12 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
           )}
 
           {/* Price and Add to Cart Row */}
-          <View style={[s.bottomRow, compact && { marginTop: 2 }]}>
+          <View style={[s.bottomRow, compact && s.compactBottomRow]}>
             <View style={s.priceContainer}>
-              <Text style={[s.currency, compact && { fontSize: 12 }]}>₱</Text>
-              <Text style={[s.price, compact && { fontSize: 16 }]}>{Number(product?.price || 0).toFixed(2)}</Text>
+              <Text style={[s.currency, compact && s.compactCurrency]}>₱</Text>
+              <Text style={[s.price, compact && s.compactPrice]}>{formatPrice(product?.price)}</Text>
               {product?.originalPrice && product.originalPrice > product.price && (
-                <Text style={[s.originalPrice, compact && { fontSize: 12 } ]}>₱{Number(product.originalPrice).toFixed(2)}</Text>
+                <Text style={[s.originalPrice, compact && s.compactOriginalPrice]}>₱{formatPrice(product.originalPrice)}</Text>
               )}
             </View>
 
@@ -192,12 +222,12 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               disabled={!inStock}
             style={({ pressed }) => StyleSheet.flatten([
               s.addButton,
-              compact && { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, minWidth: 0 },
+              compact && s.compactAddButton,
               pressed && s.addButtonPressed,
               !inStock && s.addButtonDisabled
             ])}
           >
-              <Text style={[s.addButtonText, compact && { fontSize: 13 }, !inStock && s.addButtonTextDisabled]}>
+              <Text style={[s.addButtonText, compact && s.compactAddText, !inStock && s.addButtonTextDisabled]}>
                 {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
               </Text>
             </Pressable>
@@ -214,12 +244,16 @@ const s = StyleSheet.create({
   },
   
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    backgroundColor: C.card,
+    borderRadius: Radii.xl,
     ...platformShadow({ color: "#000", offsetX: 0, offsetY: 4, radius: 12, opacity: 0.12, elevation: 6 }),
     overflow: "hidden",
   },
-  compactBorder: { borderWidth: 1, borderColor: "#E5E7EB" },
+  compactCard: {
+    height: 220,
+    borderRadius: Radii.lg,
+  },
+  compactBorder: { borderWidth: 1, borderColor: C.border },
   cardHovered: { ...platformShadow({ color: "#000", offsetX: 0, offsetY: 4, radius: 14, opacity: 0.18, elevation: 7 }) },
   
   imageContainer: {
@@ -227,11 +261,12 @@ const s = StyleSheet.create({
     height: 180,
     overflow: "hidden",
   },
+  compactImageHeight: { height: 100 },
   
   image: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: C.surface,
   },
   
   imageLoadingOverlay: {
@@ -250,8 +285,8 @@ const s = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: "#E5E7EB",
-    borderTopColor: "#10B981",
+    borderColor: C.border,
+    borderTopColor: C.accent,
   },
   
   imageGradient: {
@@ -270,7 +305,7 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(239, 68, 68, 0.9)",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: Radii.md,
   },
   
   outOfStockText: {
@@ -304,9 +339,9 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: Radii.md,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: C.border,
   },
   wishlistActive: {
     backgroundColor: "#FEE2E2",
@@ -314,7 +349,7 @@ const s = StyleSheet.create({
   },
   wishlistIcon: {
     fontSize: 14,
-    color: "#6B7280",
+    color: C.muted,
     fontWeight: "700",
   },
   wishlistIconActive: {
@@ -336,14 +371,14 @@ const s = StyleSheet.create({
     backgroundColor: "#F0FDF4",
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 16,
+    borderRadius: Radii.md,
     borderWidth: 1,
     borderColor: "#BBF7D0",
   },
   
   categoryText: {
     fontSize: 11,
-    color: "#059669",
+    color: C.accent,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -355,7 +390,7 @@ const s = StyleSheet.create({
     backgroundColor: "#FEF3C7",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: Radii.sm,
   },
   
   starIcon: {
@@ -373,11 +408,12 @@ const s = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
+    color: C.text,
     lineHeight: 24,
     marginBottom: 12,
     letterSpacing: -0.2,
   },
+  compactName: { fontSize: 13, lineHeight: 18, marginBottom: 8 },
   
   detailsContainer: {
     flexDirection: "row",
@@ -388,10 +424,10 @@ const s = StyleSheet.create({
   detailItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: C.surface,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: Radii.sm,
   },
   
   detailIcon: {
@@ -401,7 +437,7 @@ const s = StyleSheet.create({
   
   detailText: {
     fontSize: 12,
-    color: "#6B7280",
+    color: C.muted,
     fontWeight: "600",
   },
   
@@ -414,6 +450,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  compactBottomRow: { marginTop: 2 },
   
   priceContainer: {
     flexDirection: "row",
@@ -423,17 +460,19 @@ const s = StyleSheet.create({
   
   currency: {
     fontSize: 16,
-    color: "#059669",
+    color: C.accent,
     fontWeight: "700",
     marginRight: 2,
   },
+  compactCurrency: { fontSize: 12 },
   
   price: {
     fontSize: 22,
-    color: "#059669",
+    color: C.accent,
     fontWeight: "900",
     letterSpacing: -0.5,
   },
+  compactPrice: { fontSize: 16 },
   
   originalPrice: {
     fontSize: 14,
@@ -442,20 +481,22 @@ const s = StyleSheet.create({
     textDecorationLine: "line-through",
     marginLeft: 8,
   },
+  compactOriginalPrice: { fontSize: 12 },
   
   addButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: C.accent,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: Radii.lg,
     elevation: 3,
-    shadowColor: "#10B981",
+    shadowColor: C.accent,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     minWidth: 120,
     alignItems: "center",
   },
+  compactAddButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: Radii.md, minWidth: 0 },
   
   addButtonPressed: {
     backgroundColor: "#059669",
@@ -474,9 +515,22 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
+  compactAddText: { fontSize: 13 },
   
   addButtonTextDisabled: {
     color: "#9CA3AF",
   },
+  infoBadge: {
+    position: "absolute",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+  },
+  infoBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
 });
-import { platformShadow } from "../utils/shadow";

@@ -316,6 +316,7 @@ export default function OrdersScreen() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
   const {
     orders,
@@ -419,6 +420,22 @@ export default function OrdersScreen() {
     }
   };
 
+  // Normalize delivery status for filtering
+  const normalizeStatus = (order) => {
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
+    // Map confirmed to pending for tabs, keep other statuses
+    if (status === "confirmed") return "pending";
+    return status;
+  };
+
+  const filteredOrders = selectedStatus === "all"
+    ? orders
+    : (orders || []).filter((o) => normalizeStatus(o) === selectedStatus);
+
   return (
     <View style={s.container}>
       {/* Header */}
@@ -451,11 +468,32 @@ export default function OrdersScreen() {
           </View>
         ) : (
           <View style={s.ordersContainer}>
+            {/* Status Tabs */}
+            <View style={s.statusTabsRow}>
+              {[
+                {label: 'All', value: 'all'},
+                {label: 'Pending', value: 'pending'},
+                {label: 'Assigned', value: 'assigned'},
+                {label: 'In Transit', value: 'in-transit'},
+                {label: 'Completed', value: 'completed'},
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.value}
+                  style={[s.statusTabBtn, selectedStatus === tab.value && s.statusTabBtnActive]}
+                  onPress={() => setSelectedStatus(tab.value)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[s.statusTabText, selectedStatus === tab.value && s.statusTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <Text style={s.ordersCount}>
-              {orders.length} order{orders.length !== 1 ? 's' : ''} found
+              {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} found
             </Text>
             
-            {orders.map((order, index) => {
+            {filteredOrders.map((order, index) => {
               const isFocus = String(order._id) === String(focusOrderId || "");
               const deliveryStatusColor = getDeliveryStatusColor(order);
               const deliveryStatusIcon = getDeliveryStatusIcon(order);
@@ -589,6 +627,9 @@ const s = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 1200,
   },
 
   // Orders list
@@ -601,6 +642,35 @@ const s = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 16,
     textAlign: "center",
+  },
+
+  // Status tabs
+  statusTabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  statusTabBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: LIGHT_GRAY,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  statusTabBtnActive: {
+    backgroundColor: GREEN_BG,
+    borderColor: GREEN_BORDER,
+  },
+  statusTabText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: GRAY,
+  },
+  statusTabTextActive: {
+    color: GREEN_DARK,
   },
 
   // Empty state

@@ -43,6 +43,7 @@ export default function ProductsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const { viewMode, setViewMode } = useContext(AppCtx);
   
   // Cart confirmation modal
   const [showCartConfirmation, setShowCartConfirmation] = useState(false);
@@ -227,8 +228,8 @@ const renderBundlesSection = () => {
   };
 
   const filteredProducts = getFilteredAndSortedProducts();
-  const columns = width >= 900 ? 3 : 2; // responsive grid: tablets get 3
-  const columnGap = 18; // wider gaps for more whitespace
+  const columns = viewMode === "list" ? 1 : (width >= 1200 ? 4 : width >= 900 ? 3 : width >= 600 ? 2 : 1);
+  const columnGap = columns >= 4 ? 24 : columns === 3 ? 20 : columns === 2 ? 16 : 0;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -245,7 +246,8 @@ const renderBundlesSection = () => {
       category: selectedCategory,
       sortBy,
       minPrice,
-      maxPrice
+      maxPrice,
+      viewMode
     });
     setShowFilterModal(true);
   };
@@ -255,6 +257,7 @@ const renderBundlesSection = () => {
     setSortBy(tempFilters.sortBy);
     setMinPrice(tempFilters.minPrice);
     setMaxPrice(tempFilters.maxPrice);
+    if (tempFilters.viewMode) setViewMode(tempFilters.viewMode);
     setShowFilterModal(false);
   };
 
@@ -263,7 +266,8 @@ const renderBundlesSection = () => {
       category: "All",
       sortBy: "popularity",
       minPrice: "",
-      maxPrice: ""
+      maxPrice: "",
+      viewMode: "grid"
     });
   };
 
@@ -379,6 +383,22 @@ const renderBundlesSection = () => {
                   onPress={() => setTempFilters(prev => ({ ...prev, category }))}
                 />
               ))}
+            </View>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>View Mode</Text>
+            <View style={styles.filterOptions}>
+              <FilterButton
+                title="Grid"
+                selected={tempFilters.viewMode === "grid"}
+                onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "grid" }))}
+              />
+              <FilterButton
+                title="List"
+                selected={tempFilters.viewMode === "list"}
+                onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "list" }))}
+              />
             </View>
           </View>
 
@@ -546,6 +566,38 @@ const renderBundlesSection = () => {
     </Animated.View>
   );
 
+  const renderSkeletonGrid = () => {
+    const placeholders = Array.from({ length: viewMode === "list" ? 4 : columns * 4 }).map((_, i) => i);
+    return (
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        {/* featured skeleton */}
+        {viewMode === "grid" && (
+          <View style={[styles.featuredContainer, { paddingHorizontal: 0 }]}> 
+            <View style={styles.skeletonCardLarge}>
+              <View style={styles.skeletonImageLarge} />
+              <View style={styles.skeletonTextRow}>
+                <View style={styles.skeletonLineWide} />
+                <View style={styles.skeletonLineShort} />
+              </View>
+            </View>
+          </View>
+        )}
+        {/* grid/list skeletons */}
+        <View style={{ flexDirection: columns > 1 ? 'row' : 'column', flexWrap: 'wrap', gap: columnGap }}>
+          {placeholders.map((i) => (
+            <View key={`sk-${i}`} style={[styles.skeletonCard, columns > 1 ? { width: (width - 56 - columnGap) / columns } : { width: '100%' }]}>
+              <View style={styles.skeletonImage} />
+              <View style={styles.skeletonTextBlock}>
+                <View style={styles.skeletonLine} />
+                <View style={[styles.skeletonLine, { width: '60%' }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
@@ -607,6 +659,32 @@ const renderBundlesSection = () => {
         >
           <Ionicons name="options-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
+
+        {/* Inline View Toggle (Grid/List) */}
+        <View style={styles.viewToggleContainer}>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, viewMode === "grid" && styles.viewToggleBtnActive]}
+            onPress={() => setViewMode("grid")}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="grid-outline"
+              size={18}
+              color={viewMode === "grid" ? "#FFFFFF" : "#10B981"}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, viewMode === "list" && styles.viewToggleBtnActive]}
+            onPress={() => setViewMode("list")}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="list-outline"
+              size={18}
+              color={viewMode === "list" ? "#FFFFFF" : "#10B981"}
+            />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {(selectedCategory !== "All" || sortBy !== "popularity" || minPrice || maxPrice) && (
@@ -662,7 +740,7 @@ const renderBundlesSection = () => {
         keyExtractor={(item) => item._id}
         numColumns={columns}
         key={`grid-${columns}`}
-        ListEmptyComponent={renderEmptyState}
+        ListEmptyComponent={loading ? renderSkeletonGrid : renderEmptyState}
         ListHeaderComponent={renderFeaturedProduct}
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={columns > 1 ? { gap: columnGap, paddingHorizontal: 20 } : undefined}
@@ -693,6 +771,9 @@ const styles = StyleSheet.create({
 
   listContainer: {
     paddingBottom: 100,
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 1200,
   },
 
     featuredContainer: {
@@ -703,6 +784,9 @@ const styles = StyleSheet.create({
 
   headerContainer: {
     marginBottom: 6,
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 1200,
   },
 
   header: {
@@ -822,6 +906,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     shadowColor: "#10B981",
     shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  viewToggleContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  viewToggleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  viewToggleBtnActive: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
@@ -1055,6 +1168,61 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  // Skeleton styles
+  skeletonCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  skeletonImage: {
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    marginBottom: 12,
+  },
+  skeletonTextBlock: {
+    gap: 8,
+  },
+  skeletonLine: {
+    height: 10,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+  },
+  skeletonCardLarge: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 16,
+  },
+  skeletonImageLarge: {
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    marginBottom: 12,
+  },
+  skeletonTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  skeletonLineWide: {
+    flex: 1,
+    height: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+  },
+  skeletonLineShort: {
+    width: 80,
+    height: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
   },
 
   // Cart Confirmation Modal Styles

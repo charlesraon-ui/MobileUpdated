@@ -63,6 +63,8 @@ export default function AppProvider({ children }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [lastAddedCategory, setLastAddedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // UI preferences
+  const [viewMode, setViewMode] = useState("grid");
 
   // checkout state
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -123,6 +125,14 @@ export default function AppProvider({ children }) {
 
         await loadWishlist();
 
+        // load persisted UI preferences
+        try {
+          const vm = await AsyncStorage.getItem("ui:viewMode");
+          if (vm === "grid" || vm === "list") setViewMode(vm);
+        } catch (e) {
+          // ignore
+        }
+
         const [prod, cats, bundlesResp] = await Promise.all([
           getProducts(),
           getCategories().catch(() => ({ data: [] })),
@@ -151,6 +161,17 @@ export default function AppProvider({ children }) {
       }
     })();
   }, []);
+
+  // persist UI preferences
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem("ui:viewMode", String(viewMode || "grid"));
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [viewMode]);
 
   // fetch AI recommendations whenever user/cart changes
   useEffect(() => {
@@ -692,6 +713,7 @@ const handlePlaceOrder = async (opts = {}) => {
     selectedCategory, setSelectedCategory,
     lastAddedCategory, setLastAddedCategory,
     searchQuery, setSearchQuery,
+    viewMode, setViewMode,
     deliveryAddress, setDeliveryAddress,
     paymentMethod, setPaymentMethod,
     gcashNumber, setGcashNumber,
