@@ -9,6 +9,7 @@ const productSchema = new mongoose.Schema(
     description: { type: String, trim: true },
     tags: { type: [String], default: [] },
     weightKg: { type: Number, min: 0, default: null },
+    catalog: { type: Boolean, default: true }, 
 
     reviews: [
       {

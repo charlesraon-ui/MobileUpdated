@@ -9,6 +9,7 @@ import {
   listProducts,
   // NEW:
   searchProducts,
+  toggleCatalog,
   updateProduct,
 } from "../controllers/productController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
@@ -34,6 +35,7 @@ router.get("/:id", getProduct);
 router.post("/", createProduct);
 router.put("/:id", updateProduct);
 router.delete("/:id", deleteProduct);
+router.put("/:id/catalog", toggleCatalog);
 
 // Reviews
 router.post("/:id/reviews", authMiddleware, addReview);

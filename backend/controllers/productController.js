@@ -60,6 +60,21 @@ export const deleteProduct = async (req, res, next) => {
     next(e);
   }
 };
+// ✅ NEW: Toggle catalog visibility
+export const toggleCatalog = async (req, res, next) => {
+  try {
+    const { value } = req.body; // boolean
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      { catalog: Boolean(value) },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: "Product not found" });
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+};
 
 // --- Reviews ---
 export const addReview = async (req, res, next) => {

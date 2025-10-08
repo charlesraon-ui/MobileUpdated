@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppCtx } from "../context/AppContext";
 import { Colors, Radii } from "../../constants/theme";
+import { AppCtx } from "../context/AppContext";
 
 const { width } = Dimensions.get("window");
 
