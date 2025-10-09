@@ -4,7 +4,8 @@ import User from "../models/User.js"; // optional for wishlist; safe even if you
 // List all products
 export const listProducts = async (req, res, next) => {
   try {
-    const products = await Product.find();
+    // ✅ Only return products where catalog is true
+    const products = await Product.find({ catalog: true });
     res.json(products);
   } catch (e) {
     next(e);
