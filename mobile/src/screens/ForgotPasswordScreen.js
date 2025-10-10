@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import { requestPasswordReset, completePasswordReset } from "../api/apiClient";
+import Toast from "../../components/Toast";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -24,23 +25,21 @@ export default function ForgotPasswordScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const onSubmit = async () => {
     if (token) {
-      if (!password || password.length < 6) {
-        Alert.alert("Weak password", "Please enter at least 6 characters.");
-        return;
-      }
-      if (password !== confirm) {
-        Alert.alert("Mismatch", "Passwords do not match.");
-        return;
-      }
+      if (!password || password.length < 6) { setError("Please enter at least 6 characters."); setSuccess(""); return; }
+      if (password !== confirm) { setError("Passwords do not match."); setSuccess(""); return; }
       setSubmitting(true);
+      setError("");
+      setSuccess("");
       try {
         await completePasswordReset(String(token), String(password));
-        Alert.alert("Success", "Password updated. You can now log in.");
+        setSuccess("Password updated. You can now log in.");
       } catch (e) {
-        Alert.alert("Error", e?.response?.data?.message || "Reset failed. Try again.");
+        setError(e?.response?.data?.message || "Reset failed. Try again.");
       } finally {
         setSubmitting(false);
       }
@@ -48,19 +47,15 @@ export default function ForgotPasswordScreen() {
     }
 
     const normalized = email.trim().toLowerCase();
-    if (!normalized || !/^\S+@\S+\.\S+$/.test(normalized)) {
-      Alert.alert("Invalid email", "Please enter a valid email address.");
-      return;
-    }
+    if (!normalized || !/^\S+@\S+\.\S+$/.test(normalized)) { setError("Please enter a valid email address."); setSuccess(""); return; }
     setSubmitting(true);
+    setError("");
+    setSuccess("");
     try {
       await requestPasswordReset(normalized);
-      Alert.alert(
-        "Check your email",
-        "If this email is registered, we’ll send password reset instructions."
-      );
+      setSuccess("If this email is registered, we’ll send password reset instructions.");
     } catch (e) {
-      Alert.alert("Error", "Unable to request reset right now. Try again later.");
+      setError("Unable to request reset right now. Try again later.");
     } finally {
       setSubmitting(false);
     }
@@ -73,6 +68,8 @@ export default function ForgotPasswordScreen() {
       resizeMode="cover"
     >
       <View style={s.overlay} />
+      <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} offset={20} />
+      <Toast visible={!!success} type="success" message={success} onClose={() => setSuccess("")} offset={78} />
       <ScrollView
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled"
@@ -89,6 +86,7 @@ export default function ForgotPasswordScreen() {
               ? "Enter and confirm your new password."
               : "Enter your email to receive reset instructions."}
           </Text>
+
 
           {token ? (
             <>
@@ -115,9 +113,9 @@ export default function ForgotPasswordScreen() {
               />
               <View style={{ height: 12 }} />
               <TouchableOpacity
-                style={[s.primaryBtn, (!password || !confirm) && s.btnDisabled]}
+                style={[s.primaryBtn, submitting && s.btnDisabled]}
                 onPress={onSubmit}
-                disabled={!password || !confirm || submitting}
+                disabled={submitting}
                 activeOpacity={0.9}
               >
                 <Text style={s.primaryBtnText}>{submitting ? "Updating…" : "Update Password"}</Text>
@@ -139,9 +137,9 @@ export default function ForgotPasswordScreen() {
               />
               <View style={{ height: 12 }} />
               <TouchableOpacity
-                style={[s.primaryBtn, !email.trim() && s.btnDisabled]}
+                style={[s.primaryBtn, submitting && s.btnDisabled]}
                 onPress={onSubmit}
-                disabled={!email.trim() || submitting}
+                disabled={submitting}
                 activeOpacity={0.9}
               >
                 <Text style={s.primaryBtnText}>{submitting ? "Sending…" : "Send Reset Link"}</Text>
@@ -210,4 +208,5 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   btnDisabled: { opacity: 0.6 },
+  
 });

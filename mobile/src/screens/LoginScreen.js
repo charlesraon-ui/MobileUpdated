@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
+import Toast from "../../components/Toast";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -24,14 +25,22 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const validate = () => {
+    const e = email.trim().toLowerCase();
+    if (!e || !password) return "Please enter your email and password.";
+    if (!/^\S+@\S+\.\S+$/.test(e)) return "Please enter a valid email address.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    return null;
+  };
 
   const onSubmit = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert("Missing info", "Please enter your email and password.");
-      return;
-    }
+    const err = validate();
+    if (err) { setError(err); return; }
 
     setSubmitting(true);
+    setError("");
     try {
       await doLogin({ email: email.trim(), password });
       // success: AppContext will redirect to /tabs/home
@@ -43,7 +52,7 @@ export default function LoginScreen() {
           : status === 400
           ? e?.response?.data?.message || "Please check your input."
           : "Unable to login right now. Please try again.";
-      Alert.alert("Login failed", msg);
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -56,6 +65,7 @@ export default function LoginScreen() {
       resizeMode="cover"
     >
       <View style={s.overlay} />
+      <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} />
       <ScrollView
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled"
@@ -64,9 +74,10 @@ export default function LoginScreen() {
         <View style={s.card}>
           <View style={s.logoRow}>
             <GoAgriLogo width={32} height={32} />
-            <Text style={s.brand}>GoAgri</Text>
-          </View>
-          <Text style={s.title}>Welcome back</Text>
+          <Text style={s.brand}>GoAgri</Text>
+        </View>
+        <Text style={s.title}>Welcome back</Text>
+        {/* Inline error banner replaced by sticky toast */}
 
       <Text style={s.label}>Email</Text>
       <TextInput
@@ -102,9 +113,9 @@ export default function LoginScreen() {
         </View>
       ) : (
         <TouchableOpacity
-          style={[s.primaryBtn, (!email.trim() || !password) && s.btnDisabled]}
+          style={[s.primaryBtn, submitting && s.btnDisabled]}
           onPress={onSubmit}
-          disabled={!email.trim() || !password}
+          disabled={submitting}
           activeOpacity={0.9}
         >
           <Text style={s.primaryBtnText}>Login</Text>
@@ -184,4 +195,5 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   btnDisabled: { opacity: 0.6 },
+  
 });

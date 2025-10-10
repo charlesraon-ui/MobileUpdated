@@ -308,9 +308,11 @@ export async function resetPasswordRedirect(req, res) {
           <script>
             (function(){
               try {
-                var scheme = 'goagritrading://reset?token=${token}';
+                // Deep link to the mobile Forgot Password screen
+                var scheme = 'goagritrading://forgot-password?token=${token}';
                 window.location.href = scheme;
               } catch(e) {}
+              // Fallback to web route if deep link is unavailable
               setTimeout(function(){ window.location.href = '${redirectUrl}'; }, 500);
             })();
           </script>

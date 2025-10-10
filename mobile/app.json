@@ -80,7 +80,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "http://localhost:5000",
+      "apiUrl": "https://goagritrading-backend.onrender.com",
       "googleWebClientId": "1006606136969-kka7f7k99ecsnvd0v71j40tqjol6uqct.apps.googleusercontent.com",
       "eas": {
         "projectId": "e762036f-0b8a-4705-a8d9-b3c2c04cecec"

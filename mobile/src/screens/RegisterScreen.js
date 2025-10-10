@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
+import Toast from "../../components/Toast";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -36,12 +37,15 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   // No Google button; registration is authenticated by email approval.
 
   const validate = () => {
     if (!firstName.trim()) return "Please enter your first name.";
+    if (/\d/.test(firstName.trim())) return "First name should not contain numbers.";
     if (!lastName.trim()) return "Please enter your last name.";
+    if (/\d/.test(lastName.trim())) return "Last name should not contain numbers.";
     if (!street.trim()) return "Please enter your street address.";
     if (!city.trim()) return "Please enter your city.";
     if (!province.trim()) return "Please enter your province.";
@@ -56,11 +60,9 @@ export default function RegisterScreen() {
 
   const onSubmit = async () => {
     const err = validate();
-    if (err) {
-      Alert.alert("Invalid input", err);
-      return;
-    }
+    if (err) { setError(err); return; }
     setSubmitting(true);
+    setError("");
     try {
       const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
       const address = `${street.trim()}, ${city.trim()}, ${province.trim()}`.trim();
@@ -81,7 +83,7 @@ export default function RegisterScreen() {
           : status === 400
           ? apiMsg || "Please check the information you entered."
           : "Unable to register right now. Please try again.";
-      Alert.alert("Registration failed", msg);
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -94,6 +96,7 @@ export default function RegisterScreen() {
       resizeMode="cover"
     >
       <View style={s.overlay} />
+      <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} />
       <ScrollView
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled"
@@ -101,10 +104,10 @@ export default function RegisterScreen() {
       >
         <View style={s.card}>
           <View style={s.logoRow}>
-            <GoAgriLogo width={32} height={32} />
-            <Text style={s.brand}>GoAgri</Text>
-          </View>
-          <Text style={s.title}>Create Account</Text>
+          <GoAgriLogo width={32} height={32} />
+          <Text style={s.brand}>GoAgri</Text>
+        </View>
+        <Text style={s.title}>Create Account</Text>
 
       <Text style={s.sectionLabel}>Name</Text>
       <Text style={s.label}>First Name</Text>
@@ -226,18 +229,9 @@ export default function RegisterScreen() {
         </View>
       ) : (
         <TouchableOpacity
-          style={[s.primaryBtn, (!firstName.trim() || !lastName.trim() || !street.trim() || !city.trim() || !province.trim() || !email.trim() || !password || !confirm) && s.btnDisabled]}
+          style={[s.primaryBtn, submitting && s.btnDisabled]}
           onPress={onSubmit}
-          disabled={
-            !firstName.trim() ||
-            !lastName.trim() ||
-            !street.trim() ||
-            !city.trim() ||
-            !province.trim() ||
-            !email.trim() ||
-            !password ||
-            !confirm
-          }
+          disabled={submitting}
           activeOpacity={0.9}
         >
           <Text style={s.primaryBtnText}>Register</Text>
@@ -309,4 +303,5 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   btnDisabled: { opacity: 0.6 },
+  
 });
