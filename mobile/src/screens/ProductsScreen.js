@@ -529,8 +529,8 @@ const renderBundlesSection = () => {
   // Uniform grid: remove featured product emphasis; show all as compact
   const gridProducts = useMemo(() => filteredProducts, [filteredProducts]);
 
-  // Compact top search for quick access
-  const renderTopSearch = () => (
+  // Compact top search for quick access (pass as static element to avoid remounts)
+  const topSearchHeader = (
     <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
       <SearchBar onOpenFilters={openFilterModal} />
     </View>
@@ -681,7 +681,7 @@ const renderBundlesSection = () => {
         numColumns={columns}
         key={`grid-${columns}`}
         ListEmptyComponent={loading ? renderSkeletonGrid : renderEmptyState}
-        ListHeaderComponent={renderTopSearch}
+        ListHeaderComponent={topSearchHeader}
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={columns > 1 ? { gap: columnGap, paddingHorizontal: 20 } : undefined}
         refreshControl={

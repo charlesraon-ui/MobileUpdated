@@ -18,7 +18,7 @@ export default function SearchScreen() {
     let active = true;
     const t = setTimeout(async () => {
       if (!active) return;
-      if (debouncedQ.length < 2) { setItems([]); setErr(""); setLoading(false); return; }
+      if (debouncedQ.length < 1) { setItems([]); setErr(""); setLoading(false); return; }
       try {
         setLoading(true); setErr("");
         const res = await axios.get(`${API_URL}/products/search`, { params: { q: debouncedQ, limit: 50 } });
@@ -60,10 +60,10 @@ export default function SearchScreen() {
         />
       </View>
 
-      {q.trim().length < 2 && <Text style={s.hint}>Type at least 2 characters to search.</Text>}
+      {q.trim().length < 1 && <Text style={s.hint}>Type at least 1 character to search.</Text>}
       {loading && <View style={s.center}><ActivityIndicator /><Text style={s.muted}>Searching…</Text></View>}
       {!loading && err ? <Text style={s.error}>{err}</Text> : null}
-      {!loading && !err && q.trim().length >= 2 && items.length === 0 && <Text style={s.muted}>No results found.</Text>}
+      {!loading && !err && q.trim().length >= 1 && items.length === 0 && <Text style={s.muted}>No results found.</Text>}
 
       {!loading && items.length > 0 && (
         <FlatList

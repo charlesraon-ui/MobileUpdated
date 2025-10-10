@@ -142,6 +142,37 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             </View>
           )}
           <View style={s.imageGradient} />
+
+          {/* Compact overlays: wishlist (top-right), price (bottom-left), rating (bottom-right) */}
+          {compact && (
+            <>
+              <Pressable
+                onPress={async (e) => {
+                  e.stopPropagation();
+                  const action = await toggleWishlist?.(product?._id);
+                  if (action === "added") Alert.alert("Added to wishlist");
+                  else if (action === "removed") Alert.alert("Removed from wishlist");
+                }}
+                style={[s.overlayHeartButton, saved && s.overlayHeartActive]}
+              >
+                <Text style={[s.overlayHeartIcon, saved && s.overlayHeartIconActive]}>
+                  {saved ? "♥" : "♡"}
+                </Text>
+              </Pressable>
+
+              <View style={s.priceOverlay}>
+                <Text style={s.priceOverlayCurrency}>₱</Text>
+                <Text style={s.priceOverlayText}>{formatPrice(product?.price)}</Text>
+              </View>
+
+              {averageRating && (
+                <View style={s.ratingOverlay}>
+                  <Text style={s.starIcon}>★</Text>
+                  <Text style={s.ratingOverlayText}>{averageRating}</Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         {/* Content Container */}
@@ -200,30 +231,11 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               )}
             </View>
             {compact && averageRating && (
-              <View style={[s.ratingContainer, { marginTop: 4 }]}>
-                <Text style={[s.starIcon, { fontSize: 11 }]}>★</Text>
-                <Text style={[s.ratingText, { fontSize: 11 }]}>
-                  {averageRating}
-                  {reviewCount > 0 ? ` (${reviewCount})` : ""}
-                </Text>
-              </View>
+              <></>
             )}
 
             <View style={s.actionsContainer}>
-              {/* Wishlist inline toggle */}
-              <Pressable
-                onPress={async (e) => {
-                  e.stopPropagation();
-                  const action = await toggleWishlist?.(product?._id);
-                  if (action === "added") Alert.alert("Added to wishlist");
-                  else if (action === "removed") Alert.alert("Removed from wishlist");
-                }}
-                style={[s.wishlistInlineButton, saved && s.wishlistInlineActive]}
-              >
-                <Text style={[s.wishlistInlineIcon, saved && s.wishlistInlineIconActive]}>
-                  {saved ? "♥" : "♡"}
-                </Text>
-              </Pressable>
+              {/* Wishlist inline toggle removed in favor of overlay */}
 
               <Pressable
               onPress={handleAddToCartPress}
@@ -568,5 +580,75 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
+  },
+  
+  // Compact card overlays
+  overlayHeartButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  overlayHeartActive: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  overlayHeartIcon: {
+    fontSize: 14,
+    color: C.muted,
+    fontWeight: "700",
+  },
+  overlayHeartIconActive: {
+    color: "#DC2626",
+  },
+
+  priceOverlay: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    flexDirection: "row",
+    alignItems: "baseline",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  priceOverlayCurrency: {
+    fontSize: 12,
+    color: C.accent,
+    fontWeight: "700",
+    marginRight: 2,
+  },
+  priceOverlayText: {
+    fontSize: 14,
+    color: C.accent,
+    fontWeight: "900",
+    letterSpacing: -0.2,
+  },
+
+  ratingOverlay: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  ratingOverlayText: {
+    fontSize: 12,
+    color: "#D97706",
+    fontWeight: "700",
   },
 });

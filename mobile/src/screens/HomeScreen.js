@@ -31,6 +31,8 @@ export default function HomeScreen() {
     justRegistered,
     setJustRegistered,
     toAbsoluteUrl,
+    toggleWishlist,
+    isInWishlist,
     setSelectedCategory,
   } = useContext(AppCtx);
 
@@ -78,15 +80,15 @@ export default function HomeScreen() {
   };
 
   const ProductCard = ({ product }) => {
-    const img = product.imageUrl
-      ? toAbsoluteUrl?.(product.imageUrl) || product.imageUrl
-      : null;
+    const rawImg = product?.imageUrl || product?.images?.[0] || null;
+    const img = rawImg ? (toAbsoluteUrl?.(rawImg) || rawImg) : null;
+    const saved = isInWishlist?.(product?._id);
 
     return (
       <TouchableOpacity 
         style={styles.productCard} 
         activeOpacity={0.8}
-        onPress={() => router.push(`/tabs/${product._id}`)}
+        onPress={() => router.push(`/product-detail?id=${product._id}`)}
       >
         <View style={styles.productImageContainer}>
           {img ? (
@@ -96,17 +98,36 @@ export default function HomeScreen() {
               <Text style={styles.productImageText}>📦</Text>
             </View>
           )}
+          {/* Heart toggle (top-right) */}
+          <TouchableOpacity
+            onPress={async (e) => {
+              e.stopPropagation?.();
+              const action = await toggleWishlist?.(product?._id);
+              if (action === "added") Alert.alert("Added to wishlist");
+              else if (action === "removed") Alert.alert("Removed from wishlist");
+            }}
+            activeOpacity={0.7}
+            style={[styles.wishlistHeart, saved && styles.wishlistHeartActive]}
+          >
+            <Text style={[styles.wishlistHeartIcon, saved && styles.wishlistHeartIconActive]}>
+              {saved ? "♥" : "♡"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Price (bottom-left) */}
+          <View style={styles.priceTag}>
+            <Text style={styles.priceTagText}>₱{Number(product?.price || 0).toFixed(2)}</Text>
+          </View>
+
+          {/* Compact rating (bottom-right) */}
+          <View style={styles.ratingChip}>
+            <Text style={styles.ratingChipText}>⭐ {product?.averageRating || '4.5'}</Text>
+          </View>
         </View>
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>
             {product.name}
           </Text>
-          <View style={styles.productFooter}>
-            <Text style={styles.productPrice}>₱{Number(product.price || 0).toFixed(2)}</Text>
-            <View style={styles.ratingBadge}>
-              <Text style={styles.ratingText}>⭐ {product.averageRating || '4.5'}</Text>
-            </View>
-          </View>
         </View>
       </TouchableOpacity>
     );
@@ -174,7 +195,7 @@ export default function HomeScreen() {
           if (isBundle) {
             router.push(`/bundle-detail?id=${item?._id || ''}`);
           } else {
-            router.push(`/tabs/${item?._id || ''}`);
+            router.push(`/product-detail?id=${item?._id || ''}`);
           }
         }}
       >
@@ -682,6 +703,61 @@ export default function HomeScreen() {
     borderTopLeftRadius: Radii.lg,
     borderTopRightRadius: Radii.lg,
     overflow: "hidden",
+  },
+
+  // Overlays on product image
+  wishlistHeart: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  wishlistHeartActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+  },
+  wishlistHeartIcon: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '700',
+  },
+  wishlistHeartIconActive: {
+    color: '#DC2626',
+  },
+
+  priceTag: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(16,185,129,0.92)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  priceTagText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  ratingChip: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(254,243,199,0.92)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  ratingChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D97706',
   },
   
   productImage: {

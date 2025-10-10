@@ -141,8 +141,8 @@ export const searchProducts = async (req, res) => {
     const q = String(req.query.q || "").trim();
     const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
 
-    // Only search when query is meaningful
-    if (q.length < 2) {
+    // Only search when query is meaningful (allow single character)
+    if (q.length < 1) {
       return res.json([]);
     }
 
