@@ -10,6 +10,8 @@ const productSchema = new mongoose.Schema(
     tags: { type: [String], default: [] },
     weightKg: { type: Number, min: 0, default: null },
     catalog: { type: Boolean, default: true }, 
+    stock:    { type: Number, default: 0, min: 0 },
+    sold:     { type: Number, default: 0, min: 0 },
 
     reviews: [
       {
