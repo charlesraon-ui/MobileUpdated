@@ -116,13 +116,12 @@ export const createEPaymentOrder = async (req, res) => {
             message: `Product not found: ${item.name}` 
           });
         }
-        const availableStock = (product.stock ?? product.quantity ?? 0); // preferred: stock, fallback to old field if present
-          if (availableStock < item.quantity) {
-            return res.status(400).json({
-              success: false,
-              message: `Insufficient stock for ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}`
-            });
-}
+        if (product.quantity < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}`
+          });
+        }
       }
     } catch (err) {
       return res.status(500).json({ 
