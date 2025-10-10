@@ -1,6 +1,4 @@
 // backend/utils/orderHelpers.js
-// Compatibility helpers for controllers that import this module.
-// These functions are intentionally generic.
 import Product from "../models/Products.js";
 
 /** Safely convert a value to a number (supports strings with commas/spaces). */
@@ -32,7 +30,6 @@ export function normalizeItems(rawItems = []) {
       : NaN;
 
     if (!Number.isFinite(pricePeso)) {
-      // Still return a sentinel object; caller may validate separately.
       pricePeso = NaN;
     }
 
@@ -95,8 +92,9 @@ export function validateItems(items = []) {
 }
 
 /**
+ * ✅ FIXED: Use 'stock' instead of 'quantity'
  * Decrease inventory for each item in an order.
- * Uses an atomic update to ensure quantity never goes below zero.
+ * Uses an atomic update to ensure stock never goes below zero.
  * Throws a helpful error if stock is insufficient.
  */
 export async function processOrderInventory(items = []) {
@@ -107,16 +105,17 @@ export async function processOrderInventory(items = []) {
     const qty = Math.floor(Number(qtyRaw || 0));
     if (!pid || !qty || qty <= 0) continue;
 
+    // ✅ Changed from 'quantity' to 'stock'
     const updated = await Product.findOneAndUpdate(
-      { _id: pid, quantity: { $gte: qty } },
-      { $inc: { quantity: -qty } },
+      { _id: pid, stock: { $gte: qty } },  // ✅ Use 'stock' field
+      { $inc: { stock: -qty, sold: qty } }, // ✅ Use 'stock' field and increment 'sold'
       { new: true }
     );
 
     if (!updated) {
-      const p = await Product.findById(pid).select("name quantity").lean();
+      const p = await Product.findById(pid).select("name stock").lean(); // ✅ Use 'stock' field
       const name = p?.name || "Product";
-      const available = Number(p?.quantity || 0);
+      const available = Number(p?.stock || 0); // ✅ Use 'stock' field
       throw new Error(`Insufficient stock for ${name}. Available: ${available}, Requested: ${qty}`);
     }
   }

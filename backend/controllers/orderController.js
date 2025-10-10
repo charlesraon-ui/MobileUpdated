@@ -106,6 +106,7 @@ export const createEPaymentOrder = async (req, res) => {
       : Math.round((subtotal + deliveryFee) * 100) / 100;
 
     // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
+   // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
     try {
       for (const item of items) {
         if (!item.productId) continue;
@@ -116,10 +117,11 @@ export const createEPaymentOrder = async (req, res) => {
             message: `Product not found: ${item.name}` 
           });
         }
-        if (product.quantity < item.quantity) {
+        // ✅ Changed from 'quantity' to 'stock'
+        if (product.stock < item.quantity) {
           return res.status(400).json({
             success: false,
-            message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}`
+            message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
           });
         }
       }
