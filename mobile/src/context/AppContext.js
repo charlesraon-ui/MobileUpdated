@@ -10,6 +10,7 @@ import {
   getOrders as apiGetOrders,
   login as apiLogin,
   register as apiRegister,
+  initiateRegister,
   clearAuth,
   createEPaymentOrder,
   getBundleApi,
@@ -28,6 +29,7 @@ import {
   setCartApi,
   setToken,
   toAbsoluteUrl,
+  googleAuth,
 } from "../api/apiClient";
 import { registerPushToken } from "../api/apiClient";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
@@ -598,8 +600,8 @@ const handlePlaceOrder = async (opts = {}) => {
     router.replace("/tabs/home");
   };
 
-  const doRegister = async ({ name, email, password }) => {
-    const resp = await apiRegister({ name, email, password });
+  const doRegister = async ({ name, email, password, address }) => {
+    const resp = await apiRegister({ name, email, password, address });
     const { token, user: u } = resp.data || {};
     await setToken(token);
     await persistUser(u);
@@ -615,6 +617,42 @@ const handlePlaceOrder = async (opts = {}) => {
 
     setJustLoggedInName(u?.name || u?.email || "there");
     setJustRegistered(true);
+
+    await mergeGuestCartInto(u);
+    await refreshAuthedData(u);
+
+    router.replace("/tabs/home");
+  };
+
+  // Email verification flow: initiate registration without immediate login
+  const doRegisterInitiate = async ({ name, email, password, address }) => {
+    await initiateRegister({ name, email, password, address });
+    setJustLoggedInName(name || email || "there");
+    setJustRegistered(false);
+    // Show info and route user to login; they can login after confirming via email
+    Alert.alert(
+      "Check your email",
+      "We sent a verification link to your Gmail. Open it to confirm account creation. After confirming, return to the app to login.",
+      [{ text: "OK", onPress: () => router.replace("/login") }]
+    );
+  };
+
+  const doGoogleAuth = async ({ accessToken }) => {
+    const resp = await googleAuth({ accessToken });
+    const { token, user: u } = resp.data || {};
+    await setToken(token);
+    await persistUser(u);
+    setUserState(u);
+
+    try {
+      const expoToken = await registerForPushNotificationsAsync();
+      if (expoToken) await registerPushToken(expoToken);
+    } catch (e) {
+      console.warn("push token register (google) failed:", e?.message);
+    }
+
+    setJustLoggedInName(u?.name || u?.email || "there");
+    setJustRegistered(!Boolean(u?._id));
 
     await mergeGuestCartInto(u);
     await refreshAuthedData(u);
@@ -737,6 +775,8 @@ const handlePlaceOrder = async (opts = {}) => {
     handleLogout,
     doLogin,
     doRegister,
+    doRegisterInitiate,
+    doGoogleAuth,
     refreshAuthedData,
 
     // product & reviews

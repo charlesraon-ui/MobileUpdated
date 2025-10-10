@@ -1,31 +1,54 @@
 // src/screens/RegisterScreen.js
 import { Link } from "expo-router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
+  Dimensions,
+  ImageBackground,
+  TouchableOpacity,
   StyleSheet,
   Text,
   TextInput,
   View,
+  ScrollView,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import GoAgriLogo from "../../components/GoAgriLogo";
+
+const { height } = Dimensions.get('window');
+const placeholderColor = 'rgba(55, 65, 81, 0.5)';
 
 export default function RegisterScreen() {
-  const { doRegister } = useContext(AppCtx);
+  const { doRegisterInitiate } = useContext(AppCtx);
 
-  const [name, setName] = useState("");
+  // Name fields
+  const [firstName, setFirstName] = useState("");
+  const [middleInitial, setMiddleInitial] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  // Address fields
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // No Google button; registration is authenticated by email approval.
+
   const validate = () => {
-    if (!name.trim()) return "Please enter your name.";
+    if (!firstName.trim()) return "Please enter your first name.";
+    if (!lastName.trim()) return "Please enter your last name.";
+    if (!street.trim()) return "Please enter your street address.";
+    if (!city.trim()) return "Please enter your city.";
+    if (!province.trim()) return "Please enter your province.";
     if (!email.trim()) return "Please enter your email.";
     // very light email check
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email.";
+    // Gmail verification is optional; if configured and verified, we show it.
     if (password.length < 6) return "Password must be at least 6 characters.";
     if (password !== confirm) return "Passwords do not match.";
     return null;
@@ -39,12 +62,16 @@ export default function RegisterScreen() {
     }
     setSubmitting(true);
     try {
-      await doRegister({
-        name: name.trim(),
+      const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
+      const address = `${street.trim()}, ${city.trim()}, ${province.trim()}`.trim();
+
+      await doRegisterInitiate({
+        name,
+        address,
         email: email.trim().toLowerCase(),
         password,
       });
-      // success → AppContext redirects to /tabs/home
+      // AppContext will alert and route to Login with instructions
     } catch (e) {
       const status = e?.response?.status;
       const apiMsg = e?.response?.data?.message;
@@ -61,14 +88,54 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={s.container}>
-      <Text style={s.title}>Create Account</Text>
+    <ImageBackground
+      source={require("../../../assets/images/farm-landing-background.png")}
+      style={s.bg}
+      resizeMode="cover"
+    >
+      <View style={s.overlay} />
+      <ScrollView
+        contentContainerStyle={s.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={s.card}>
+          <View style={s.logoRow}>
+            <GoAgriLogo width={32} height={32} />
+            <Text style={s.brand}>GoAgri</Text>
+          </View>
+          <Text style={s.title}>Create Account</Text>
 
-      <Text style={s.label}>Full Name</Text>
+      <Text style={s.sectionLabel}>Name</Text>
+      <Text style={s.label}>First Name</Text>
       <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Juan Dela Cruz"
+        value={firstName}
+        onChangeText={setFirstName}
+        placeholder="Juan"
+        placeholderTextColor={placeholderColor}
+        autoCapitalize="words"
+        style={s.input}
+        editable={!submitting}
+      />
+
+      <Text style={s.label}>Middle Initial (optional)</Text>
+      <TextInput
+        value={middleInitial}
+        onChangeText={(v) => setMiddleInitial(v.slice(0, 1))}
+        placeholder="M"
+        placeholderTextColor={placeholderColor}
+        autoCapitalize="characters"
+        style={s.input}
+        editable={!submitting}
+        maxLength={1}
+      />
+
+      <Text style={s.label}>Last Name</Text>
+      <TextInput
+        value={lastName}
+        onChangeText={setLastName}
+        placeholder="Dela Cruz"
+        placeholderTextColor={placeholderColor}
         autoCapitalize="words"
         style={s.input}
         editable={!submitting}
@@ -79,9 +146,49 @@ export default function RegisterScreen() {
         value={email}
         onChangeText={setEmail}
         placeholder="you@example.com"
+        placeholderTextColor={placeholderColor}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
+        style={s.input}
+        editable={!submitting}
+      />
+
+      <View style={{ height: 8 }} />
+      <Text style={s.helper}>
+        After submitting, we send a Gmail notification with a verification link. Approve it to create your account, then you’ll be redirected back to the app.
+      </Text>
+
+      <Text style={s.sectionLabel}>Address</Text>
+      <Text style={s.label}>Street</Text>
+      <TextInput
+        value={street}
+        onChangeText={setStreet}
+        placeholder="123 Rizal St."
+        placeholderTextColor={placeholderColor}
+        autoCapitalize="words"
+        style={s.input}
+        editable={!submitting}
+      />
+
+      <Text style={s.label}>City</Text>
+      <TextInput
+        value={city}
+        onChangeText={setCity}
+        placeholder="Moncada"
+        placeholderTextColor={placeholderColor}
+        autoCapitalize="words"
+        style={s.input}
+        editable={!submitting}
+      />
+
+      <Text style={s.label}>Province</Text>
+      <TextInput
+        value={province}
+        onChangeText={setProvince}
+        placeholder="Tarlac"
+        placeholderTextColor={placeholderColor}
+        autoCapitalize="words"
         style={s.input}
         editable={!submitting}
       />
@@ -91,6 +198,7 @@ export default function RegisterScreen() {
         value={password}
         onChangeText={setPassword}
         placeholder="••••••••"
+        placeholderTextColor={placeholderColor}
         secureTextEntry
         autoCapitalize="none"
         style={s.input}
@@ -102,6 +210,7 @@ export default function RegisterScreen() {
         value={confirm}
         onChangeText={setConfirm}
         placeholder="••••••••"
+        placeholderTextColor={placeholderColor}
         secureTextEntry
         autoCapitalize="none"
         style={s.input}
@@ -116,11 +225,23 @@ export default function RegisterScreen() {
           <Text style={{ marginLeft: 8 }}>Creating your account…</Text>
         </View>
       ) : (
-        <Button
-          title="Register"
+        <TouchableOpacity
+          style={[s.primaryBtn, (!firstName.trim() || !lastName.trim() || !street.trim() || !city.trim() || !province.trim() || !email.trim() || !password || !confirm) && s.btnDisabled]}
           onPress={onSubmit}
-          disabled={!name.trim() || !email.trim() || !password || !confirm}
-        />
+          disabled={
+            !firstName.trim() ||
+            !lastName.trim() ||
+            !street.trim() ||
+            !city.trim() ||
+            !province.trim() ||
+            !email.trim() ||
+            !password ||
+            !confirm
+          }
+          activeOpacity={0.9}
+        >
+          <Text style={s.primaryBtnText}>Register</Text>
+        </TouchableOpacity>
       )}
 
       <View style={{ height: 16 }} />
@@ -128,31 +249,64 @@ export default function RegisterScreen() {
       <Text style={s.small}>
         Already have an account? <Link href="/login">Login</Link>
       </Text>
-    </View>
+        </View>
+      </ScrollView>
+    </ImageBackground>
   );
 }
 
 const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#fff",
-    justifyContent: "center",
+  bg: { flex: 1, minHeight: height, overflow: "hidden" },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
+  container: { flex: 1, minHeight: height, padding: 20, justifyContent: "center" },
+  card: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    maxWidth: 520,
+    alignSelf: "center",
+    width: "100%",
   },
-  title: { fontSize: 24, fontWeight: "800", marginBottom: 16, textAlign: "center" },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  brand: { fontSize: 18, fontWeight: "800", color: "#065F46" },
+  title: { fontSize: 22, fontWeight: "800", marginBottom: 16, color: "#111827" },
+  sectionLabel: { fontWeight: "800", color: "#111827", marginTop: 12 },
   label: { fontWeight: "700", color: "#374151", marginTop: 8 },
   input: {
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "white",
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   small: { color: "#6B7280", textAlign: "center" },
+  helper: { color: "#6B7280", fontSize: 12, marginTop: 6 },
   loading: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
+  primaryBtn: {
+    backgroundColor: "#10B981",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  btnDisabled: { opacity: 0.6 },
 });

@@ -4,7 +4,7 @@ import RegisterScreen from "../src/screens/RegisterScreen";
 export default function RegisterRoute() {
   return (
     <>
-      <Stack.Screen options={{ title: "Register" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <RegisterScreen />
     </>
   );

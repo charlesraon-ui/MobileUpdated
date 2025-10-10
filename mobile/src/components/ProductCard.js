@@ -40,7 +40,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   const saved = isInWishlist?.(product?._id);
 
   const createdAt = product?.createdAt ? new Date(product.createdAt) : null;
-  const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 14 : false;
+  const isNew = createdAt ? (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24) <= 1 : false;
   const isOnSale = (product?.originalPrice && product.originalPrice > product.price) || !!product?.discount;
 
   const handlePressIn = () => {
@@ -141,22 +141,6 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               <Text style={[s.infoBadgeText, { color: "#16A34A" }]}>IN STOCK</Text>
             </View>
           )}
-
-          {/* Wishlist toggle */}
-          <Pressable
-            onPress={async (e) => {
-              e.stopPropagation();
-              const action = await toggleWishlist?.(product?._id);
-              if (action === "added") Alert.alert("Added to wishlist");
-              else if (action === "removed") Alert.alert("Removed from wishlist");
-            }}
-            style={[s.wishlistButton, saved && s.wishlistActive]}
-          >
-            <Text style={[s.wishlistIcon, saved && s.wishlistIconActive]}>
-              {saved ? "♥" : "♡"}
-            </Text>
-          </Pressable>
-
           <View style={s.imageGradient} />
         </View>
 
@@ -169,11 +153,10 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
                 {categoryLabelOf?.(product) || "Product"}
               </Text>
             </View>
-            
-            {averageRating && (
+            {!compact && averageRating && (
               <View style={s.ratingContainer}>
-                <Text style={[s.starIcon, compact && { fontSize: 11 }]}>★</Text>
-                <Text style={[s.ratingText, compact && { fontSize: 11 }]}>
+                <Text style={[s.starIcon, { fontSize: 12 }]}>★</Text>
+                <Text style={s.ratingText}>
                   {averageRating}
                   {reviewCount > 0 ? ` (${reviewCount})` : ""}
                 </Text>
@@ -216,8 +199,33 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
                 <Text style={[s.originalPrice, compact && s.compactOriginalPrice]}>₱{formatPrice(product.originalPrice)}</Text>
               )}
             </View>
+            {compact && averageRating && (
+              <View style={[s.ratingContainer, { marginTop: 4 }]}>
+                <Text style={[s.starIcon, { fontSize: 11 }]}>★</Text>
+                <Text style={[s.ratingText, { fontSize: 11 }]}>
+                  {averageRating}
+                  {reviewCount > 0 ? ` (${reviewCount})` : ""}
+                </Text>
+              </View>
+            )}
 
-            <Pressable
+            <View style={s.actionsContainer}>
+              {/* Wishlist inline toggle */}
+              <Pressable
+                onPress={async (e) => {
+                  e.stopPropagation();
+                  const action = await toggleWishlist?.(product?._id);
+                  if (action === "added") Alert.alert("Added to wishlist");
+                  else if (action === "removed") Alert.alert("Removed from wishlist");
+                }}
+                style={[s.wishlistInlineButton, saved && s.wishlistInlineActive]}
+              >
+                <Text style={[s.wishlistInlineIcon, saved && s.wishlistInlineIconActive]}>
+                  {saved ? "♥" : "♡"}
+                </Text>
+              </Pressable>
+
+              <Pressable
               onPress={handleAddToCartPress}
               disabled={!inStock}
             style={({ pressed }) => StyleSheet.flatten([
@@ -231,6 +239,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
                 {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
               </Text>
             </Pressable>
+            </View>
           </View>
         </View>
       </Pressable>
@@ -250,7 +259,7 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   compactCard: {
-    height: 220,
+    minHeight: 240,
     borderRadius: Radii.lg,
   },
   compactBorder: { borderWidth: 1, borderColor: C.border },
@@ -261,7 +270,7 @@ const s = StyleSheet.create({
     height: 180,
     overflow: "hidden",
   },
-  compactImageHeight: { height: 100 },
+  compactImageHeight: { height: 120 },
   
   image: {
     width: "100%",
@@ -450,7 +459,34 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  compactBottomRow: { marginTop: 2 },
+  compactBottomRow: { marginTop: 6, flexDirection: "column", alignItems: "stretch", gap: 6 },
+
+  actionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  wishlistInlineButton: {
+    backgroundColor: "rgba(255,255,255,0.85)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  wishlistInlineActive: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  wishlistInlineIcon: {
+    fontSize: 16,
+    color: C.muted,
+    fontWeight: "700",
+  },
+  wishlistInlineIconActive: {
+    color: "#DC2626",
+  },
   
   priceContainer: {
     flexDirection: "row",
@@ -496,7 +532,7 @@ const s = StyleSheet.create({
     minWidth: 120,
     alignItems: "center",
   },
-  compactAddButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: Radii.md, minWidth: 0 },
+  compactAddButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: Radii.md, minWidth: 0, alignSelf: "stretch" },
   
   addButtonPressed: {
     backgroundColor: "#059669",

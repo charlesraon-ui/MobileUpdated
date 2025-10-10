@@ -1,9 +1,16 @@
 import { Router } from "express";
-import { login, register } from "../controllers/authController.js";
+import { login, register, googleAuth, initiateRegistration, confirmRegistration, forgotPassword, resetPassword, resetPasswordRedirect } from "../controllers/authController.js";
 
 const router = Router();
 
 router.post("/register", register);
+router.post("/register/initiate", initiateRegistration);
+router.get("/register/confirm", confirmRegistration);
 router.post("/login", login);
+router.post("/google", googleAuth);
+// Forgot password
+router.post("/password/forgot", forgotPassword);
+router.get("/password/reset", resetPasswordRedirect);
+router.post("/password/reset", resetPassword);
 
 export default router;

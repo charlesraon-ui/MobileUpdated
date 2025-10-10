@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import SearchBar from "../components/SearchBar";
 import { Colors, Radii } from "../../constants/theme";
 
 const { width } = Dimensions.get('window');
@@ -22,12 +23,15 @@ export default function HomeScreen() {
   const {
     recommendedProducts,
     categories, // Get categories from context
+    products,
+    bundles,
     user,
     justLoggedInName,
     setJustLoggedInName,
     justRegistered,
     setJustRegistered,
     toAbsoluteUrl,
+    setSelectedCategory,
   } = useContext(AppCtx);
 
   // show banner once after login/register
@@ -136,19 +140,73 @@ export default function HomeScreen() {
 
   const CategoryCard = ({ category, index }) => (
     <TouchableOpacity
-      style={[styles.categoryCard, { backgroundColor: getCategoryColor(index) }]}
+      style={styles.categoryChip}
       onPress={() => {
+        setSelectedCategory?.(category);
         router.push('/tabs/products');
-        // You might want to set the selected category in context here
       }}
       activeOpacity={0.8}
     >
-      <View style={styles.categoryContent}>
-        <Text style={styles.categoryIcon}>{getCategoryIcon(category)}</Text>
-        <Text style={styles.categoryTitle} numberOfLines={1}>{category}</Text>
+      <View style={[styles.categoryChipIconWrap, { backgroundColor: getCategoryColor(index) }]}>
+        <Text style={styles.categoryChipIcon}>{getCategoryIcon(category)}</Text>
       </View>
+      <Text style={styles.categoryChipLabel} numberOfLines={1}>{category}</Text>
     </TouchableOpacity>
   );
+
+  const OfferCard = ({ data }) => {
+    const isBundle = data?.type === 'bundle';
+    const item = data?.item || {};
+    const name = isBundle ? (item?.name || 'Bundle') : (item?.name || 'Product');
+    const price = isBundle
+      ? Number(item?.totalPrice || item?.items?.reduce((s, it) => s + Number(it?.productId?.price || 0) * Number(it?.quantity || 1), 0) || 0)
+      : Number(item?.price || 0);
+    const img = isBundle
+      ? (item?.imageUrl || item?.coverImage || '')
+      : (item?.imageUrl || item?.images?.[0] || '');
+    const uri = img ? (toAbsoluteUrl?.(img) || img) : null;
+
+    return (
+      <TouchableOpacity
+        style={styles.offerCard}
+        activeOpacity={0.85}
+        onPress={() => {
+          if (isBundle) {
+            router.push(`/bundle-detail?id=${item?._id || ''}`);
+          } else {
+            router.push(`/tabs/${item?._id || ''}`);
+          }
+        }}
+      >
+        <View style={styles.offerImageWrap}>
+          {uri ? (
+            <Image source={{ uri }} style={styles.offerImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.offerImagePlaceholder}><Text style={{ fontSize: 28 }}>🛍️</Text></View>
+          )}
+          {isBundle && (
+            <View style={styles.bundleTag}><Text style={styles.bundleTagText}>Bundle</Text></View>
+          )}
+        </View>
+        <View style={styles.offerInfo}>
+          <Text numberOfLines={1} style={styles.offerName}>{name}</Text>
+          <Text style={styles.offerPrice}>₱{price.toFixed(2)}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Build Best Offers: mix top bundles and cheapest products
+  const bestOffers = (() => {
+    const bundleCards = (bundles || [])
+      .slice(0, 4)
+      .map((b) => ({ type: 'bundle', item: b }));
+    const cheapest = [...(products || [])]
+      .sort((a, b) => Number(a?.price || 0) - Number(b?.price || 0))
+      .slice(0, 6)
+      .map((p) => ({ type: 'product', item: p }));
+    return [...bundleCards, ...cheapest].slice(0, 8);
+  })();
 
   const FeatureCard = ({ title, subtitle, onPress, icon }) => (
     <TouchableOpacity style={styles.featureCard} onPress={onPress} activeOpacity={0.8}>
@@ -236,17 +294,7 @@ export default function HomeScreen() {
 
         {/* Search Bar */}
         <View style={styles.searchSection}>
-          <TouchableOpacity 
-            style={styles.searchBar} 
-            onPress={() => router.push("/tabs/products")}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.searchIcon}>🔍</Text>
-            <Text style={styles.searchPlaceholder}>Search for products...</Text>
-            <View style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Search</Text>
-            </View>
-          </TouchableOpacity>
+          <SearchBar />
         </View>
 
         {/* Categories - Dynamic from context */}
@@ -258,11 +306,33 @@ export default function HomeScreen() {
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.categoriesContainer}>
-              {categories.slice(0, 6).map((category, index) => (
+            <View style={styles.categoriesChipsRow}>
+              {categories.slice(0, 8).map((category, index) => (
                 <CategoryCard key={category} category={category} index={index} />
               ))}
             </View>
+          </View>
+        )}
+
+        {/* Best Offers */}
+        {bestOffers.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Best Offers</Text>
+              <TouchableOpacity onPress={() => router.push('/tabs/products')}>
+                <Text style={styles.seeAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.productsScroll}
+              contentContainerStyle={styles.productsScrollContent}
+            >
+              {bestOffers.map((o, idx) => (
+                <OfferCard key={(o.item?._id || idx) + '-' + o.type} data={o} />
+              ))}
+            </ScrollView>
           </View>
         )}
 
@@ -357,7 +427,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.surface,
@@ -545,42 +615,44 @@ const styles = StyleSheet.create({
   },
 
   // Categories
-  categoriesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+  categoriesChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
-  
-  categoryCard: {
-    width: (width - 64) / 3, // 3 columns with gaps
-    aspectRatio: 1.2,
+
+  categoryChip: {
+    width: (width - 80) / 4, // 4 per row on phones
+    minWidth: 80,
+    backgroundColor: Colors.light.surface,
     borderRadius: Radii.lg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  
-  categoryContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-  },
-  
-  categoryIcon: {
-    fontSize: 28,
+
+  categoryChipIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
-  
-  categoryTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    textAlign: "center",
-    textTransform: "capitalize",
+
+  categoryChipIcon: {
+    fontSize: 18,
+  },
+
+  categoryChipLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.light.text,
+    textAlign: 'center',
+    textTransform: 'capitalize',
   },
 
   // Products
@@ -782,6 +854,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
+  },
+
+  // Best Offers cards
+  offerCard: {
+    width: 220,
+    backgroundColor: Colors.light.card,
+    borderRadius: Radii.lg,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    overflow: 'hidden',
+  },
+  offerImageWrap: {
+    height: 120,
+    position: 'relative',
+  },
+  offerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  offerImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.surface,
+  },
+  bundleTag: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  bundleTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  offerInfo: {
+    padding: 12,
+  },
+  offerName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.light.text,
+    marginBottom: 6,
+  },
+  offerPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.light.accent,
   },
   
   offerContent: {

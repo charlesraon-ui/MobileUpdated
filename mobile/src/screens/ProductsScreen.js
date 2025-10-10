@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import BundleCard from "../components/BundleCard";
 import ProductCard from "../components/ProductCard";
+import SearchBar from "../components/SearchBar";
 import { AppCtx } from "../context/AppContext";
 
 const { width } = Dimensions.get('window');
@@ -34,7 +35,8 @@ export default function ProductsScreen() {
     setSearchQuery,
     loading,
     user,
-    handleAddToCart: contextAddToCart
+    handleAddToCart: contextAddToCart,
+    categoryLabelOf
   } = useContext(AppCtx);
   
   // Check if user is logged in
@@ -57,7 +59,8 @@ export default function ProductsScreen() {
     category: "All",
     sortBy: "popularity",
     minPrice: "",
-    maxPrice: ""
+    maxPrice: "",
+    search: ""
   });
 
   const filteredBundles = useMemo(() => {
@@ -175,22 +178,19 @@ const renderBundlesSection = () => {
 
     if (selectedCategory !== "All") {
       filtered = filtered.filter(product => {
-        const productCategory = product.category;
-        if (typeof productCategory === "string") {
-          return productCategory === selectedCategory;
-        }
-        if (typeof productCategory === "object") {
-          return productCategory?.name === selectedCategory || productCategory?.categoryName === selectedCategory;
-        }
-        return false;
+        const label = typeof categoryLabelOf === 'function' ? categoryLabelOf(product) : (product?.category?.name || product?.category?.categoryName || product?.category || '');
+        return label === selectedCategory;
       });
     }
 
     if (searchQuery) {
-      filtered = filtered.filter(product => 
-        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(product => {
+        const name = product.name?.toLowerCase() || '';
+        const desc = product.description?.toLowerCase() || '';
+        const label = typeof categoryLabelOf === 'function' ? String(categoryLabelOf(product)).toLowerCase() : String(product?.category || '').toLowerCase();
+        return name.includes(q) || desc.includes(q) || label.includes(q);
+      });
     }
 
     if (minPrice && !isNaN(minPrice)) {
@@ -228,8 +228,9 @@ const renderBundlesSection = () => {
   };
 
   const filteredProducts = getFilteredAndSortedProducts();
-  const columns = viewMode === "list" ? 1 : (width >= 1200 ? 4 : width >= 900 ? 3 : width >= 600 ? 2 : 1);
-  const columnGap = columns >= 4 ? 24 : columns === 3 ? 20 : columns === 2 ? 16 : 0;
+  // More mobile-friendly grid: ensure at least 2 columns for phones
+  const columns = viewMode === "list" ? 1 : (width >= 1200 ? 5 : width >= 992 ? 4 : width >= 768 ? 3 : 2);
+  const columnGap = columns >= 4 ? 24 : columns === 3 ? 20 : 16;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -247,7 +248,8 @@ const renderBundlesSection = () => {
       sortBy,
       minPrice,
       maxPrice,
-      viewMode
+      viewMode,
+      search: searchQuery
     });
     setShowFilterModal(true);
   };
@@ -257,6 +259,7 @@ const renderBundlesSection = () => {
     setSortBy(tempFilters.sortBy);
     setMinPrice(tempFilters.minPrice);
     setMaxPrice(tempFilters.maxPrice);
+    setSearchQuery((tempFilters.search || "").trim());
     if (tempFilters.viewMode) setViewMode(tempFilters.viewMode);
     setShowFilterModal(false);
   };
@@ -267,7 +270,8 @@ const renderBundlesSection = () => {
       sortBy: "popularity",
       minPrice: "",
       maxPrice: "",
-      viewMode: "grid"
+      viewMode: "grid",
+      search: ""
     });
   };
 
@@ -370,6 +374,17 @@ const renderBundlesSection = () => {
             >
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Search</Text>
+            <TextInput
+              value={tempFilters.search}
+              onChangeText={(text) => setTempFilters(prev => ({ ...prev, search: text }))}
+              placeholder="Search products..."
+              placeholderTextColor="#9CA3AF"
+              style={styles.priceInput}
+            />
           </View>
 
           <View style={styles.filterSection}>
@@ -511,29 +526,15 @@ const renderBundlesSection = () => {
     </Animated.View>
   );
 
-  // Featured product (large) at top; others in compact grid
-  const featuredProduct = useMemo(() => (filteredProducts && filteredProducts.length > 0 ? filteredProducts[0] : null), [filteredProducts]);
-  const gridProducts = useMemo(() => (featuredProduct ? filteredProducts.slice(1) : filteredProducts), [filteredProducts, featuredProduct]);
+  // Uniform grid: remove featured product emphasis; show all as compact
+  const gridProducts = useMemo(() => filteredProducts, [filteredProducts]);
 
-  const renderFeaturedProduct = () => {
-    if (!featuredProduct) return null;
-    return (
-      <Animated.View
-        style={[
-          styles.featuredContainer,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-        ]}
-      >
-        <ProductCard
-          product={featuredProduct}
-          onPress={() => {
-            router.push(`/product-detail?id=${featuredProduct._id}`);
-          }}
-          onAddToCart={() => handleAddToCart(featuredProduct)}
-        />
-      </Animated.View>
-    );
-  };
+  // Compact top search for quick access
+  const renderTopSearch = () => (
+    <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+      <SearchBar onOpenFilters={openFilterModal} />
+    </View>
+  );
 
   const renderEmptyState = () => (
     <Animated.View 
@@ -605,7 +606,7 @@ const renderBundlesSection = () => {
       <Animated.View 
         style={[
           styles.header,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+          { opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }
         ]}
       >
         <View style={styles.headerContent}>
@@ -624,68 +625,7 @@ const renderBundlesSection = () => {
         </Text>
       </Animated.View>
 
-      <Animated.View 
-        style={[
-          styles.searchContainer,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-        ]}
-      >
-        <View style={[
-          styles.searchInputContainer,
-          searchFocused && styles.searchInputFocused
-        ]}>
-          <Ionicons name="search-outline" size={20} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            ref={searchInputRef}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search products..."
-            placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        <TouchableOpacity
-          style={styles.filterIconButton}
-          onPress={openFilterModal}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="options-outline" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {/* Inline View Toggle (Grid/List) */}
-        <View style={styles.viewToggleContainer}>
-          <TouchableOpacity
-            style={[styles.viewToggleBtn, viewMode === "grid" && styles.viewToggleBtnActive]}
-            onPress={() => setViewMode("grid")}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="grid-outline"
-              size={18}
-              color={viewMode === "grid" ? "#FFFFFF" : "#10B981"}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.viewToggleBtn, viewMode === "list" && styles.viewToggleBtnActive]}
-            onPress={() => setViewMode("list")}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="list-outline"
-              size={18}
-              color={viewMode === "list" ? "#FFFFFF" : "#10B981"}
-            />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      {/* Removed duplicate compact controls; using the top SearchBar with filter button */}
 
       {(selectedCategory !== "All" || sortBy !== "popularity" || minPrice || maxPrice) && (
         <View style={styles.activeFiltersContainer}>
@@ -741,7 +681,7 @@ const renderBundlesSection = () => {
         numColumns={columns}
         key={`grid-${columns}`}
         ListEmptyComponent={loading ? renderSkeletonGrid : renderEmptyState}
-        ListHeaderComponent={renderFeaturedProduct}
+        ListHeaderComponent={renderTopSearch}
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={columns > 1 ? { gap: columnGap, paddingHorizontal: 20 } : undefined}
         refreshControl={

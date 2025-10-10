@@ -5,7 +5,7 @@ const GoAgriLogo = ({ width = 120, height = 120, style }) => {
   return (
     <Image
       source={require('../assets/go-agri-logo.png')}
-      style={[{ width, height }, style]}
+      style={[{ width, height, backgroundColor: 'transparent' }, style]}
       resizeMode="contain"
     />
   );

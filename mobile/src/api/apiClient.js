@@ -103,7 +103,12 @@ export const isValidGcash = (num) => /^09\d{9}$/.test((num || "").trim());
 
 /** ------------- Core APIs (relative paths) ------------- */
 export const register = (payload) => api.post(`/api/auth/register`, payload);
+export const initiateRegister = (payload) => api.post(`/api/auth/register/initiate`, payload);
 export const login    = (payload) => api.post(`/api/auth/login`, payload);
+export const googleAuth = (payload) => api.post(`/api/auth/google`, payload);
+// Forgot password
+export const requestPasswordReset = (email) => api.post(`/api/auth/password/forgot`, { email });
+export const completePasswordReset = (token, password) => api.post(`/api/auth/password/reset`, { token, password });
 
 export const getProducts   = () => api.get(`/api/products`);
 export const getProductApi = (id) => api.get(`/api/products/${id}`);
