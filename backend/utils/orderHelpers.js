@@ -101,55 +101,24 @@ export function validateItems(items = []) {
  */
 export async function processOrderInventory(items = []) {
   const list = Array.isArray(items) ? items : [];
-  if (list.length === 0) return { ok: true };
+  for (const it of list) {
+    const pid = it?.productId;
+    const qtyRaw = it?.quantity;
+    const qty = Math.floor(Number(qtyRaw || 0));
+    if (!pid || !qty || qty <= 0) continue;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    for (const it of list) {
-      const pid = it?.productId;
-      const qtyRaw = it?.quantity;
-      const qty = Math.floor(Number(qtyRaw || 0));
-      if (!pid || !qty || qty <= 0) continue;
+    const updated = await Product.findOneAndUpdate(
+      { _id: pid, quantity: { $gte: qty } },
+      { $inc: { quantity: -qty } },
+      { new: true }
+    );
 
-      // Load product inside session (locks the doc for the transaction)
-      const prod = await Product.findById(pid).session(session).select("name stock quantity sold").lean();
-      if (!prod) throw new Error(`Product not found: ${pid}`);
-
-      // Determine available value (prefer stock, fallback to quantity)
-      const available = Number(prod.stock ?? prod.quantity ?? 0);
-
-      if (available < qty) {
-        throw new Error(`Insufficient stock for ${prod.name}. Available: ${available}, Requested: ${qty}`);
-      }
-
-      // Decide which field to decrement on update (prefer 'stock')
-      const fieldToDecrement = prod.stock != null ? "stock" : (prod.quantity != null ? "quantity" : "stock");
-
-      // Build $inc object dynamically
-      const incObj = { sold: qty };
-      incObj[fieldToDecrement] = -qty;
-
-      // Apply update within the session
-      const upd = await Product.updateOne(
-        { _id: pid },
-        { $inc: incObj },
-        { session }
-      );
-
-      if (upd.nModified === 0 && upd.modifiedCount === 0) {
-        // Shouldn't happen because we checked availability, but guard anyway
-        throw new Error(`Failed to decrement stock for product ${prod.name}`);
-      }
+    if (!updated) {
+      const p = await Product.findById(pid).select("name quantity").lean();
+      const name = p?.name || "Product";
+      const available = Number(p?.quantity || 0);
+      throw new Error(`Insufficient stock for ${name}. Available: ${available}, Requested: ${qty}`);
     }
-
-    await session.commitTransaction();
-    session.endSession();
-    return { ok: true };
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
   }
 }
 
