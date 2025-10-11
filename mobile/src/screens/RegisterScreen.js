@@ -12,6 +12,8 @@ import {
   TextInput,
   View,
   ScrollView,
+  Platform,
+  StatusBar,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
@@ -19,6 +21,10 @@ import Toast from "../../components/Toast";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
+// Dynamic top padding to avoid content hidden under status bar/notch
+const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 56;
+// Bottom padding to ensure last element is reachable across devices
+const bottomPad = Platform.OS === 'ios' ? 72 : 40;
 
 export default function RegisterScreen() {
   const { doRegisterInitiate } = useContext(AppCtx);
@@ -98,14 +104,17 @@ export default function RegisterScreen() {
       <View style={s.overlay} />
       <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} />
       <ScrollView
+        style={s.scroll}
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="always"
+        scrollIndicatorInsets={{ bottom: bottomPad }}
+        showsVerticalScrollIndicator={true}
       >
         <View style={s.card}>
           <View style={s.logoRow}>
-          <GoAgriLogo width={32} height={32} />
-          <Text style={s.brand}>GoAgri</Text>
+          <GoAgriLogo width={48} height={48} />
+          <Text style={s.brand}>Go Agri Trading</Text>
         </View>
         <Text style={s.title}>Create Account</Text>
 
@@ -252,11 +261,13 @@ export default function RegisterScreen() {
 const s = StyleSheet.create({
   bg: { flex: 1, minHeight: height, overflow: "hidden" },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
-  container: { flex: 1, minHeight: height, padding: 20, justifyContent: "center" },
+  scroll: { flex: 1 },
+  container: { paddingHorizontal: 20, paddingTop: topPad, paddingBottom: bottomPad },
   card: {
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 16,
     padding: 20,
+    paddingTop: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -266,8 +277,8 @@ const s = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  brand: { fontSize: 18, fontWeight: "800", color: "#065F46" },
+  logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8, paddingTop: 6, width: "100%" },
+  brand: { fontSize: 18, lineHeight: 22, fontWeight: "800", color: "#065F46" },
   title: { fontSize: 22, fontWeight: "800", marginBottom: 16, color: "#111827" },
   sectionLabel: { fontWeight: "800", color: "#111827", marginTop: 12 },
   label: { fontWeight: "700", color: "#374151", marginTop: 8 },

@@ -72,6 +72,87 @@ export default function AppProvider({ children }) {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [gcashNumber, setGcashNumber] = useState("");
+  // addresses (saved per user)
+  const [addresses, setAddresses] = useState([]);
+  const [defaultAddress, setDefaultAddressState] = useState("");
+  const ADDR_KEY_PREFIX = "addresses:";
+  const addrKey = useMemo(() => {
+    const uid = user?._id || user?.id || user?.email || "guest";
+    return `${ADDR_KEY_PREFIX}${uid}`;
+  }, [user]);
+  const DEFAULT_ADDR_KEY_PREFIX = "defaultAddress:";
+  const defaultAddrKey = useMemo(() => {
+    const uid = user?._id || user?.id || user?.email || "guest";
+    return `${DEFAULT_ADDR_KEY_PREFIX}${uid}`;
+  }, [user]);
+
+  const loadAddresses = useCallback(async (key = addrKey) => {
+    try {
+      const json = await AsyncStorage.getItem(key);
+      const arr = json ? JSON.parse(json) : [];
+      setAddresses(Array.isArray(arr) ? arr : []);
+    } catch (e) {
+      console.warn("loadAddresses failed:", e?.message);
+      setAddresses([]);
+    }
+  }, [addrKey]);
+
+  const loadDefaultAddress = useCallback(async (key = defaultAddrKey) => {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const val = raw ? JSON.parse(raw) : "";
+      const addr = typeof val === "string" ? val : String(val || "");
+      setDefaultAddressState(addr);
+      if (addr && !String(deliveryAddress || "").trim()) {
+        setDeliveryAddress(addr);
+      }
+    } catch (e) {
+      console.warn("loadDefaultAddress failed:", e?.message);
+      setDefaultAddressState("");
+    }
+  }, [defaultAddrKey, deliveryAddress]);
+
+  const saveAddresses = useCallback(async (next, key = addrKey) => {
+    try {
+      setAddresses(next);
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+    } catch (e) {
+      console.warn("saveAddresses failed:", e?.message);
+    }
+  }, [addrKey]);
+
+  const setDefaultAddress = useCallback(async (addr) => {
+    try {
+      const val = String(addr || "").trim();
+      setDefaultAddressState(val);
+      await AsyncStorage.setItem(defaultAddrKey, JSON.stringify(val));
+      if (val) setDeliveryAddress(val);
+    } catch (e) {
+      console.warn("setDefaultAddress failed:", e?.message);
+    }
+  }, [defaultAddrKey]);
+
+  const addAddress = useCallback(async (addressText) => {
+    const a = String(addressText || "").trim();
+    if (!a) return;
+    const next = Array.from(new Set([...(addresses || []), a]));
+    await saveAddresses(next);
+    if ((addresses || []).length === 0) {
+      await setDefaultAddress(a);
+    }
+    setDeliveryAddress(a);
+  }, [addresses, saveAddresses, setDefaultAddress]);
+
+  const removeAddress = useCallback(async (addressText) => {
+    const next = (addresses || []).filter((x) => x !== addressText);
+    await saveAddresses(next);
+    if (String(defaultAddress || "").trim() === String(addressText || "").trim()) {
+      await setDefaultAddress("");
+    }
+    if (String(deliveryAddress || "").trim() === String(addressText || "").trim()) {
+      setDeliveryAddress(next[0] || "");
+    }
+  }, [addresses, saveAddresses, deliveryAddress, defaultAddress, setDefaultAddress]);
 
   // derived
   const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
@@ -126,6 +207,10 @@ export default function AppProvider({ children }) {
         if (u) setUserState(u);
 
         await loadWishlist();
+        // load addresses for current user
+        const uid = (u?._id || u?.id || u?.email || "guest");
+        await loadAddresses(`${ADDR_KEY_PREFIX}${uid}`);
+        await loadDefaultAddress(`${DEFAULT_ADDR_KEY_PREFIX}${uid}`);
 
         // load persisted UI preferences
         try {
@@ -152,6 +237,20 @@ export default function AppProvider({ children }) {
 
         if (u) {
           await refreshAuthedData(u);
+          // seed delivery address from user profile if available
+          const seedAddr = String(u?.address || "").trim();
+          if (seedAddr && !String(deliveryAddress || "").trim()) {
+            setDeliveryAddress(seedAddr);
+            // ensure seed address is saved
+            const existing = (addresses || []);
+            if (!existing.includes(seedAddr)) {
+              await saveAddresses([seedAddr, ...existing]);
+            }
+          }
+          // seed default address if not set
+          if (seedAddr && !String(defaultAddress || "").trim()) {
+            await setDefaultAddress(seedAddr);
+          }
         } else {
           const guestCart = await loadCart();
           setCart(Array.isArray(guestCart?.items) ? guestCart.items : []);
@@ -174,6 +273,26 @@ export default function AppProvider({ children }) {
       }
     })();
   }, [viewMode]);
+
+  // reload addresses when user changes (e.g., after login/logout)
+  useEffect(() => {
+    loadAddresses();
+  }, [addrKey, loadAddresses]);
+
+  // reload default address when user changes
+  useEffect(() => {
+    loadDefaultAddress();
+  }, [defaultAddrKey, loadDefaultAddress]);
+
+  // keep deliveryAddress aligned with default when appropriate
+  useEffect(() => {
+    if (defaultAddress && (addresses || []).includes(defaultAddress)) {
+      const current = String(deliveryAddress || "").trim();
+      if (!current || !addresses.includes(current)) {
+        setDeliveryAddress(defaultAddress);
+      }
+    }
+  }, [defaultAddress, addresses]);
 
   // fetch AI recommendations whenever user/cart changes
   useEffect(() => {
@@ -755,6 +874,8 @@ const handlePlaceOrder = async (opts = {}) => {
     deliveryAddress, setDeliveryAddress,
     paymentMethod, setPaymentMethod,
     gcashNumber, setGcashNumber,
+    addresses,
+    defaultAddress,
     recoItems,
     justMergedFromGuest, setJustMergedFromGuest,
     justLoggedInName, setJustLoggedInName,
@@ -807,6 +928,12 @@ const handlePlaceOrder = async (opts = {}) => {
     listMyDeliveries,
     getDeliveryForOrder,
     getDriverContact,
+
+    // addresses helpers
+    addAddress,
+    removeAddress,
+    saveAddresses,
+    setDefaultAddress,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

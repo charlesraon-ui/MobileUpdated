@@ -186,32 +186,7 @@ export default function ProfileScreen() {
           title="Current Status"
           subtitle={user?.loyaltyStatus || "Not yet earned"}
         />
-        {isLoggedIn && loyalty?.isEligible && !loyalty?.cardIssued && (
-          <TouchableOpacity
-            style={s.issueCardBtn}
-            activeOpacity={0.9}
-            onPress={async () => {
-              try {
-                setIssueLoading(true);
-                const { data } = await issueLoyaltyCard();
-                // After issuing, fetch card and show modal
-                setLoyalty({ ...(loyalty || {}), cardIssued: true });
-                setCardLoading(true);
-                setCardVisible(true);
-                const cardResp = await getDigitalCard();
-                setCard(cardResp?.data?.card || null);
-              } catch (e) {
-                // noop
-              } finally {
-                setCardLoading(false);
-                setIssueLoading(false);
-              }
-            }}
-          >
-            <Ionicons name="gift-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={s.issueCardText}>{issueLoading ? "Issuing..." : "Issue Card"}</Text>
-          </TouchableOpacity>
-        )}
+        {/* Removed Issue Card button per request */}
         <TouchableOpacity
           style={s.viewCardBtn}
           activeOpacity={0.85}

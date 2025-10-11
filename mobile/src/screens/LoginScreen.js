@@ -1,5 +1,5 @@
 import { Link } from "expo-router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,21 +11,78 @@ import {
   TextInput,
   View,
   ScrollView,
+  Platform,
+  StatusBar,
 } from "react-native";
+import Constants from "expo-constants";
+import * as Google from "expo-auth-session/providers/google";
+import * as AuthSession from "expo-auth-session";
+import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
+// Dynamic top padding to avoid content hidden under status bar/notch
+const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 56;
 
 export default function LoginScreen() {
-  const { doLogin } = useContext(AppCtx);
+  const { doLogin, doGoogleAuth } = useContext(AppCtx);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // ---- Google OAuth setup ----
+  const googleClientId =
+    Constants.expoConfig?.extra?.googleWebClientId ||
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+    // Fallback to known web client id to avoid empty config during dev
+    "1006606136969-kka7f7k99ecsnvd0v71j40tqjol6uqct.apps.googleusercontent.com";
+  // Compute redirect URI and discovery for web
+  const redirectUri = Platform.OS === "web" ? makeRedirectUri({ useProxy: false }) : undefined;
+  const discovery = {
+    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+  };
+
+  // Choose provider: generic OAuth on web (explicit clientId), Google provider elsewhere
+  const [request, response, promptAsync] = Platform.OS === "web"
+    ? useAuthRequest(
+        {
+          clientId: googleClientId,
+          scopes: ["profile", "email"],
+          responseType: AuthSession.ResponseType.Token,
+          redirectUri,
+        },
+        discovery
+      )
+    : Google.useAuthRequest({
+        expoClientId: googleClientId,
+        scopes: ["profile", "email"],
+        responseType: "token",
+        useProxy: true,
+      });
+
+  // Debug: verify config values in runtime
+  if (Platform.OS === "web") {
+    console.log("[Google OAuth] clientId:", googleClientId);
+    console.log("[Google OAuth] redirectUri:", redirectUri);
+  }
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const accessToken = response?.authentication?.accessToken;
+      if (accessToken) {
+        doGoogleAuth({ accessToken }).catch((e) => {
+          Alert.alert("Google login failed", e?.message || "Please try again.");
+        });
+      }
+    }
+  }, [response]);
 
   const validate = () => {
     const e = email.trim().toLowerCase();
@@ -58,6 +115,14 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      await promptAsync({ useProxy: Platform.OS !== "web" });
+    } catch (e) {
+      Alert.alert("Google login failed", e?.message || "Please try again.");
+    }
+  };
+
   return (
     <ImageBackground
       source={require("../../../assets/images/farm-landing-background.png")}
@@ -69,12 +134,13 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="always"
         showsVerticalScrollIndicator={false}
       >
         <View style={s.card}>
           <View style={s.logoRow}>
-            <GoAgriLogo width={32} height={32} />
-          <Text style={s.brand}>GoAgri</Text>
+            <GoAgriLogo width={48} height={48} />
+          <Text style={s.brand}>Go Agri Trading</Text>
         </View>
         <Text style={s.title}>Welcome back</Text>
         {/* Inline error banner replaced by sticky toast */}
@@ -122,6 +188,23 @@ export default function LoginScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Divider */}
+      <View style={s.dividerRow}>
+        <View style={s.divider} />
+        <Text style={s.dividerText}>or</Text>
+        <View style={s.divider} />
+      </View>
+
+      {/* Google Login */}
+      <TouchableOpacity
+        style={s.socialBtn}
+        onPress={handleGoogleLogin}
+        activeOpacity={0.9}
+        disabled={!request}
+      >
+        <Text style={s.socialBtnText}>Continue with Google</Text>
+      </TouchableOpacity>
+
       <View style={{ height: 16 }} />
 
       <Text style={s.small}>
@@ -146,11 +229,12 @@ export default function LoginScreen() {
 const s = StyleSheet.create({
   bg: { flex: 1, minHeight: height, overflow: "hidden" },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
-  container: { flex: 1, minHeight: height, padding: 20, justifyContent: "center" },
+  container: { flex: 1, minHeight: height, padding: 20, paddingTop: topPad, justifyContent: "center" },
   card: {
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 16,
     padding: 20,
+    paddingTop: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -160,8 +244,8 @@ const s = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  brand: { fontSize: 18, fontWeight: "800", color: "#065F46" },
+  logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8, paddingTop: 6, width: "100%" },
+  brand: { fontSize: 18, lineHeight: 22, fontWeight: "800", color: "#065F46" },
   title: { fontSize: 22, fontWeight: "800", marginBottom: 16, color: "#111827" },
   label: { fontWeight: "700", color: "#374151", marginTop: 8 },
   input: {
@@ -195,5 +279,22 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   btnDisabled: { opacity: 0.6 },
+  dividerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginVertical: 12 },
+  divider: { height: 1, backgroundColor: "#E5E7EB", flex: 1 },
+  dividerText: { marginHorizontal: 8, color: "#6B7280" },
+  socialBtn: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  socialBtnText: { color: "#111827", fontSize: 16, fontWeight: "700" },
   
 });

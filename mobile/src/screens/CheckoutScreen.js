@@ -35,6 +35,8 @@ export default function CheckoutScreen() {
     cartTotal,
     deliveryAddress,
     setDeliveryAddress,
+    addresses,
+    defaultAddress,
     paymentMethod,
     setPaymentMethod,
     handlePlaceOrder,
@@ -281,7 +283,7 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Address Section */}
+          {/* Address Section (select from saved addresses) */}
           {deliveryMethod !== "pickup" && (
             <View style={s.sectionContainer}>
               <View style={s.sectionHeader}>
@@ -290,24 +292,61 @@ export default function CheckoutScreen() {
                   {deliveryMethod === "in-house" ? "Delivery Address" : "Delivery Location"}
                 </Text>
               </View>
-              <View style={s.inputContainer}>
-                <TextInput
-                  value={deliveryAddress}
-                  onChangeText={setDeliveryAddress}
-                  placeholder="House no., Street, Barangay, City"
-                  style={[s.modernInput, !!addrError && s.inputError]}
-                  multiline
-                  numberOfLines={3}
-                  placeholderTextColor={GRAY}
-                />
-                <Ionicons 
-                  name="location" 
-                  size={20} 
-                  color={!!addrError ? "#EF4444" : GRAY} 
-                  style={s.inputIcon} 
-                />
-              </View>
-              {!!addrError && <Text style={s.errorText}>{addrError}</Text>}
+
+              {(addresses || []).length === 0 ? (
+                <View style={s.inputContainer}>
+                  <TextInput
+                    value={deliveryAddress}
+                    onChangeText={setDeliveryAddress}
+                    placeholder="House no., Street, Barangay, City"
+                    style={[s.modernInput, !!addrError && s.inputError]}
+                    multiline
+                    numberOfLines={3}
+                    placeholderTextColor={GRAY}
+                  />
+                  <Ionicons name="location" size={20} color={!!addrError ? "#EF4444" : GRAY} style={s.inputIcon} />
+                  {!!addrError && <Text style={s.errorText}>{addrError}</Text>}
+                  <View style={{ height: 10 }} />
+                  <TouchableOpacity
+                    onPress={() => router.push("/(modal)/addresses")}
+                    style={{ alignSelf: "flex-start" }}
+                  >
+                    <Text style={{ color: BLUE, fontWeight: "700" }}>Add address in Manage Addresses</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View>
+                  <View style={{ gap: 8 }}>
+                    {(addresses || []).map((addr) => {
+                      const selected = String(deliveryAddress || "").trim() === String(addr || "").trim();
+                      return (
+                        <TouchableOpacity
+                          key={addr}
+                          style={[s.addressOption, selected && s.addressOptionSelected]}
+                          onPress={() => setDeliveryAddress(addr)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                            <Ionicons name={selected ? "radio-button-on" : "radio-button-off"} size={20} color={selected ? GREEN_DARK : GRAY} />
+                            <Text style={[s.addressText, selected && { color: GREEN_DARK }]}>{addr}</Text>
+                            {String(defaultAddress || "") === String(addr || "") && (
+                              <Text style={s.defaultPill}>Default</Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  {!!addrError && <Text style={s.errorText}>{addrError}</Text>}
+                  <View style={{ height: 10 }} />
+                  <TouchableOpacity
+                    onPress={() => router.push("/(modal)/addresses")}
+                    style={{ alignSelf: "flex-start" }}
+                  >
+                    <Text style={{ color: BLUE, fontWeight: "700" }}>Manage addresses</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           )}
 
@@ -543,6 +582,24 @@ const s = StyleSheet.create({
     borderColor: "#EF4444", backgroundColor: "#FEF2F2",
   },
   inputIcon: { position: "absolute", right: 16, top: 16 },
+  addressOption: {
+    borderWidth: 2,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  addressOptionSelected: {
+    borderColor: GREEN,
+    backgroundColor: GREEN_BG,
+  },
+  addressText: { fontSize: 15, color: "#111827", fontWeight: "600" },
+  defaultPill: {
+    marginLeft: 8,
+    color: GREEN_DARK,
+    fontWeight: "700",
+  },
   errorText: {
     color: "#DC2626", fontSize: 12, marginTop: 6, fontWeight: "500",
   },
