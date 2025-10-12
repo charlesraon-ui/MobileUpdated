@@ -11,6 +11,7 @@ import {
   View
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { getMyRefundTicketsApi } from "../api/apiClient";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -318,6 +319,7 @@ export default function OrdersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [refundMap, setRefundMap] = useState({}); // { [orderId]: status }
 
   const {
     orders,
@@ -337,11 +339,52 @@ export default function OrdersScreen() {
     }, [isLoggedIn])
   );
 
+  // Fetch user's refund tickets and map by orderId
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoggedIn) return;
+      (async () => {
+        try {
+          const { data } = await getMyRefundTicketsApi();
+          const tickets = Array.isArray(data?.tickets) ? data.tickets : [];
+          const map = {};
+          tickets.forEach((t) => {
+            const oid = String(t?.order?._id || t?.order || t?.orderId || "");
+            const status = String(t?.status || "");
+            if (["requested", "under_review", "approved"].includes(status) && oid) {
+              map[oid] = status;
+            }
+          });
+          setRefundMap(map);
+        } catch (e) {
+          // fail silently for orders list
+          console.warn("refund tickets fetch failed:", e?.message);
+        }
+      })();
+    }, [isLoggedIn])
+  );
+
   const onRefresh = useCallback(async () => {
     if (!isLoggedIn) return;
     setRefreshing(true);
     try {
       await refreshAuthedData?.();
+      // Also refresh refund tickets map
+      try {
+        const { data } = await getMyRefundTicketsApi();
+        const tickets = Array.isArray(data?.tickets) ? data.tickets : [];
+        const map = {};
+        tickets.forEach((t) => {
+          const oid = String(t?.order?._id || t?.order || t?.orderId || "");
+          const status = String(t?.status || "");
+          if (["requested", "under_review", "approved"].includes(status) && oid) {
+            map[oid] = status;
+          }
+        });
+        setRefundMap(map);
+      } catch (e) {
+        console.warn("refund tickets refresh failed:", e?.message);
+      }
     } finally {
       setRefreshing(false);
     }
@@ -435,7 +478,12 @@ export default function OrdersScreen() {
 
   const canRequestRefund = (order) => {
     const status = String(normalizeStatus(order));
-    return ["pending", "confirmed", "completed", "delivered"].includes(status);
+    return ["pending", "confirmed", "completed", "delivered", "ready"].includes(status);
+  };
+
+  const isRefundInProcess = (orderId) => {
+    const status = String(refundMap[String(orderId)] || "");
+    return ["requested", "under_review", "approved"].includes(status);
   };
 
   const filteredOrders = selectedStatus === "all"
@@ -458,6 +506,20 @@ export default function OrdersScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Refunds Section */}
+        <View style={s.refundSectionCard}>
+          <Text style={s.refundSectionTitle}>Refunds</Text>
+          <Text style={s.refundSectionSubtitle}>View your refund tickets or request a refund.</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <TouchableOpacity
+              style={s.refundSectionButton}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/refund/my-tickets`)}
+            >
+              <Text style={s.refundSectionButtonText}>My Refund Tickets</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {orders.length === 0 ? (
           <View style={s.empty}>
             <View style={s.emptyIconContainer}>
@@ -528,6 +590,11 @@ export default function OrdersScreen() {
                       <Text style={[s.statusText, { color: deliveryStatusColor }]}>
                         {getDeliveryStatusText(order)}
                       </Text>
+                      {isRefundInProcess(order._id) && (
+                        <View style={s.refundBadge}>
+                          <Text style={s.refundBadgeText}>Refund in process</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -575,7 +642,7 @@ export default function OrdersScreen() {
                         <Text style={s.actionButtonText}>Track Delivery</Text>
                         <Text style={s.actionButtonArrow}>→</Text>
                       </View>
-                      {canRequestRefund(order) && (
+                      {canRequestRefund(order) && !isRefundInProcess(order._id) && (
                         <TouchableOpacity
                           style={s.refundButton}
                           activeOpacity={0.85}
@@ -808,6 +875,20 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  refundBadge: {
+    marginLeft: 8,
+    backgroundColor: "#FEF3C7", // amber-100
+    borderColor: "#FCD34D", // amber-300
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  refundBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#92400E", // amber-800
+  },
 
   // Order info
   orderInfo: {
@@ -905,6 +986,36 @@ const s = StyleSheet.create({
   refundButtonText: {
     fontSize: 14,
     color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  // Refunds section styles
+  refundSectionCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: GREEN_BORDER,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  refundSectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  refundSectionSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: GRAY,
+  },
+  refundSectionButton: {
+    backgroundColor: GREEN,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  refundSectionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "700",
   },
 
