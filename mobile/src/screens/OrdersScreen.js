@@ -1,5 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useContext, useRef, useState } from "react";
 import {
   Modal,
@@ -312,6 +312,7 @@ function OrderDetailsModal({ order, visible, onClose }) {
 }
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const { focusOrderId } = useLocalSearchParams();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -430,6 +431,11 @@ export default function OrdersScreen() {
     // Map confirmed to pending for tabs, keep other statuses
     if (status === "confirmed") return "pending";
     return status;
+  };
+
+  const canRequestRefund = (order) => {
+    const status = String(normalizeStatus(order));
+    return ["pending", "confirmed", "completed", "delivered"].includes(status);
   };
 
   const filteredOrders = selectedStatus === "all"
@@ -564,9 +570,20 @@ export default function OrdersScreen() {
                         ₱{Number(order.total || 0).toFixed(2)}
                       </Text>
                     </View>
-                    <View style={s.actionButton}>
-                      <Text style={s.actionButtonText}>Track Delivery</Text>
-                      <Text style={s.actionButtonArrow}>→</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={s.actionButton}>
+                        <Text style={s.actionButtonText}>Track Delivery</Text>
+                        <Text style={s.actionButtonArrow}>→</Text>
+                      </View>
+                      {canRequestRefund(order) && (
+                        <TouchableOpacity
+                          style={s.refundButton}
+                          activeOpacity={0.85}
+                          onPress={() => router.push(`/refund/${order._id}`)}
+                        >
+                          <Text style={s.refundButtonText}>Request Refund</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -863,6 +880,17 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: GREEN_BORDER,
   },
+  refundButton: {
+    backgroundColor: ORANGE,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   actionButtonText: {
     fontSize: 14,
     color: GREEN_DARK,
@@ -872,6 +900,11 @@ const s = StyleSheet.create({
   actionButtonArrow: {
     fontSize: 14,
     color: GREEN_DARK,
+    fontWeight: "700",
+  },
+  refundButtonText: {
+    fontSize: 14,
+    color: "#FFFFFF",
     fontWeight: "700",
   },
 

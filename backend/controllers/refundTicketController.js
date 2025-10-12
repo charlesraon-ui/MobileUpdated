@@ -21,7 +21,9 @@ export const getOrderWithRefundStatus = async (req, res) => {
     }
 
     // Verify ownership
-    if (order.userId._id.toString() !== req.user._id.toString()) {
+    // Note: Order.userId is stored as a String in the Order model,
+    // so populating won't produce an object with _id. Compare as strings.
+    if (String(order.userId) !== String(req.user._id)) {
       return res.status(403).json({ 
         success: false, 
         message: 'Not authorized' 
@@ -65,11 +67,11 @@ export const uploadRefundImages = async (req, res) => {
       });
     }
 
-    const uploadPromises = req.files.map(file => 
+    const uploadPromises = req.files.map((file) =>
       uploadBufferToCloudinary(file.buffer, {
         folder: process.env.CLOUDINARY_ROOT_FOLDER
           ? `${process.env.CLOUDINARY_ROOT_FOLDER}/refunds`
-          : 'refunds'
+          : "refunds",
       })
     );
 
@@ -80,7 +82,7 @@ export const uploadRefundImages = async (req, res) => {
       success: true,
       urls,
       count: urls.length,
-      message: `${urls.length} image(s) uploaded successfully`
+      message: `${urls.length} image(s) uploaded successfully`,
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -134,11 +136,12 @@ export const createRefundTicket = async (req, res) => {
     }
 
     // Check order status
-    const allowedStatuses = ['Pending', 'Completed', 'Delivered'];
-    if (!allowedStatuses.includes(order.status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot request refund for orders with status: ${order.status}` 
+    const allowedStatuses = ["pending", "confirmed", "completed", "delivered"];
+    const orderStatus = String(order.status || "").toLowerCase();
+    if (!allowedStatuses.includes(orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot request refund for orders with status: ${order.status}`,
       });
     }
 

@@ -12,13 +12,13 @@ import {
   updateCustomerLoyalty,
   getLoyaltyHistory
 } from "../controllers/adminLoyaltyController.js";
-import { requireAuth } from "../middleware/authMiddleware.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 import { isAdmin } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
 // All routes require authentication and admin privileges
-router.use(requireAuth);
+router.use(authMiddleware);
 router.use(isAdmin);
 
 // Tier Management

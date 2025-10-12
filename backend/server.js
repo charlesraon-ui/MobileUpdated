@@ -25,6 +25,7 @@ import productRoutes from "./routes/productRoutes.js";
 import recommendRoutes from "./routes/recommendRoutes.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import refundTicketRoutes from "./routes/refundTickets.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -73,26 +74,27 @@ app.use("/payment", paymentRoutes); // (if you really need this alias)
 app.use("/api/bundles", bundleRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/refund-tickets", refundTicketRoutes);
 // Customer-only app - no admin loyalty routes
 
 
-// db + start server (start AFTER DB connects)
+// db + start server (start regardless, warn if DB is down)
 const start = async () => {
+  let dbConnected = false;
+  const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/goagri";
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      // Mongoose v7+ ignores deprecated opts; these are safe defaults
-      maxPoolSize: 10,
-    });
+    await mongoose.connect(uri, { maxPoolSize: 10 });
+    dbConnected = true;
     console.log("✅ MongoDB connected");
-
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ API listening on ${PORT}`);
-    });
   } catch (err) {
     console.error("❌ MongoDB connection error:", err?.message || err);
-    // Keep process alive so /health can still answer while you debug:
-    // If you prefer hard fail: process.exit(1);
+    console.warn("⚠️ Starting API without DB connection. Set MONGO_URI in .env.");
   }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ API listening on ${PORT}`);
+    if (!dbConnected) console.warn("⚠️ API running, but DB is not connected.");
+  });
 };
 start();
 

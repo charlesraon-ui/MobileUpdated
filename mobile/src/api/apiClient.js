@@ -182,6 +182,35 @@ export const getLoyaltyStatus = () =>
 export const issueLoyaltyCard = () =>
   withFallbackPost(`/api/loyalty/issue-card`, {}, `/api/app/loyalty/issue-card`);
 
+/** ------------- Refunds ------------- */
+export const getOrderRefundStatus = (orderId) =>
+  api.get(`/api/refund-tickets/order/${orderId}`);
+
+export const getMyRefundTicketsApi = () =>
+  api.get(`/api/refund-tickets/my-tickets`);
+
+export const getRefundTicketApi = (ticketId) =>
+  api.get(`/api/refund-tickets/${ticketId}`);
+
+export const createRefundTicketApi = (payload) =>
+  api.post(`/api/refund-tickets`, payload);
+
+// React Native image upload via FormData: files as { uri, name, type }
+export const uploadRefundImagesFromUris = async (images = []) => {
+  const form = new FormData();
+  images.forEach((img, idx) => {
+    if (!img) return;
+    const uri = typeof img === 'string' ? img : img.uri;
+    const name = (typeof img === 'object' && img.fileName) || `refund_${Date.now()}_${idx}.jpg`;
+    const type = (typeof img === 'object' && img.type) || 'image/jpeg';
+    form.append('images', { uri, name, type });
+  });
+  const res = await api.post(`/api/refund-tickets/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string
 
