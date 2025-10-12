@@ -136,7 +136,7 @@ export const createRefundTicket = async (req, res) => {
     }
 
     // Check order status
-    const allowedStatuses = ["pending", "confirmed", "completed", "delivered"];
+    const allowedStatuses = ["pending", "confirmed", "completed", "delivered", "ready"]; // include READY for refund eligibility
     const orderStatus = String(order.status || "").toLowerCase();
     if (!allowedStatuses.includes(orderStatus)) {
       return res.status(400).json({
