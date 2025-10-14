@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema({
   address: { type: String },
   role: { type: String, enum: ["admin", "superadmin", "user"], default: "user" },
 
+  // Profile
+  avatarUrl: { type: String },
+
   // Loyalty fields
   loyaltyPoints: { type: Number, default: 0 },
   loyaltyTier: {

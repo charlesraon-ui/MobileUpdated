@@ -14,15 +14,16 @@ import {
   View,
   Image
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { AppCtx } from "../context/AppContext";
-// Avatar upload removed
+import { uploadProfileImageFromUri } from "../api/apiClient";
 
 export default function EditProfileScreen() {
   const { user, setUserState, persistUser, toAbsoluteUrl } = useContext(AppCtx);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [loading, setLoading] = useState(false);
-  // Avatar upload removed
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const save = async () => {
     if (!name.trim()) {
@@ -78,9 +79,64 @@ export default function EditProfileScreen() {
 
   const hasChanges = name !== (user?.name || "") || email !== (user?.email || "");
 
-  // pickAvatar removed
+  const pickAvatar = async () => {
+    try {
+      setAvatarUploading(true);
+      // Request permission only on native; web does not require
+      if (Platform.OS !== "web") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission required", "Please allow photo library access");
+          setAvatarUploading(false);
+          return;
+        }
+      }
 
-  // removeAvatar removed
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result?.canceled) {
+        setAvatarUploading(false);
+        return;
+      }
+
+      const asset = (result?.assets || [])[0];
+      if (!asset?.uri) {
+        setAvatarUploading(false);
+        return;
+      }
+
+      const resp = await uploadProfileImageFromUri(asset);
+      const url = resp?.url || resp?.user?.avatarUrl;
+      if (!url) throw new Error("Upload failed");
+
+      const updatedUser = { ...user, avatarUrl: url };
+      setUserState?.(updatedUser);
+      await persistUser?.(updatedUser);
+      Alert.alert("Success", "Profile photo updated");
+    } catch (e) {
+      console.warn("avatar upload error:", e?.message || e);
+      Alert.alert("Error", "Failed to upload photo. Please try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      const updatedUser = { ...user };
+      delete updatedUser.avatarUrl;
+      setUserState?.(updatedUser);
+      await persistUser?.(updatedUser);
+      Alert.alert("Removed", "Profile photo removed");
+    } catch (e) {
+      Alert.alert("Error", "Unable to remove photo");
+    }
+  };
 
   return (
     <View style={s.container}>
@@ -124,8 +180,24 @@ export default function EditProfileScreen() {
                 )}
               </View>
             </View>
-            <Text style={s.avatarLabel}>Profile Picture</Text>
-            <Text style={s.avatarSubtext}>Profile photo upload is disabled.</Text>
+          <Text style={s.avatarLabel}>Profile Picture</Text>
+            <View style={s.avatarActions}>
+              <TouchableOpacity
+                style={s.avatarBtn}
+                onPress={pickAvatar}
+                disabled={avatarUploading}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="cloud-upload" size={18} color="#FFFFFF" />
+                <Text style={s.avatarBtnText}>{avatarUploading ? "Uploading…" : "Upload Photo"}</Text>
+              </TouchableOpacity>
+              {user?.avatarUrl ? (
+                <TouchableOpacity style={s.removeBtn} onPress={removeAvatar} activeOpacity={0.85}>
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  <Text style={s.removeBtnText}>Remove</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           {/* Form Section */}
