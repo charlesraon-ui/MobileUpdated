@@ -33,6 +33,8 @@ export default function CheckoutScreen() {
   const {
     cart,
     cartTotal,
+    cartTotalAfterDiscount,
+    loyaltyDiscountPct,
     deliveryAddress,
     setDeliveryAddress,
     addresses,
@@ -78,7 +80,7 @@ export default function CheckoutScreen() {
 
   const calculateOrderTotals = () => {
     const deliveryFee = getDeliveryFee(deliveryMethod);
-    const subtotal = cartTotal;
+    const subtotal = cartTotalAfterDiscount;
     const total = subtotal + deliveryFee;
 
     return { deliveryFee, subtotal, total };
@@ -94,7 +96,7 @@ export default function CheckoutScreen() {
     return "";
   }, [deliveryAddress, deliveryMethod]);
 
-  const disabled = !isLoggedIn || cartTotal <= 0 || !!addrError || placing;
+  const disabled = !isLoggedIn || cartTotalAfterDiscount <= 0 || !!addrError || placing;
 
   // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
@@ -233,6 +235,12 @@ export default function CheckoutScreen() {
             <Text style={s.summaryLabel}>Items ({cart.length})</Text>
             <Text style={s.summaryValue}>₱{cartTotal.toFixed(2)}</Text>
           </View>
+          {Number(loyaltyDiscountPct) > 0 && (
+            <View style={s.summaryRow}>
+              <Text style={s.summaryLabel}>Loyalty Discount ({Number(loyaltyDiscountPct)}%)</Text>
+              <Text style={s.summaryValue}>-₱{(cartTotal - cartTotalAfterDiscount).toFixed(2)}</Text>
+            </View>
+          )}
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>Delivery Fee</Text>
             <Text style={[s.summaryValue, deliveryMethod === "pickup" && s.freeText]}>

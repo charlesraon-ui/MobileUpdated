@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useContext, useRef, useState } from "react";
+import { useCallback, useContext, useRef, useState, useEffect } from "react";
 import {
   Modal,
   Animated,
@@ -318,6 +318,8 @@ export default function OrdersScreen() {
   const { focusOrderId } = useLocalSearchParams();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  // Guard to ensure query-driven auto-open only happens once per orderId
+  const [autoOpenedOid, setAutoOpenedOid] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [refundMap, setRefundMap] = useState({}); // { [orderId]: status }
@@ -362,6 +364,20 @@ export default function OrdersScreen() {
       loop.stop();
     };
   }, [refundPulse]);
+
+  // If a focusOrderId is provided, auto-open its details when orders are available
+  // Guarded to avoid duplicate openings in StrictMode/dev double effects
+  useEffect(() => {
+    const oid = String(focusOrderId || "");
+    if (!oid) return;
+    if (autoOpenedOid === oid) return; // already opened for this id
+    const match = (orders || []).find((o) => String(o?._id) === oid);
+    if (match) {
+      setSelectedOrder(match);
+      setModalVisible(true);
+      setAutoOpenedOid(oid);
+    }
+  }, [focusOrderId, orders, autoOpenedOid]);
 
   // Fetch user's refund tickets and map by orderId
   useFocusEffect(
@@ -415,8 +431,14 @@ export default function OrdersScreen() {
   }, [isLoggedIn, refreshAuthedData]);
 
   const handleViewDetails = (order) => {
-    setSelectedOrder(order);
-    setModalVisible(true);
+    const oid = String(order?._id || "");
+    if (oid) {
+      // Navigate to full-screen order details page
+      router.push(`/orders/${oid}`);
+    } else {
+      // Fallback to list if order id missing
+      router.push(`/tabs/orders`);
+    }
   };
 
   // ✅ Updated to use delivery.status instead of order.status
@@ -602,6 +624,12 @@ export default function OrdersScreen() {
                 >
                   {/* Delivery Status indicator */}
                   <View style={[s.statusIndicator, { backgroundColor: deliveryStatusColor }]} />
+                  {/* Corner ribbon for refunding orders */}
+                  {isRefundInProcess(order._id) && (
+                    <View style={s.cornerRibbon}>
+                      <Text style={s.cornerRibbonText}>REFUND</Text>
+                    </View>
+                  )}
                   
                   {/* Order Header */}
                   <View style={s.orderCardHeader}>
@@ -615,12 +643,19 @@ export default function OrdersScreen() {
                         {getDeliveryStatusText(order)}
                       </Text>
                       {isRefundInProcess(order._id) && (
-                        <Animated.View style={[s.refundBadge, { transform: [{ scale: refundPulse }] }]}>
+                        <Animated.View style={[s.refundBadge, s.refundBadgeGlow, { transform: [{ scale: refundPulse }] }]}>
                           <Text style={s.refundBadgeText}>💸 REFUND IN PROCESS</Text>
                         </Animated.View>
                       )}
                     </View>
                   </View>
+
+                  {/* Top banner for refunding orders */}
+                  {isRefundInProcess(order._id) && (
+                    <View style={s.refundBanner}>
+                      <Text style={s.refundBannerText}>Refund in process</Text>
+                    </View>
+                  )}
 
                   {/* Order Info */}
                   <View style={s.orderInfo}>
@@ -700,6 +735,8 @@ export default function OrdersScreen() {
         onClose={() => {
           setModalVisible(false);
           setSelectedOrder(null);
+          // Allow future auto-open if a different id is focused
+          // Keep current autoOpenedOid so same id won't re-open immediately
         }}
       />
     </View>
@@ -922,10 +959,58 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  refundBadgeGlow: {
+    shadowColor: ORANGE,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   refundBadgeText: {
     fontSize: 10,
     fontWeight: "800",
     color: "#9A3412", // amber-800
+  },
+  // Corner ribbon for refunding orders
+  cornerRibbon: {
+    position: "absolute",
+    top: 8,
+    right: -20,
+    backgroundColor: ORANGE,
+    paddingVertical: 4,
+    paddingHorizontal: 28,
+    transform: [{ rotate: "15deg" }],
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cornerRibbonText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  // Top banner inside order card
+  refundBanner: {
+    marginTop: -6,
+    marginBottom: 10,
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  refundBannerText: {
+    color: "#9A3412",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
   },
   refundViewButton: {
     backgroundColor: "#FFFFFF",

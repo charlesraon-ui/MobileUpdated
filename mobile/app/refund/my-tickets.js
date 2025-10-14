@@ -36,23 +36,42 @@ export default function MyRefundTicketsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <Stack.Screen options={{ title: "My Refund Tickets" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <FlatList
         data={tickets}
         keyExtractor={(item) => String(item._id)}
         contentContainerStyle={{ padding: 12 }}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        renderItem={({ item }) => (
-          <View style={s.card}>
-            <Text style={s.title}>Ticket #{String(item._id).slice(-8).toUpperCase()}</Text>
-            <Text style={s.subtle}>Order: {String(item.orderId).slice(-8).toUpperCase()}</Text>
-            <Text style={s.subtle}>Status: {String(item.status || "requested").toUpperCase()}</Text>
-            <Text style={s.subtle} numberOfLines={3}>Reason: {item.reason}</Text>
-            <TouchableOpacity style={s.btn} onPress={() => router.push(`/orders/${item.orderId}`)}>
-              <Text style={s.btnText}>View Order</Text>
+        ListHeaderComponent={() => (
+          <View style={s.topBar}>
+            <TouchableOpacity style={s.backBtn} onPress={() => router.replace(`/tabs/orders`)} activeOpacity={0.8}>
+              <Text style={s.backIcon}>←</Text>
+              <Text style={s.backText}>Back to Orders</Text>
             </TouchableOpacity>
+            <Text style={s.topBarTitle}>My Refund Tickets</Text>
+            <View style={{ width: 12 }} />
           </View>
         )}
+        stickyHeaderIndices={[0]}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        renderItem={({ item }) => {
+          const oid = String(item?.order?._id || item?.order || item?.orderId || "");
+          const shortOid = oid ? String(oid).slice(-8).toUpperCase() : "—";
+          const onViewOrder = () => {
+            if (oid) router.push(`/orders/${oid}?from=refund`);
+            else router.push(`/tabs/orders`);
+          };
+          return (
+            <View style={s.card}>
+              <Text style={s.title}>Ticket #{String(item._id).slice(-8).toUpperCase()}</Text>
+              <Text style={s.subtle}>Order: {shortOid}</Text>
+              <Text style={s.subtle}>Status: {String(item.status || "requested").toUpperCase()}</Text>
+              <Text style={s.subtle} numberOfLines={3}>Reason: {item.reason}</Text>
+              <TouchableOpacity style={s.btn} onPress={onViewOrder}>
+                <Text style={s.btnText}>{oid ? "View Order" : "Open Orders"}</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }}
         ListEmptyComponent={() => (
           <View style={s.centered}>
             <Text style={{ color: GRAY }}>No refund tickets yet.</Text>
@@ -65,6 +84,30 @@ export default function MyRefundTicketsScreen() {
 
 const s = StyleSheet.create({
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+    marginBottom: 10,
+  },
+  topBarTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: "#F3F4F6",
+  },
+  backIcon: { fontSize: 16, marginRight: 6 },
+  backText: { fontSize: 14, fontWeight: "700", color: "#111827" },
   card: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 12 },
   title: { fontSize: 16, fontWeight: "700", color: "#111827" },
   subtle: { fontSize: 14, color: GRAY, marginTop: 6 },

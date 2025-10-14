@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
+import Toast from "../../components/Toast";
 import {
   addReviewApi,
   createOrder as apiCreateOrder,
@@ -32,6 +33,7 @@ import {
   googleAuth,
 } from "../api/apiClient";
 import { registerPushToken } from "../api/apiClient";
+import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 
@@ -52,6 +54,27 @@ export default function AppProvider({ children }) {
   const [myReviews, setMyReviews] = useState([]);
   const [recoItems, setRecoItems] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+
+  // global toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastType, setToastType] = useState("success");
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastActionLabel, setToastActionLabel] = useState("");
+  const [toastAction, setToastAction] = useState(null);
+
+  const showToast = useCallback(({ type = "success", message = "", actionLabel = "", onAction = null }) => {
+    setToastType(type);
+    setToastMessage(String(message || ""));
+    setToastActionLabel(String(actionLabel || ""));
+    setToastAction(() => onAction);
+    setToastVisible(true);
+  }, []);
+  const hideToast = useCallback(() => {
+    setToastVisible(false);
+    setToastMessage("");
+    setToastActionLabel("");
+    setToastAction(null);
+  }, []);
 
   // UX flags
   const [justMergedFromGuest, setJustMergedFromGuest] = useState(false);
@@ -157,6 +180,9 @@ export default function AppProvider({ children }) {
   // derived
   const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
   const userId = useMemo(() => user?._id || user?.id || user?.email || "guest", [user]);
+
+  // Loyalty state
+  const [loyalty, setLoyalty] = useState(null);
 
   // wishlist persistence (client-side)
   const WISHLIST_KEY = "wishlist";
@@ -364,10 +390,46 @@ export default function AppProvider({ children }) {
     } catch {
       setCart([]);
       setOrders([]);
+      setLoyalty(null);
     }
   },
   [user]
 );
+
+  // Auto-activate loyalty upon login/register and refresh loyalty state
+  const refreshLoyalty = useCallback(async () => {
+    try {
+      const { data } = await getLoyaltyStatus();
+      const current = data?.loyalty || null;
+      let next = current;
+
+      // Auto-issue card if eligible and not yet issued
+      if (current?.isEligible && !current?.cardIssued) {
+        try {
+          await issueLoyaltyCard();
+          // fetch updated digital card
+          const cardRes = await getDigitalCard();
+          const card = cardRes?.data?.card || null;
+          next = { ...(current || {}), cardIssued: true, isActive: Boolean(card?.isActive), cardId: card?.cardId, cardType: card?.cardType, discountPercentage: card?.discountPercentage ?? current?.discountPercentage };
+
+          // Inform user
+          showToast({
+            type: "success",
+            message: "Loyalty activated",
+            actionLabel: "View Card",
+            onAction: () => router.push("/profile"),
+          });
+        } catch (e) {
+          // If issuing fails, still set status so user can view
+          next = current;
+        }
+      }
+
+      setLoyalty(next);
+    } catch (e) {
+      setLoyalty(null);
+    }
+  }, [router]);
 
   // guard with alert
   const ensureAuthed = () => {
@@ -418,6 +480,14 @@ export default function AppProvider({ children }) {
     setCart(updated);
     persistCart(updated);
     setLastAddedCategory(product?.category ?? "Uncategorized");
+
+    // show success toast with action to view cart
+    showToast({
+      type: "success",
+      message: "Product added to cart",
+      actionLabel: "View Cart",
+      onAction: () => router.push("/tabs/cart"),
+    });
   };
 
   const setQty = async (productId, qty) => {
@@ -528,10 +598,11 @@ const handlePlaceOrder = async (opts = {}) => {
     return 50; // default
   };
 
-  // Calculate totals
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Calculate totals (apply loyalty discount)
+  const rawSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discountedSubtotal = cartTotalAfterDiscount != null ? cartTotalAfterDiscount : rawSubtotal;
   const deliveryFee = Number.isFinite(Number(deliveryFeeInput)) ? Number(deliveryFeeInput) : getDeliveryFee(deliveryType);
-  const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0 ? Number(totalInput) : (cartTotal + deliveryFee);
+  const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0 ? Number(totalInput) : (discountedSubtotal + deliveryFee);
 
   try {
     // 🎯 CHECK PAYMENT METHOD
@@ -715,6 +786,7 @@ const handlePlaceOrder = async (opts = {}) => {
 
     await mergeGuestCartInto(u);
     await refreshAuthedData(u);
+    await refreshLoyalty();
 
     router.replace("/tabs/home");
   };
@@ -739,6 +811,7 @@ const handlePlaceOrder = async (opts = {}) => {
 
     await mergeGuestCartInto(u);
     await refreshAuthedData(u);
+    await refreshLoyalty();
 
     router.replace("/tabs/home");
   };
@@ -775,6 +848,7 @@ const handlePlaceOrder = async (opts = {}) => {
 
     await mergeGuestCartInto(u);
     await refreshAuthedData(u);
+    await refreshLoyalty();
 
     router.replace("/tabs/home");
   };
@@ -784,6 +858,7 @@ const handlePlaceOrder = async (opts = {}) => {
     setUserState(null);
     setCart([]);
     setOrders([]);
+    setLoyalty(null);
     router.replace("/tabs/home");
   };
 
@@ -821,6 +896,12 @@ const handlePlaceOrder = async (opts = {}) => {
     () => cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0),
     [cart]
   );
+
+  const loyaltyDiscountPct = Number(loyalty?.discountPercentage || 0);
+  const cartTotalAfterDiscount = useMemo(() => {
+    const pct = loyaltyDiscountPct > 0 ? loyaltyDiscountPct : 0;
+    return Math.max(0, cartTotal * (1 - pct / 100));
+  }, [cartTotal, loyaltyDiscountPct]);
 
   // Product details + reviews
   const fetchProductDetail = async (id) => {
@@ -882,7 +963,7 @@ const handlePlaceOrder = async (opts = {}) => {
     justRegistered, setJustRegistered,
 
     // derived
-    isLoggedIn, categories, filteredProducts, recommendedProducts, cartTotal,
+    isLoggedIn, categories, filteredProducts, recommendedProducts, cartTotal, loyaltyDiscountPct, cartTotalAfterDiscount,
 
     // actions
     ensureAuthed,
@@ -899,6 +980,7 @@ const handlePlaceOrder = async (opts = {}) => {
     doRegisterInitiate,
     doGoogleAuth,
     refreshAuthedData,
+    refreshLoyalty,
 
     // product & reviews
     productDetail,
@@ -924,6 +1006,13 @@ const handlePlaceOrder = async (opts = {}) => {
     setUserState,
     persistUser,
 
+    // loyalty
+    loyalty,
+
+    // toast helpers
+    showToast,
+    hideToast,
+
      // deliveries
     listMyDeliveries,
     getDeliveryForOrder,
@@ -936,5 +1025,17 @@ const handlePlaceOrder = async (opts = {}) => {
     setDefaultAddress,
   };
 
-  return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
+  return (
+    <AppCtx.Provider value={value}>
+      {children}
+      <Toast
+        visible={toastVisible}
+        type={toastType}
+        message={toastMessage}
+        actionLabel={toastActionLabel}
+        onAction={toastAction}
+        onClose={hideToast}
+      />
+    </AppCtx.Provider>
+  );
 }

@@ -26,6 +26,9 @@ import recommendRoutes from "./routes/recommendRoutes.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import refundTicketRoutes from "./routes/refundTickets.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import directMessageRoutes from "./routes/directMessageRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -75,6 +78,9 @@ app.use("/api/bundles", bundleRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/dm", directMessageRoutes);
+app.use("/api/users", userRoutes);
 // Customer-only app - no admin loyalty routes
 
 

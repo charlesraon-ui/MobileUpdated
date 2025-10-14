@@ -211,6 +211,32 @@ export const uploadRefundImagesFromUris = async (images = []) => {
   return res.data;
 };
 
+// Upload a single profile image and return server response
+export const uploadProfileImageFromUri = async (img) => {
+  if (!img) return null;
+  const form = new FormData();
+  const uri = typeof img === 'string' ? img : img.uri;
+  const name = (typeof img === 'object' && (img.fileName || img.name)) || `avatar_${Date.now()}.jpg`;
+  const type = (typeof img === 'object' && img.type) || 'image/jpeg';
+  form.append('image', { uri, name, type });
+  const res = await api.post(`/api/users/profile/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data; // expect { url } or similar
+};
+
+/** ------------- In-app Messaging ------------- */
+export const getMyMessagesApi = () => api.get(`/api/messages`);
+export const sendMessageApi = (text) => api.post(`/api/messages`, { text });
+
+// Direct Messages (user-to-user)
+export const getConversationsApi = () => api.get(`/api/dm/conversations`);
+export const getDMThreadApi = (userId) => api.get(`/api/dm/${userId}`);
+export const sendDMMessageApi = (userId, text) => api.post(`/api/dm/${userId}`, { text });
+
+// User search
+export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
+
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string
 

@@ -21,7 +21,6 @@ const BORDER = "#E5E7EB";
 const BLUE = "#3B82F6";
 
 export default function CustomerSupportScreen() {
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -92,13 +91,7 @@ export default function CustomerSupportScreen() {
       title: "Live Chat",
       description: "Chat with us online",
       icon: "💬",
-      action: () => {
-        Alert.alert(
-          "Live Chat",
-          "Live chat feature coming soon! Please use other contact methods for now.",
-          [{ text: "OK" }]
-        );
-      },
+      action: () => router.push("/chat"),
     },
     {
       title: "FAQ",
@@ -113,43 +106,7 @@ export default function CustomerSupportScreen() {
       },
     },
   ];
-
-  const handleSubmitTicket = () => {
-    if (!selectedCategory) {
-      Alert.alert("Error", "Please select a support category.");
-      return;
-    }
-    if (!name.trim()) {
-      Alert.alert("Error", "Please enter your name.");
-      return;
-    }
-    if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email address.");
-      return;
-    }
-    if (!message.trim()) {
-      Alert.alert("Error", "Please describe your issue.");
-      return;
-    }
-
-    // Here you would typically send the data to your backend
-    Alert.alert(
-      "Ticket Submitted",
-      "Your support ticket has been submitted successfully. We'll get back to you within 24 hours.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reset form
-            setSelectedCategory(null);
-            setMessage("");
-            setEmail("");
-            setName("");
-          },
-        },
-      ]
-    );
-  };
+  // Ticket submission form removed; chat is the primary support channel.
 
   return (
     <View style={s.container}>
@@ -188,102 +145,9 @@ export default function CustomerSupportScreen() {
           </View>
         </View>
 
-        {/* Support Categories */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>What do you need help with?</Text>
-          <View style={s.categoriesContainer}>
-            {supportCategories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  s.categoryCard,
-                  selectedCategory?.id === category.id && s.categoryCardSelected,
-                  selectedCategory?.id === category.id && {
-                    borderColor: category.color,
-                    backgroundColor: `${category.color}10`,
-                  },
-                ]}
-                onPress={() => setSelectedCategory(category)}
-                activeOpacity={0.8}
-              >
-                <View style={s.categoryHeader}>
-                  <View style={[s.categoryIcon, { backgroundColor: `${category.color}20` }]}>
-                    <Text style={s.categoryIconText}>{category.icon}</Text>
-                  </View>
-                  <View style={s.categoryInfo}>
-                    <Text style={[s.categoryTitle, selectedCategory?.id === category.id && { color: category.color }]}>
-                      {category.title}
-                    </Text>
-                    <Text style={s.categoryDescription}>{category.description}</Text>
-                  </View>
-                </View>
-                {selectedCategory?.id === category.id && (
-                  <View style={[s.selectedIndicator, { backgroundColor: category.color }]}>
-                    <Text style={s.selectedIndicatorText}>✓</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {/* Categories removed per requirement */}
 
-        {/* Contact Form */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Submit a Support Ticket</Text>
-          <View style={s.formContainer}>
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>Full Name *</Text>
-              <TextInput
-                style={s.textInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-                placeholderTextColor={GRAY}
-              />
-            </View>
-
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>Email Address *</Text>
-              <TextInput
-                style={s.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email address"
-                placeholderTextColor={GRAY}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>Describe Your Issue *</Text>
-              <TextInput
-                style={[s.textInput, s.textArea]}
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Please provide as much detail as possible about your issue..."
-                placeholderTextColor={GRAY}
-                multiline
-                textAlignVertical="top"
-                maxLength={1000}
-              />
-              <Text style={s.characterCount}>{message.length}/1000 characters</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                s.submitButton,
-                (!selectedCategory || !name.trim() || !email.trim() || !message.trim()) &&
-                  s.submitButtonDisabled,
-              ]}
-              onPress={handleSubmitTicket}
-              disabled={!selectedCategory || !name.trim() || !email.trim() || !message.trim()}
-              activeOpacity={0.8}
-            >
-              <Text style={s.submitButtonText}>Submit Support Ticket</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Message Support CTA removed; use Live Chat quick action */}
 
         {/* Contact Information */}
         <View style={s.section}>
@@ -318,36 +182,7 @@ export default function CustomerSupportScreen() {
           </View>
         </View>
 
-        {/* Help Tips */}
-        <View style={[s.section, { marginBottom: 40 }]}>
-          <Text style={s.sectionTitle}>Tips for Faster Support</Text>
-          <View style={s.tipsContainer}>
-            <View style={s.tipItem}>
-              <Text style={s.tipNumber}>1</Text>
-              <Text style={s.tipText}>
-                Include your order number if your issue is related to a specific purchase
-              </Text>
-            </View>
-            <View style={s.tipItem}>
-              <Text style={s.tipNumber}>2</Text>
-              <Text style={s.tipText}>
-                Provide screenshots if you're experiencing technical issues
-              </Text>
-            </View>
-            <View style={s.tipItem}>
-              <Text style={s.tipNumber}>3</Text>
-              <Text style={s.tipText}>
-                Be as detailed as possible when describing your problem
-              </Text>
-            </View>
-            <View style={s.tipItem}>
-              <Text style={s.tipNumber}>4</Text>
-              <Text style={s.tipText}>
-                Check your spam folder for our email responses
-              </Text>
-            </View>
-          </View>
-        </View>
+        {/* Help Tips removed per request */}
       </ScrollView>
     </View>
   );

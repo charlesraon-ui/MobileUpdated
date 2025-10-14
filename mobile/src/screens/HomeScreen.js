@@ -195,7 +195,7 @@ export default function HomeScreen() {
           if (isBundle) {
             router.push(`/bundle-detail?id=${item?._id || ''}`);
           } else {
-            router.push(`/product-detail?id=${item?._id || ''}`);
+            router.push(`/tabs/product-detail?id=${item?._id || ''}`);
           }
         }}
       >

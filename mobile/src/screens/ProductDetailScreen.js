@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { getProductRecommendations } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
@@ -96,6 +97,7 @@ export default function ProductDetailScreen() {
     if (handleAddToCart) {
       try {
         handleAddToCart(product);
+        // Toast is triggered from context handler; keep UX snappy
       } catch (error) {
         console.error('Add to cart error:', error);
       }
@@ -107,7 +109,7 @@ export default function ProductDetailScreen() {
       if (router.canGoBack()) {
         router.back();
       } else {
-        router.replace('/products'); // Fallback route
+        router.replace('/tabs/products'); // Fallback route
       }
     } catch (error) {
       console.error('Navigation error:', error);

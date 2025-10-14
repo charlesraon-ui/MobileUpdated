@@ -10,8 +10,7 @@ export default function RootLayout() {
       <View style={{ flex: 1 }}>
         <Stack
           screenOptions={{
-            headerShown: true,
-            headerTitleAlign: "center",
+            headerShown: false,
           }}
         />
         <StatusBar style="auto" />

@@ -11,15 +11,18 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Image
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+// Avatar upload removed
 
 export default function EditProfileScreen() {
-  const { user, setUserState, persistUser } = useContext(AppCtx);
+  const { user, setUserState, persistUser, toAbsoluteUrl } = useContext(AppCtx);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [loading, setLoading] = useState(false);
+  // Avatar upload removed
 
   const save = async () => {
     if (!name.trim()) {
@@ -75,6 +78,10 @@ export default function EditProfileScreen() {
 
   const hasChanges = name !== (user?.name || "") || email !== (user?.email || "");
 
+  // pickAvatar removed
+
+  // removeAvatar removed
+
   return (
     <View style={s.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
@@ -105,13 +112,20 @@ export default function EditProfileScreen() {
           <View style={s.avatarSection}>
             <View style={s.avatarContainer}>
               <View style={s.avatar}>
-                <Text style={s.avatarText}>
-                  {(name || user?.name || "U").charAt(0).toUpperCase()}
-                </Text>
+                {user?.avatarUrl ? (
+                  <Image
+                    source={{ uri: (toAbsoluteUrl?.(user.avatarUrl) || user.avatarUrl) }}
+                    style={s.avatarImage}
+                  />
+                ) : (
+                  <Text style={s.avatarText}>
+                    {(name || user?.name || "U").charAt(0).toUpperCase()}
+                  </Text>
+                )}
               </View>
             </View>
             <Text style={s.avatarLabel}>Profile Picture</Text>
-            <Text style={s.avatarSubtext}>Upload or change your profile picture</Text>
+            <Text style={s.avatarSubtext}>Profile photo upload is disabled.</Text>
           </View>
 
           {/* Form Section */}
@@ -276,6 +290,7 @@ const s = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     backgroundColor: "#10B981",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#10B981",
@@ -289,6 +304,58 @@ const s = StyleSheet.create({
     fontSize: 40,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+
+  avatarActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  avatarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#10B981",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  avatarBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  removeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  removeBtnText: {
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   avatarLabel: {

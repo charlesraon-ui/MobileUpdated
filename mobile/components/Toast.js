@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function Toast({ visible, type = "error", message = "", onClose, offset = 20, duration = 4000, autoHide = true, respectSafeArea = true }) {
+export default function Toast({ visible, type = "error", message = "", onClose, offset = 20, duration = 4000, autoHide = true, respectSafeArea = true, actionLabel, onAction }) {
   const insets = useSafeAreaInsets();
   const topOffset = (respectSafeArea ? (insets?.top || 0) : 0) + offset;
   const boxStyle = useMemo(() => [
@@ -35,6 +35,11 @@ export default function Toast({ visible, type = "error", message = "", onClose, 
   return (
     <View style={boxStyle} pointerEvents="box-none">
       <Text style={textStyle} numberOfLines={3}>{message}</Text>
+      {actionLabel ? (
+        <TouchableOpacity onPress={() => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } onAction?.(); onClose?.(); }} activeOpacity={0.85} style={s.actionBtn}>
+          <Text style={s.actionTxt}>{actionLabel}</Text>
+        </TouchableOpacity>
+      ) : null}
       <TouchableOpacity onPress={() => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } onClose?.(); }} activeOpacity={0.8} style={s.closeBtn}>
         <Text style={s.closeTxt}>✕</Text>
       </TouchableOpacity>
@@ -74,4 +79,6 @@ const s = StyleSheet.create({
   successText: { color: "#166534" },
   closeBtn: { marginLeft: 12, paddingHorizontal: 8, paddingVertical: 4 },
   closeTxt: { fontSize: 16, color: "#6B7280" },
+  actionBtn: { marginLeft: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: "#10B981" },
+  actionTxt: { color: "#FFFFFF", fontWeight: "700" },
 });

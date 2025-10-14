@@ -21,7 +21,7 @@ export default function OrdersRoute() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Checkout & Orders" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <OrdersScreen route={{ params }} navigation={navigation} />
       <Redirect href="/tabs/orders" />;
     </>

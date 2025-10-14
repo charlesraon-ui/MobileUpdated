@@ -161,7 +161,7 @@ const renderBundlesSection = () => {
     
     // Check if user is authenticated before redirecting to cart
     if (isLoggedIn) {
-      router.push('/cart');
+      router.push('/tabs/cart');
     } else {
       // Redirect to login page if not authenticated
       router.push('/login');
@@ -518,9 +518,8 @@ const renderBundlesSection = () => {
         product={item}
         onPress={() => {
           console.log('Navigating to product:', item._id);
-          router.push(`/product-detail?id=${item._id}`);
+          router.push(`/tabs/product-detail?id=${item._id}`);
         }}
-        onAddToCart={() => handleAddToCart(item)}
         compact
       />
     </Animated.View>

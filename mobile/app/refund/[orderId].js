@@ -113,12 +113,50 @@ export default function RefundRequestScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <Stack.Screen options={{ title: "Request Refund" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View style={s.card}>
           <Text style={s.title}>Order #{String(order._id).slice(-8).toUpperCase()}</Text>
           <Text style={s.subtle}>Status: {String(order.status || "pending").toUpperCase()}</Text>
           <Text style={s.subtle}>Total: ₱{Number(order.total || 0).toFixed(2)}</Text>
+        </View>
+
+        {/* Order Description */}
+        <View style={s.card}>
+          <Text style={s.title}>Order Description</Text>
+          <View style={s.detailRow}>
+            <Text style={s.detailLabel}>Payment</Text>
+            <Text style={s.detailValue}>{order.paymentMethod || 'COD'}</Text>
+          </View>
+          {order?.delivery && (
+            <View style={s.detailRow}>
+              <Text style={s.detailLabel}>Delivery</Text>
+              <Text style={s.detailValue}>{order.delivery.type || order.deliveryType || 'N/A'}</Text>
+            </View>
+          )}
+          {order?.address && (
+            <View style={[s.addressBox, { marginTop: 8 }]}> 
+              <Text style={s.addressLabel}>Address</Text>
+              <Text style={s.addressText}>{order.address}</Text>
+            </View>
+          )}
+
+          {Array.isArray(order.items) && order.items.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={s.subtle}>Items</Text>
+              <View style={s.itemsContainer}>
+                {order.items.map((it, idx) => (
+                  <View key={idx} style={[s.itemRow, idx === order.items.length - 1 && { borderBottomWidth: 0 }]}> 
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.itemName}>{it.name || 'Product'}</Text>
+                      <Text style={s.itemMeta}>Qty: {it.quantity}</Text>
+                    </View>
+                    <Text style={s.itemPrice}>₱{Number(it.price || 0).toFixed(2)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {hasRefund ? (
@@ -233,4 +271,16 @@ const s = StyleSheet.create({
   viewerBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", alignItems: "center", justifyContent: "center" },
   viewerImage: { width: "90%", height: "80%" },
   viewerClose: { position: "absolute", top: 40, right: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#111827", borderRadius: 8 },
+  // Order description styles
+  detailRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  detailLabel: { fontSize: 14, color: GRAY, fontWeight: "600" },
+  detailValue: { fontSize: 14, color: "#111827", fontWeight: "600" },
+  addressBox: { backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: BORDER, borderRadius: 8, padding: 10 },
+  addressLabel: { fontSize: 12, color: GRAY, fontWeight: "700", marginBottom: 4 },
+  addressText: { fontSize: 14, color: "#111827" },
+  itemsContainer: { marginTop: 8, borderWidth: 1, borderColor: BORDER, borderRadius: 8, overflow: "hidden" },
+  itemRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 10, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: BORDER },
+  itemName: { fontSize: 14, color: "#111827", fontWeight: "600" },
+  itemMeta: { fontSize: 12, color: GRAY },
+  itemPrice: { fontSize: 14, color: GREEN_DARK, fontWeight: "700" },
 });

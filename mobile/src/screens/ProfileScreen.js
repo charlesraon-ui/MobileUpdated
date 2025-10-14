@@ -8,20 +8,23 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Image
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard } from "../api/apiClient";
+// Avatar upload removed
 
 const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews } = useContext(AppCtx);
+  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser } = useContext(AppCtx);
   const [cardVisible, setCardVisible] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
   const [card, setCard] = useState(null);
   const [loyalty, setLoyalty] = useState(null);
   const [issueLoading, setIssueLoading] = useState(false);
+  // Avatar upload removed
 
   // Safely format dates coming from backend, avoiding RangeError on invalid values
   const formatDateSafe = (input) => {
@@ -72,6 +75,10 @@ export default function ProfileScreen() {
       }
     })();
   }, [isLoggedIn]);
+
+  // pickAvatar removed
+
+  // removeAvatar removed
 
   const ProfileButton = ({ title, onPress, icon, style = {} }) => (
     <TouchableOpacity 
@@ -135,10 +142,20 @@ export default function ProfileScreen() {
       <View style={s.profileHeader}>
         <View style={s.avatarContainer}>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>
-              {(user?.name || "U").charAt(0).toUpperCase()}
-            </Text>
+            {user?.avatarUrl ? (
+              <Image
+                source={{ uri: (toAbsoluteUrl?.(user.avatarUrl) || user.avatarUrl) }}
+                style={s.avatarImage}
+              />
+            ) : (
+              <Text style={s.avatarText}>
+                {(user?.name || "U").charAt(0).toUpperCase()}
+              </Text>
+            )}
           </View>
+        </View>
+        <View style={s.avatarActions}>
+          <Text style={{ color: "#6B7280" }}>Profile photo upload is disabled.</Text>
         </View>
         <Text style={s.userName}>{user?.name || "User"}</Text>
         <Text style={s.userEmail}>{user?.email || "-"}</Text>
@@ -367,28 +384,7 @@ export default function ProfileScreen() {
                             </View>
                           </View>
                         </View>
-                        {isLoggedIn && loyalty?.isEligible && !loyalty?.cardIssued && (
-                          <TouchableOpacity
-                            style={[s.viewCardBtn, { marginTop: 12 }]}
-                            activeOpacity={0.9}
-                            onPress={async () => {
-                              try {
-                                setIssueLoading(true);
-                                await issueLoyaltyCard();
-                                setLoyalty({ ...(loyalty || {}), cardIssued: true });
-                                const { data } = await getDigitalCard();
-                                setCard(data?.card || null);
-                              } catch (e) {
-                                // noop
-                              } finally {
-                                setIssueLoading(false);
-                              }
-                            }}
-                          >
-                            <Ionicons name="flash-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={s.viewCardText}>{issueLoading ? "Activating..." : "Activate Now"}</Text>
-                          </TouchableOpacity>
-                        )}
+                        {/* Manual activation removed; loyalty is auto-activated on login */}
                       </>
                     );
                   })()
@@ -472,6 +468,7 @@ const s = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: "#10B981",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#10B981",
@@ -485,6 +482,53 @@ const s = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  avatarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#10B981",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  removeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  removeBtnText: {
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "700",
   },
   
   userName: {

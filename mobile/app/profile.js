@@ -14,7 +14,7 @@ export default function ProfileRoute() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Profile" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <ProfileScreen navigation={navigation} />
       <Redirect href="/tabs/profile" />;
     </>

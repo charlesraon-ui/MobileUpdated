@@ -49,7 +49,7 @@ function TabsInner() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerStyle: { 
           backgroundColor: "#10B981",
           shadowColor: "#000",
@@ -135,6 +135,15 @@ function TabsInner() {
           title: "Wishlist",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="heart-outline" color={color} size={size + 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color, size }) => (
+            <TabBarIcon name="chatbubbles-outline" color={color} size={size + 2} />
           ),
         }}
       />

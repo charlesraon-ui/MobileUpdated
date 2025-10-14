@@ -237,20 +237,22 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             <View style={s.actionsContainer}>
               {/* Wishlist inline toggle removed in favor of overlay */}
 
-              <Pressable
-              onPress={handleAddToCartPress}
-              disabled={!inStock}
-            style={({ pressed }) => StyleSheet.flatten([
-              s.addButton,
-              compact && s.compactAddButton,
-              pressed && s.addButtonPressed,
-              !inStock && s.addButtonDisabled
-            ])}
-          >
-              <Text style={[s.addButtonText, compact && s.compactAddText, !inStock && s.addButtonTextDisabled]}>
-                {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
-              </Text>
-            </Pressable>
+              {onAddToCart && (
+                <Pressable
+                  onPress={handleAddToCartPress}
+                  disabled={!inStock}
+                  style={({ pressed }) => StyleSheet.flatten([
+                    s.addButton,
+                    compact && s.compactAddButton,
+                    pressed && s.addButtonPressed,
+                    !inStock && s.addButtonDisabled
+                  ])}
+                >
+                  <Text style={[s.addButtonText, compact && s.compactAddText, !inStock && s.addButtonTextDisabled]}>
+                    {inStock ? (compact ? "Add" : "Add to Cart") : "Unavailable"}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>

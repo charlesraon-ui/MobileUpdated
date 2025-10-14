@@ -29,7 +29,7 @@ export default function WishlistScreen() {
         renderItem={({ item }) => (
           <ProductCard
             product={item}
-            onPress={() => router.push(`/product-detail?id=${item?._id}`)}
+            onPress={() => router.push(`/tabs/product-detail?id=${item?._id}`)}
           />
         )}
         contentContainerStyle={{ padding: 16 }}

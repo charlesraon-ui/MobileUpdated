@@ -14,7 +14,7 @@ export default function CartRoute() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Cart" }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <CartScreen navigation={navigation} />
     </>
   );
