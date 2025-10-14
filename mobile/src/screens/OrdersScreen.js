@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useContext, useRef, useState } from "react";
 import {
   Modal,
+  Animated,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -320,6 +321,7 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [refundMap, setRefundMap] = useState({}); // { [orderId]: status }
+  const refundPulse = useRef(new Animated.Value(1)).current;
 
   const {
     orders,
@@ -338,6 +340,28 @@ export default function OrdersScreen() {
       });
     }, [isLoggedIn])
   );
+
+  // Animated pulse for refund badge
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(refundPulse, {
+          toValue: 1.05,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(refundPulse, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+    };
+  }, [refundPulse]);
 
   // Fetch user's refund tickets and map by orderId
   useFocusEffect(
@@ -591,9 +615,9 @@ export default function OrdersScreen() {
                         {getDeliveryStatusText(order)}
                       </Text>
                       {isRefundInProcess(order._id) && (
-                        <View style={s.refundBadge}>
-                          <Text style={s.refundBadgeText}>Refund in process</Text>
-                        </View>
+                        <Animated.View style={[s.refundBadge, { transform: [{ scale: refundPulse }] }]}>
+                          <Text style={s.refundBadgeText}>💸 REFUND IN PROCESS</Text>
+                        </Animated.View>
                       )}
                     </View>
                   </View>
@@ -649,6 +673,15 @@ export default function OrdersScreen() {
                           onPress={() => router.push(`/refund/${order._id}`)}
                         >
                           <Text style={s.refundButtonText}>Request Refund</Text>
+                        </TouchableOpacity>
+                      )}
+                      {isRefundInProcess(order._id) && (
+                        <TouchableOpacity
+                          style={s.refundViewButton}
+                          activeOpacity={0.85}
+                          onPress={() => router.push(`/refund/my-tickets`)}
+                        >
+                          <Text style={s.refundViewButtonText}>View Refunds</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -877,17 +910,35 @@ const s = StyleSheet.create({
   },
   refundBadge: {
     marginLeft: 8,
-    backgroundColor: "#FEF3C7", // amber-100
-    borderColor: "#FCD34D", // amber-300
+    backgroundColor: "#FFF7ED", // amber-50
+    borderColor: "#FDBA74", // amber-300
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   refundBadgeText: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#92400E", // amber-800
+    color: "#9A3412", // amber-800
+  },
+  refundViewButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: GREEN_BORDER,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  refundViewButtonText: {
+    fontSize: 14,
+    color: GREEN_DARK,
+    fontWeight: "700",
   },
 
   // Order info
