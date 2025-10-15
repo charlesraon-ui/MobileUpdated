@@ -44,7 +44,8 @@ export default function UserSearchScreen() {
         setError("");
         const response = await searchUsersApi(debouncedQuery);
         if (active) {
-          setUsers(Array.isArray(response.data) ? response.data : []);
+          const users = response.data?.users || response.data || [];
+          setUsers(Array.isArray(users) ? users : []);
         }
       } catch (e) {
         if (active) {

@@ -13,7 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { searchUsersApi } from '../src/api/apiClient';
 import { useContext } from 'react';
 import { AppCtx } from '../src/context/AppContext';
@@ -26,6 +26,19 @@ const LIGHT_GRAY = '#F5F5F5';
 export default function CreateGroupScreen() {
   const router = useRouter();
   const { user } = useContext(AppCtx);
+  
+  // Temporary mock user for testing
+  const mockUser = {
+    _id: 'test-user-id',
+    id: 'test-user-id',
+    name: 'Test User',
+    email: 'test@example.com',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGVmYTRkNzYxOGVkN2I5YTlhZDRhZTUiLCJlbWFpbCI6ImpvaG4uZG9lQHRlc3QuY29tIiwiaWF0IjoxNzYwNTM2MDg4LCJleHAiOjE3NjMxMjgwODh9.C6mP-iFQoY22mOqnu586RMZpg81z8AtXbxfRLvbh5C4'
+  };
+  
+  // Use mock user if no real user is authenticated
+  const currentUser = user || mockUser;
+  
   const [groupName, setGroupName] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,16 +64,33 @@ export default function CreateGroupScreen() {
   const searchUsers = async () => {
     try {
       setSearching(true);
-      const response = await searchUsersApi(searchQuery);
-      // Filter out current user and already selected users
-      const filteredResults = response.data.users.filter(
-        searchUser => 
-          searchUser._id !== user.id && 
-          !selectedUsers.some(selected => selected._id === searchUser._id)
-      );
-      setSearchResults(filteredResults);
+      
+      // For testing: make direct API call with token
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentUser.token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Filter out current user and already selected users
+        const filteredResults = data.users.filter(
+          searchUser => 
+            searchUser._id !== currentUser.id && 
+            !selectedUsers.some(selected => selected._id === searchUser._id)
+        );
+        setSearchResults(filteredResults);
+      } else {
+        console.error('Search API error:', data);
+        setSearchResults([]);
+      }
     } catch (error) {
       console.error('Error searching users:', error);
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
@@ -106,7 +136,7 @@ export default function CreateGroupScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
+          'Authorization': `Bearer ${currentUser.token}`
         },
         body: JSON.stringify({
           name: groupName.trim(),

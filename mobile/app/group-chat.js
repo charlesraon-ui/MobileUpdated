@@ -13,7 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useContext } from 'react';
 import { AppCtx } from '../src/context/AppContext';
 import socketService from '../src/services/socketService';
