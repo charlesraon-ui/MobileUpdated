@@ -85,7 +85,7 @@ export default function OrderDetailsPage() {
     try { router.back(); } catch {}
     // As a fallback in web, replace to orders list
     setTimeout(() => {
-      router.replace("/tabs/orders");
+      router.replace("/tabs/profile");
     }, 0);
   };
 
@@ -112,7 +112,7 @@ export default function OrderDetailsPage() {
       ) : !order ? (
         <View style={s.centered}> 
           <Text style={{ color: GRAY }}>Order not found.</Text>
-          <TouchableOpacity style={[s.actionBtn, { marginTop: 16 }]} onPress={() => router.replace("/tabs/orders")}>
+          <TouchableOpacity style={[s.actionBtn, { marginTop: 16 }]} onPress={() => router.replace("/tabs/profile")}>
             <Text style={s.actionBtnText}>Open Orders</Text>
           </TouchableOpacity>
         </View>

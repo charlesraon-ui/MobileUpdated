@@ -64,7 +64,26 @@ export async function sendDMToUser(req, res) {
     if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!other) return res.status(400).json({ success: false, message: "userId is required" });
     if (!text) return res.status(400).json({ success: false, message: "Message text is required" });
+    
     const msg = await DirectMessage.create({ senderId: me, recipientId: other, text });
+    
+    // Emit real-time message to both users
+    const io = req.app.get('io');
+    if (io) {
+      const roomId = [me, other].sort().join('_');
+      io.to(`dm_${roomId}`).emit('new_dm_message', {
+        message: msg,
+        senderId: me,
+        recipientId: other
+      });
+      
+      // Notify recipient
+      io.to(`user_${other}`).emit('new_dm_notification', {
+        senderId: me,
+        message: msg
+      });
+    }
+    
     res.status(201).json({ success: true, message: msg });
   } catch (e) {
     console.error("SEND_DM_ERROR:", e);

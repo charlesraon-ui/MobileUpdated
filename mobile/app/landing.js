@@ -17,7 +17,6 @@ import Animated, {
   withTiming,
   withSpring,
 } from "react-native-reanimated";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import GoAgriLogo from "../components/GoAgriLogo";
 
 const { width, height } = Dimensions.get('window');
@@ -78,6 +77,14 @@ export default function Landing() {
               Go Agri Trading is a company that sells fertilizers, chemicals,
               seeds and other farm tools.
             </Text>
+            
+            {/* Bible Verse */}
+            <View style={s.verseContainer}>
+              <Text style={s.verseReference}>John 3:16</Text>
+              <Text style={s.verseText}>
+                "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."
+              </Text>
+            </View>
           </View>
 
           <View style={s.ctaBottom}>
@@ -163,6 +170,29 @@ const s = StyleSheet.create({
   title: { color: "#ECFDF5", fontSize: 28, fontWeight: "900", letterSpacing: -0.6, textAlign: "center" },
   subtitle: { color: "#D1FAE5", marginTop: 8, fontSize: 16, lineHeight: 22, textAlign: "center" },
   subtitleUnderTitle: { marginTop: 12 },
+  verseContainer: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: "#10B981",
+  },
+  verseReference: {
+    color: "#10B981",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  verseText: {
+    color: "#D1FAE5",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
   cta: {
     marginTop: 18,
     backgroundColor: "#10B981",

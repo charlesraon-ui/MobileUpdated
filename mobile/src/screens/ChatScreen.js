@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { AppCtx } from "../context/AppContext";
 import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi, getUserByIdApi } from "../api/apiClient";
 import Avatar from "../components/Avatar";
+import socketService from "../services/socketService";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
@@ -36,7 +37,21 @@ export default function ChatScreen() {
     }
   }, [isLoggedIn, targetUserId]);
 
-  useFocusEffect(useCallback(() => { fetchMessages(); }, [fetchMessages]));
+  useFocusEffect(useCallback(() => { 
+    fetchMessages(); 
+    
+    // Join DM room when screen is focused
+    if (targetUserId && isLoggedIn) {
+      socketService.joinDMRoom(targetUserId);
+    }
+    
+    return () => {
+      // Leave DM room when screen is unfocused
+      if (targetUserId && isLoggedIn) {
+        socketService.leaveDMRoom(targetUserId);
+      }
+    };
+  }, [fetchMessages, targetUserId, isLoggedIn]));
 
   // Fetch recipient information when targetUserId changes
   useEffect(() => {
@@ -56,6 +71,31 @@ export default function ChatScreen() {
     };
 
     fetchRecipient();
+  }, [targetUserId, isLoggedIn]);
+
+  // Set up real-time message listeners
+  useEffect(() => {
+    if (!targetUserId || !isLoggedIn) return;
+
+    const handleNewMessage = (data) => {
+      if (data.senderId === targetUserId || data.recipientId === targetUserId) {
+        setMessages(prev => [...prev, data.message]);
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+      }
+    };
+
+    const handleTyping = (data) => {
+      // Handle typing indicator if needed
+      console.log('User typing:', data);
+    };
+
+    socketService.on('new_dm_message', handleNewMessage);
+    socketService.on('user_typing_dm', handleTyping);
+
+    return () => {
+      socketService.off('new_dm_message', handleNewMessage);
+      socketService.off('user_typing_dm', handleTyping);
+    };
   }, [targetUserId, isLoggedIn]);
 
   const onSend = async () => {

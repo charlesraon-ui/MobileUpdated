@@ -518,7 +518,7 @@ const renderBundlesSection = () => {
         product={item}
         onPress={() => {
           console.log('Navigating to product:', item._id);
-          router.push(`/tabs/product-detail?id=${item._id}`);
+          router.push(`/product-detail?id=${item._id}`);
         }}
         compact
       />

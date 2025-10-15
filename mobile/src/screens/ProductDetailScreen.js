@@ -317,30 +317,27 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#10B981" />
-
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
+      {/* Modern Navigation Header */}
       <View style={s.header}>
-        <TouchableOpacity 
-          onPress={handleBackPress} 
-          style={s.backButton}
-          activeOpacity={0.8}
-        >
-          <Text style={s.backIcon}>←</Text>
+        <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
+          <View style={s.backIconContainer}>
+            <Text style={s.backIcon}>←</Text>
+          </View>
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>
-          {p?.name || "Product Details"}
-        </Text>
-        <TouchableOpacity
-          onPress={async () => {
-            const action = await toggleWishlist?.(p?._id);
-            if (action === "added") alert("Added to wishlist");
-            else if (action === "removed") alert("Removed from wishlist");
-          }}
-          style={[s.headerWishlistButton, saved && s.headerWishlistActive]}
-          activeOpacity={0.8}
+        
+        <View style={s.headerCenter}>
+          <Text style={s.headerTitle} numberOfLines={1}>
+            {p?.name || "Product Details"}
+          </Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={[s.wishlistButton, saved && s.wishlistButtonActive]} 
+          onPress={() => toggleWishlist?.(p?._id)}
         >
-          <Text style={[s.headerWishlistIcon, saved && s.headerWishlistIconActive]}>
+          <Text style={[s.wishlistIcon, saved && s.wishlistIconActive]}>
             {saved ? "♥" : "♡"}
           </Text>
         </TouchableOpacity>
@@ -604,31 +601,7 @@ const s = StyleSheet.create({
     fontWeight: "600" 
   },
 
-  header: {
-    backgroundColor: "#10B981", paddingTop: 50, paddingBottom: 16, paddingHorizontal: 16,
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
-  },
-  backButton: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center", justifyContent: "center",
-  },
-  backIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "bold" },
-  headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700", color: "#FFFFFF", marginHorizontal: 16 },
-  headerSpacer: { width: 40 },
-  headerWishlistButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerWishlistActive: {
-    backgroundColor: "rgba(254,228,228,0.4)",
-  },
-  headerWishlistIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "bold" },
-  headerWishlistIconActive: { color: "#FEE2E2" },
+
 
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 32 },
@@ -748,4 +721,69 @@ const s = StyleSheet.create({
   noReviewsContainer: { alignItems: "center", paddingVertical: 40 },
   noReviewsText: { fontSize: 18, fontWeight: "600", color: "#9CA3AF", marginBottom: 8 },
   noReviewsSubtext: { fontSize: 14, color: "#D1D5DB" },
+
+  // Modern Header Styles
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backIcon: {
+    fontSize: 18,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  headerCenter: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
+  },
+  wishlistButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wishlistButtonActive: {
+    backgroundColor: "#FEE2E2",
+  },
+  wishlistIcon: {
+    fontSize: 20,
+    color: "#6B7280",
+  },
+  wishlistIconActive: {
+    color: "#DC2626",
+  },
 });

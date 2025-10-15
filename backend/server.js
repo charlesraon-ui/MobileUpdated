@@ -7,6 +7,9 @@ import express from "express";
 import mongoose from "mongoose";
 import helmet from "helmet";
 import compression from "compression";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 
 // --- route imports (models first if they add hooks) ---
 import "./models/Driver.js";
@@ -28,10 +31,18 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import refundTicketRoutes from "./routes/refundTickets.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import directMessageRoutes from "./routes/directMessageRoutes.js";
+import groupChatRoutes from "./routes/groupChatRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = Number(process.env.PORT) || 5000; // Render sets PORT
 
 // middleware
@@ -80,8 +91,86 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/dm", directMessageRoutes);
+app.use("/api/group-chats", groupChatRoutes);
 app.use("/api/users", userRoutes);
 // Customer-only app - no admin loyalty routes
+
+// Socket.IO authentication middleware
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error("Authentication error"));
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id || decoded._id || decoded.sub || decoded.userId;
+    
+    socket.userId = userId;
+    socket.userEmail = decoded.email;
+    next();
+  } catch (err) {
+    next(new Error("Authentication error"));
+  }
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log(`User ${socket.userId} connected`);
+  
+  // Join user to their personal room for notifications
+  socket.join(`user_${socket.userId}`);
+  
+  // Join direct message room
+  socket.on('join_dm_room', (otherUserId) => {
+    const roomId = [socket.userId, otherUserId].sort().join('_');
+    socket.join(`dm_${roomId}`);
+    console.log(`User ${socket.userId} joined DM room: dm_${roomId}`);
+  });
+  
+  // Join group chat room
+  socket.on('join_group_room', (groupId) => {
+    socket.join(`group_${groupId}`);
+    console.log(`User ${socket.userId} joined group room: group_${groupId}`);
+  });
+  
+  // Leave direct message room
+  socket.on('leave_dm_room', (otherUserId) => {
+    const roomId = [socket.userId, otherUserId].sort().join('_');
+    socket.leave(`dm_${roomId}`);
+    console.log(`User ${socket.userId} left DM room: dm_${roomId}`);
+  });
+  
+  // Leave group chat room
+  socket.on('leave_group_room', (groupId) => {
+    socket.leave(`group_${groupId}`);
+    console.log(`User ${socket.userId} left group room: group_${groupId}`);
+  });
+  
+  // Handle typing indicators for DMs
+  socket.on('typing_dm', ({ otherUserId, isTyping }) => {
+    const roomId = [socket.userId, otherUserId].sort().join('_');
+    socket.to(`dm_${roomId}`).emit('user_typing_dm', {
+      userId: socket.userId,
+      isTyping
+    });
+  });
+  
+  // Handle typing indicators for groups
+  socket.on('typing_group', ({ groupId, isTyping }) => {
+    socket.to(`group_${groupId}`).emit('user_typing_group', {
+      userId: socket.userId,
+      isTyping
+    });
+  });
+  
+  socket.on('disconnect', () => {
+    console.log(`User ${socket.userId} disconnected`);
+  });
+});
+
+// Make io available to controllers
+app.set('io', io);
 
 
 // db + start server (start regardless, warn if DB is down)
@@ -97,8 +186,9 @@ const start = async () => {
     console.warn("⚠️ Starting API without DB connection. Set MONGO_URI in .env.");
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ API listening on ${PORT}`);
+    console.log(`✅ Socket.IO server ready`);
     if (!dbConnected) console.warn("⚠️ API running, but DB is not connected.");
   });
 };

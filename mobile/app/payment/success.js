@@ -17,7 +17,7 @@ export default function PaymentSuccessRoute() {
 
     // Auto redirect to orders after 2 seconds
     const timer = setTimeout(() => {
-      router.replace('/tabs/orders');
+      router.replace('/tabs/profile');
     }, 2000);
 
     return () => clearTimeout(timer);

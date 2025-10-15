@@ -437,7 +437,7 @@ export default function OrdersScreen() {
       router.push(`/orders/${oid}`);
     } else {
       // Fallback to list if order id missing
-      router.push(`/tabs/orders`);
+      router.push(`/tabs/profile`);
     }
   };
 
@@ -540,8 +540,17 @@ export default function OrdersScreen() {
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>My Orders</Text>
-        <Text style={s.headerSubtitle}>Track your delivery status</Text>
+        <TouchableOpacity 
+          style={s.backButton}
+          onPress={() => navigation.navigate("profile")}
+          activeOpacity={0.7}
+        >
+          <Text style={s.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <View style={s.headerContent}>
+          <Text style={s.headerTitle}>My Orders</Text>
+          <Text style={s.headerSubtitle}>Track your delivery status</Text>
+        </View>
       </View>
 
       <ScrollView 
@@ -762,6 +771,22 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#F3F4F6",
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 28,

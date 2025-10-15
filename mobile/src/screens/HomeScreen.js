@@ -405,7 +405,7 @@ export default function HomeScreen() {
               title="My Orders"
               subtitle="Track your purchases"
               icon="📦"
-              onPress={() => router.push("/tabs/orders")}
+              onPress={() => router.push("/tabs/profile")}
             />
             <FeatureCard
               title="My Profile"

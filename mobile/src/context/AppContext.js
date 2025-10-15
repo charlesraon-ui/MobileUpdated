@@ -36,6 +36,7 @@ import { registerPushToken } from "../api/apiClient";
 import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
+import socketService from "../services/socketService";
 
 export const AppCtx = createContext(null);
 
@@ -788,6 +789,9 @@ const handlePlaceOrder = async (opts = {}) => {
     await refreshAuthedData(u);
     await refreshLoyalty();
 
+    // Connect to socket for real-time messaging
+    await socketService.connect();
+
     router.replace("/tabs/home");
   };
 
@@ -812,6 +816,9 @@ const handlePlaceOrder = async (opts = {}) => {
     await mergeGuestCartInto(u);
     await refreshAuthedData(u);
     await refreshLoyalty();
+
+    // Connect to socket for real-time messaging
+    await socketService.connect();
 
     router.replace("/tabs/home");
   };
@@ -854,6 +861,9 @@ const handlePlaceOrder = async (opts = {}) => {
   };
 
   const handleLogout = async () => {
+    // Disconnect socket before clearing auth
+    socketService.disconnect();
+    
     await clearAuth();
     setUserState(null);
     setCart([]);

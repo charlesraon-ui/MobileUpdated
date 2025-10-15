@@ -64,27 +64,32 @@ function TabsInner() {
           fontSize: 18, 
           color: "#fff" 
         },
-        tabBarActiveTintColor: "#fff",
-        tabBarInactiveTintColor: "rgba(255, 255, 255, 0.6)",
+        tabBarActiveTintColor: "#10B981",
+        tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: {
-          backgroundColor: "#10B981",
-          borderTopWidth: 0,
-          height: 80,
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 1,
+          borderTopColor: "#E5E7EB",
+          height: 75,
           paddingBottom: 8,
           paddingTop: 8,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 15,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
         },
-        tabBarLabelStyle: { 
-          fontSize: 11, 
+        tabBarLabelStyle: {
+          fontSize: 12,
           fontWeight: "600",
-          marginTop: 2,
+          marginTop: 4,
+          letterSpacing: 0.5,
         },
         tabBarIconStyle: {
-          marginBottom: 2,
+          marginBottom: 0,
+          marginTop: 2,
         },
       }}
     >
@@ -92,6 +97,7 @@ function TabsInner() {
         name="home"
         options={{
           title: "Home",
+          tabBarLabel: "Home",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="home-outline" color={color} size={size + 2} />
           ),
@@ -101,6 +107,7 @@ function TabsInner() {
         name="products"
         options={{
           title: "Products",
+          tabBarLabel: "Products",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="grid-outline" color={color} size={size + 2} />
           ),
@@ -110,6 +117,7 @@ function TabsInner() {
         name="cart"
         options={{
           title: "Cart",
+          tabBarLabel: "Cart",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon 
               name="bag-outline" 
@@ -121,18 +129,10 @@ function TabsInner() {
         }}
       />
       <Tabs.Screen
-        name="orders"
-        options={{
-          title: "Orders",
-          tabBarIcon: ({ color, size }) => (
-            <TabBarIcon name="receipt-outline" color={color} size={size + 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="wishlist"
         options={{
           title: "Wishlist",
+          tabBarLabel: "Wishlist",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="heart-outline" color={color} size={size + 2} />
           ),
@@ -142,6 +142,7 @@ function TabsInner() {
         name="messages"
         options={{
           title: "Messages",
+          tabBarLabel: "Messages",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="chatbubbles-outline" color={color} size={size + 2} />
           ),
@@ -151,6 +152,7 @@ function TabsInner() {
         name="profile"
         options={{
           title: "Profile",
+          tabBarLabel: "Profile",
           tabBarIcon: ({ color, size }) => (
             <TabBarIcon name="person-outline" color={color} size={size + 2} />
           ),

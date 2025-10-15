@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useContext } from "react";
 import { TextInput, TouchableOpacity, View } from "react-native";
 import { AppCtx } from "../context/AppContext";

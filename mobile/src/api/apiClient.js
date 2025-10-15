@@ -238,6 +238,21 @@ export const sendDMMessageApi = (userId, text) => api.post(`/api/dm/${userId}`, 
 export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
 export const getUserByIdApi = (userId) => api.get(`/api/users/${userId}`);
 
+// Group Chats
+export const createGroupChatApi = (name, description, participantIds) => 
+  api.post(`/api/group-chats`, { name, description, participantIds });
+export const getUserGroupChatsApi = () => api.get(`/api/group-chats`);
+export const getGroupChatMessagesApi = (groupChatId, page = 1, limit = 50) => 
+  api.get(`/api/group-chats/${groupChatId}/messages`, { params: { page, limit } });
+export const sendGroupMessageApi = (groupChatId, text) => 
+  api.post(`/api/group-chats/${groupChatId}/messages`, { text });
+export const addParticipantApi = (groupChatId, userId) => 
+  api.post(`/api/group-chats/${groupChatId}/participants`, { userId });
+export const removeParticipantApi = (groupChatId, userId) => 
+  api.delete(`/api/group-chats/${groupChatId}/participants`, { data: { userId } });
+export const leaveGroupChatApi = (groupChatId) => 
+  api.post(`/api/group-chats/${groupChatId}/leave`);
+
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string
 

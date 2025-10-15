@@ -43,7 +43,7 @@ export default function MyRefundTicketsScreen() {
         contentContainerStyle={{ padding: 12 }}
         ListHeaderComponent={() => (
           <View style={s.topBar}>
-            <TouchableOpacity style={s.backBtn} onPress={() => router.replace(`/tabs/orders`)} activeOpacity={0.8}>
+            <TouchableOpacity style={s.backBtn} onPress={() => router.replace(`/tabs/profile`)} activeOpacity={0.8}>
               <Text style={s.backIcon}>←</Text>
               <Text style={s.backText}>Back to Orders</Text>
             </TouchableOpacity>
@@ -58,7 +58,7 @@ export default function MyRefundTicketsScreen() {
           const shortOid = oid ? String(oid).slice(-8).toUpperCase() : "—";
           const onViewOrder = () => {
             if (oid) router.push(`/orders/${oid}?from=refund`);
-            else router.push(`/tabs/orders`);
+            else router.push(`/tabs/profile`);
           };
           return (
             <View style={s.card}>

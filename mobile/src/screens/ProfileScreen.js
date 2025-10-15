@@ -12,18 +12,21 @@ import {
   Image
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
-import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard } from "../api/apiClient";
+import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard, getMyRefundTicketsApi } from "../api/apiClient";
 // Avatar upload removed
 
 const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser } = useContext(AppCtx);
+  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser, orders } = useContext(AppCtx);
   const [cardVisible, setCardVisible] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
   const [card, setCard] = useState(null);
   const [loyalty, setLoyalty] = useState(null);
   const [issueLoading, setIssueLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
+  const [refundMap, setRefundMap] = useState({});
   // Avatar upload removed
 
   // Safely format dates coming from backend, avoiding RangeError on invalid values
@@ -74,6 +77,25 @@ export default function ProfileScreen() {
         setLoyalty(null);
       }
     })();
+    // Fetch refund tickets
+    (async () => {
+      if (!isLoggedIn) return;
+      try {
+        const { data } = await getMyRefundTicketsApi();
+        const tickets = Array.isArray(data?.tickets) ? data.tickets : [];
+        const map = {};
+        tickets.forEach((t) => {
+          const oid = String(t?.order?._id || t?.order || t?.orderId || "");
+          const status = String(t?.status || "");
+          if (["requested", "under_review", "approved"].includes(status) && oid) {
+            map[oid] = status;
+          }
+        });
+        setRefundMap(map);
+      } catch (e) {
+        console.warn("refund tickets fetch failed:", e?.message);
+      }
+    })();
   }, [isLoggedIn]);
 
   // pickAvatar removed
@@ -105,6 +127,58 @@ export default function ProfileScreen() {
       </View>
     </View>
   );
+
+  // Order helper functions
+  const getDeliveryStatusColor = (order) => {
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
+    
+    switch (status) {
+      case 'confirmed':
+      case 'completed':
+        return "#10B981";
+      case 'assigned':
+      case 'in-transit':
+        return "#3B82F6";
+      case 'cancelled':
+        return "#EF4444";
+      case 'pending':
+      default:
+        return "#6B7280";
+    }
+  };
+
+  const getDeliveryStatusText = (order) => {
+    const base = String(order.delivery?.status || order.status || "pending").toLowerCase();
+    const status =
+      String(order.paymentMethod || "").toLowerCase() === "e-payment" && base === "pending"
+        ? "confirmed"
+        : base;
+    
+    switch (status) {
+      case 'confirmed':
+        return 'CONFIRMED';
+      case 'completed':
+        return 'COMPLETED';
+      case 'assigned':
+        return 'ASSIGNED';
+      case 'in-transit':
+        return 'IN TRANSIT';
+      case 'cancelled':
+        return 'CANCELLED';
+      case 'pending':
+      default:
+        return 'PENDING';
+    }
+  };
+
+  const handleViewOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setOrderModalVisible(true);
+  };
 
   if (!isLoggedIn) {
     return (
@@ -154,9 +228,7 @@ export default function ProfileScreen() {
             )}
           </View>
         </View>
-        <View style={s.avatarActions}>
-          <Text style={{ color: "#6B7280" }}>Profile photo upload is disabled.</Text>
-        </View>
+
         <Text style={s.userName}>{user?.name || "User"}</Text>
         <Text style={s.userEmail}>{user?.email || "-"}</Text>
       </View>
@@ -172,11 +244,6 @@ export default function ProfileScreen() {
           title="Manage Addresses"
           icon="location-outline"
           onPress={() => router.push("/(modal)/addresses")}
-        />
-        <ProfileButton
-          title="Order History"
-          icon="receipt-outline"
-          onPress={() => router.push("/tabs/orders")}
         />
       </View>
 
@@ -278,6 +345,21 @@ export default function ProfileScreen() {
             )}
           </View>
         )}
+      </View>
+
+      {/* Orders Button */}
+      <View style={s.section}>
+        <TouchableOpacity 
+          style={s.viewAllOrdersButton}
+          onPress={() => router.push("/full-orders")}
+          activeOpacity={0.8}
+        >
+          <View style={s.viewAllOrdersContent}>
+            <Ionicons name="receipt-outline" size={20} color="#10B981" />
+            <Text style={s.viewAllOrdersText}>Orders</Text>
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Digital Card Modal */}
@@ -388,6 +470,94 @@ export default function ProfileScreen() {
                       </>
                     );
                   })()
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Order Detail Modal */}
+      <Modal
+        visible={orderModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setOrderModalVisible(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={[s.modalSheet, { maxHeight: Math.min(height * 0.8, 720) }]}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Order Details</Text>
+              <TouchableOpacity 
+                onPress={() => setOrderModalVisible(false)}
+                style={s.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedOrder && (
+              <ScrollView style={s.modalContent} showsVerticalScrollIndicator={false}>
+                <View style={s.orderDetailHeader}>
+                  <Text style={s.orderDetailId}>
+                    Order #{String(selectedOrder._id || "").slice(-8).toUpperCase()}
+                  </Text>
+                  <View style={[s.orderStatus, { backgroundColor: `${getDeliveryStatusColor(selectedOrder)}15` }]}>
+                    <Text style={[s.orderStatusText, { color: getDeliveryStatusColor(selectedOrder) }]}>
+                      {getDeliveryStatusText(selectedOrder)}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={s.orderDetailSection}>
+                  <Text style={s.orderDetailSectionTitle}>Order Information</Text>
+                  <View style={s.orderDetailRow}>
+                    <Text style={s.orderDetailLabel}>Date:</Text>
+                    <Text style={s.orderDetailValue}>
+                      {new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </Text>
+                  </View>
+                  <View style={s.orderDetailRow}>
+                    <Text style={s.orderDetailLabel}>Total:</Text>
+                    <Text style={s.orderDetailValue}>₱{Number(selectedOrder.total || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={s.orderDetailRow}>
+                    <Text style={s.orderDetailLabel}>Payment:</Text>
+                    <Text style={s.orderDetailValue}>{selectedOrder.paymentMethod || 'N/A'}</Text>
+                  </View>
+                </View>
+                
+                {selectedOrder.items && selectedOrder.items.length > 0 && (
+                  <View style={s.orderDetailSection}>
+                    <Text style={s.orderDetailSectionTitle}>Items ({selectedOrder.items.length})</Text>
+                    {selectedOrder.items.map((item, index) => (
+                      <View key={index} style={s.orderItemCard}>
+                        <View style={s.orderItemInfo}>
+                          <Text style={s.orderItemName}>{item.name || 'Unknown Item'}</Text>
+                          <Text style={s.orderItemDetails}>
+                            Qty: {item.quantity || 1} × ₱{Number(item.price || 0).toFixed(2)}
+                          </Text>
+                        </View>
+                        <Text style={s.orderItemTotal}>
+                          ₱{Number((item.quantity || 1) * (item.price || 0)).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                
+                {selectedOrder.deliveryAddress && (
+                  <View style={s.orderDetailSection}>
+                    <Text style={s.orderDetailSectionTitle}>Delivery Address</Text>
+                    <Text style={s.orderDetailAddress}>
+                      {selectedOrder.deliveryAddress}
+                    </Text>
+                  </View>
                 )}
               </ScrollView>
             )}
@@ -974,5 +1144,200 @@ const s = StyleSheet.create({
 
   bottomSpacer: {
     height: 32,
+  },
+
+  // Order styles
+  ordersList: {
+    gap: 12,
+  },
+
+  orderCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  orderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  orderIdContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  orderIdText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+
+  refundBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+
+  refundBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#D97706",
+  },
+
+  orderStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+
+  orderStatusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  orderDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  orderDate: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  orderItems: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  orderFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  orderTotal: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+
+  // Order detail modal styles
+  orderDetailHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+
+  orderDetailId: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+
+  orderDetailSection: {
+    marginBottom: 24,
+  },
+
+  orderDetailSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 12,
+  },
+
+  orderDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  orderDetailLabel: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  orderDetailValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1F2937",
+  },
+
+  orderItemCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+
+  orderItemInfo: {
+    flex: 1,
+  },
+
+  orderItemName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+
+  orderItemDetails: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  viewAllOrdersButton: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+
+  viewAllOrdersContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    justifyContent: "space-between",
+  },
+
+  viewAllOrdersText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#10B981",
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  orderItemTotal: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+
+  orderDetailAddress: {
+    fontSize: 14,
+    color: "#1F2937",
+    lineHeight: 20,
   },
 });

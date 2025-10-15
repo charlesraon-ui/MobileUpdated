@@ -160,7 +160,7 @@ export default function CheckoutScreen() {
           [
             { 
               text: "View Orders", 
-              onPress: () => router.replace("/tabs/orders") 
+              onPress: () => router.replace("/tabs/profile") 
             }
           ]
         );
@@ -187,7 +187,7 @@ export default function CheckoutScreen() {
         showToast(`Order #${shortId} placed!`);
         
         setTimeout(() => {
-          router.replace("/tabs/orders");
+          router.replace("/tabs/profile");
         }, 1000);
       } else {
         throw new Error(res?.message || "Order creation failed");
