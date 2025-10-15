@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useContext, useRef, useState, useEffect } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi, getUserByIdApi } from "../api/apiClient";
@@ -78,6 +78,9 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={s.header}>
+        <TouchableOpacity style={s.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
         {targetUserId && recipient ? (
           <>
             <Avatar 
@@ -105,7 +108,11 @@ export default function ChatScreen() {
         ) : messages.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="chatbubble-ellipsis-outline" size={48} color={GRAY} />
-            <Text style={s.emptyText}>Start a conversation with our support team.</Text>
+            <Text style={s.emptyText}>
+              {targetUserId && recipient 
+                ? `Start a chat with ${recipient.name || recipient.email}` 
+                : "Start a conversation with our support team."}
+            </Text>
           </View>
         ) : (
           messages.map((m) => {
@@ -140,6 +147,7 @@ export default function ChatScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: { backgroundColor: GREEN, paddingTop: 50, paddingBottom: 16, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 8 },
+  backButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center" },
   headerInfo: { flex: 1 },
   headerTitle: { color: "#FFFFFF", fontWeight: "800", fontSize: 18 },
   headerSubtitle: { color: "rgba(255, 255, 255, 0.8)", fontSize: 12, fontWeight: "500" },
