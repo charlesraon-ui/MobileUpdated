@@ -8,12 +8,30 @@ export async function searchUsers(req, res) {
     // Case-insensitive partial match on name or email
     const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     const users = await User.find({ $or: [{ name: regex }, { email: regex }] })
-      .select("name email")
+      .select("name email avatarUrl")
       .limit(50)
       .lean();
     res.json(users);
   } catch (e) {
     console.error("SEARCH_USERS_ERROR:", e);
+    res.status(500).json({ success: false, message: e?.message || "Server error" });
+  }
+}
+
+export async function getUserById(req, res) {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ success: false, message: "userId is required" });
+    
+    const user = await User.findById(userId)
+      .select("name email avatarUrl")
+      .lean();
+    
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    
+    res.json({ success: true, user });
+  } catch (e) {
+    console.error("GET_USER_BY_ID_ERROR:", e);
     res.status(500).json({ success: false, message: e?.message || "Server error" });
   }
 }

@@ -236,6 +236,7 @@ export const sendDMMessageApi = (userId, text) => api.post(`/api/dm/${userId}`, 
 
 // User search
 export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
+export const getUserByIdApi = (userId) => api.get(`/api/users/${userId}`);
 
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string

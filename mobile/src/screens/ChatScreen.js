@@ -1,10 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useContext, useRef, useState } from "react";
+import { useCallback, useContext, useRef, useState, useEffect } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { AppCtx } from "../context/AppContext";
-import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi } from "../api/apiClient";
+import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi, getUserByIdApi } from "../api/apiClient";
+import Avatar from "../components/Avatar";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
@@ -17,6 +18,7 @@ export default function ChatScreen() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recipient, setRecipient] = useState(null);
   const scrollRef = useRef(null);
 
   const fetchMessages = useCallback(async () => {
@@ -35,6 +37,26 @@ export default function ChatScreen() {
   }, [isLoggedIn, targetUserId]);
 
   useFocusEffect(useCallback(() => { fetchMessages(); }, [fetchMessages]));
+
+  // Fetch recipient information when targetUserId changes
+  useEffect(() => {
+    const fetchRecipient = async () => {
+      if (!targetUserId || !isLoggedIn) {
+        setRecipient(null);
+        return;
+      }
+      
+      try {
+        const { data } = await getUserByIdApi(String(targetUserId));
+        setRecipient(data?.user || null);
+      } catch (e) {
+        console.warn("Failed to fetch recipient info:", e.message);
+        setRecipient(null);
+      }
+    };
+
+    fetchRecipient();
+  }, [targetUserId, isLoggedIn]);
 
   const onSend = async () => {
     const t = text.trim();
@@ -56,8 +78,25 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={s.header}>
-        <Ionicons name="chatbubbles-outline" size={22} color="#FFFFFF" />
-        <Text style={s.headerTitle}>{targetUserId ? "Chat" : "Live Chat"}</Text>
+        {targetUserId && recipient ? (
+          <>
+            <Avatar 
+              user={recipient} 
+              size={32} 
+              textStyle={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}
+              style={{ backgroundColor: "rgba(255, 255, 255, 0.2)" }}
+            />
+            <View style={s.headerInfo}>
+              <Text style={s.headerTitle}>{recipient.name || recipient.email}</Text>
+              <Text style={s.headerSubtitle}>Online</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <Ionicons name="chatbubbles-outline" size={22} color="#FFFFFF" />
+            <Text style={s.headerTitle}>{targetUserId ? "Chat" : "Live Chat"}</Text>
+          </>
+        )}
         <View style={{ width: 24 }} />
       </View>
       <ScrollView ref={scrollRef} style={s.list} contentContainerStyle={{ padding: 16 }}>
@@ -101,7 +140,9 @@ export default function ChatScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   header: { backgroundColor: GREEN, paddingTop: 50, paddingBottom: 16, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 8 },
+  headerInfo: { flex: 1 },
   headerTitle: { color: "#FFFFFF", fontWeight: "800", fontSize: 18 },
+  headerSubtitle: { color: "rgba(255, 255, 255, 0.8)", fontSize: 12, fontWeight: "500" },
   list: { flex: 1 },
   empty: { alignItems: "center", marginTop: 40, gap: 12 },
   emptyText: { color: GRAY, fontWeight: "600" },

@@ -22,7 +22,7 @@ export async function listConversations(req, res) {
 
     const conversations = Array.from(convMap.values());
     const userIds = conversations.map((c) => c.otherUserId);
-    const users = await User.find({ _id: { $in: userIds } }).select("name email").lean();
+    const users = await User.find({ _id: { $in: userIds } }).select("name email avatarUrl").lean();
     const userMap = new Map(users.map((u) => [String(u._id), u]));
     const result = conversations.map((c) => ({ ...c, user: userMap.get(c.otherUserId) || null }));
     res.json({ success: true, conversations: result });

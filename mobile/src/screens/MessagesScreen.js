@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { getConversationsApi, searchUsersApi } from "../api/apiClient";
+import Avatar from "../components/Avatar";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
@@ -56,7 +57,14 @@ export default function MessagesScreen() {
     const time = item?.lastMessage?.createdAt ? new Date(item.lastMessage.createdAt).toLocaleString() : "";
     return (
       <TouchableOpacity style={s.convItem} onPress={() => openThread(item.otherUserId)} activeOpacity={0.8}>
-        <View style={s.avatar}><Text style={s.avatarText}>{String(name || "?").charAt(0).toUpperCase()}</Text></View>
+        <View style={{ marginRight: 12 }}>
+          <Avatar 
+            avatarUrl={item?.user?.avatarUrl} 
+            name={name} 
+            email={item?.user?.email}
+            size={40}
+          />
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={s.convName} numberOfLines={1}>{name}</Text>
           <Text style={s.convLast} numberOfLines={1}>{lastText}</Text>
@@ -71,7 +79,15 @@ export default function MessagesScreen() {
 
   const renderResult = ({ item }) => (
     <TouchableOpacity style={s.searchItem} onPress={() => openThread(item._id)} activeOpacity={0.8}>
-      <View style={s.avatarSmall}><Text style={s.avatarTextSmall}>{String(item.name || item.email || "?").charAt(0).toUpperCase()}</Text></View>
+      <View style={{ marginRight: 12 }}>
+        <Avatar 
+          avatarUrl={item.avatarUrl} 
+          name={item.name} 
+          email={item.email}
+          size={32}
+          textSize={14}
+        />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={s.resultName} numberOfLines={1}>{item.name || item.email}</Text>
         <Text style={s.resultEmail} numberOfLines={1}>{item.email}</Text>
