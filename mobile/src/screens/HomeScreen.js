@@ -98,6 +98,7 @@ export default function HomeScreen() {
               <Text style={styles.productImageText}>📦</Text>
             </View>
           )}
+          
           {/* Heart toggle (top-right) */}
           <TouchableOpacity
             onPress={async (e) => {
@@ -114,20 +115,31 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Price (bottom-left) */}
+          {/* Price badge (bottom-left) */}
           <View style={styles.priceTag}>
             <Text style={styles.priceTagText}>₱{Number(product?.price || 0).toFixed(2)}</Text>
           </View>
 
-          {/* Compact rating (bottom-right) */}
+          {/* Rating badge (bottom-right) */}
           <View style={styles.ratingChip}>
             <Text style={styles.ratingChipText}>⭐ {product?.averageRating || '4.5'}</Text>
           </View>
         </View>
+        
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>
             {product.name}
           </Text>
+          <View style={styles.productMeta}>
+            <Text style={styles.productCategory} numberOfLines={1}>
+              {product.category || 'General'}
+            </Text>
+            {product.stock && (
+              <Text style={[styles.stockIndicator, product.stock < 10 && styles.lowStock]}>
+                {product.stock < 10 ? 'Low Stock' : 'In Stock'}
+              </Text>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -687,22 +699,25 @@ export default function HomeScreen() {
   },
   
   productCard: {
-    width: 160,
+    width: 170,
     backgroundColor: Colors.light.card,
-    borderRadius: Radii.lg,
+    borderRadius: 16,
     marginRight: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
   },
   
   productImageContainer: {
-    height: 120,
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
+    height: 130,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: "hidden",
+    position: "relative",
   },
 
   // Overlays on product image
@@ -778,7 +793,8 @@ export default function HomeScreen() {
   },
   
   productInfo: {
-    padding: 16,
+    padding: 14,
+    paddingTop: 12,
   },
   
   productName: {
@@ -787,6 +803,37 @@ export default function HomeScreen() {
     color: Colors.light.text,
     marginBottom: 8,
     lineHeight: 20,
+  },
+  
+  productMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  
+  productCategory: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: Colors.light.muted,
+    textTransform: "capitalize",
+    flex: 1,
+  },
+  
+  stockIndicator: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#10B981",
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    textAlign: "center",
+  },
+  
+  lowStock: {
+    color: "#DC2626",
+    backgroundColor: "#FEF2F2",
   },
   
   productFooter: {

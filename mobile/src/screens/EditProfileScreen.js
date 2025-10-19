@@ -12,11 +12,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Image
+  Image,
+  Dimensions
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { AppCtx } from "../context/AppContext";
-import { uploadProfileImageFromUri } from "../api/apiClient";
+import { uploadProfileImageFromUri, updateProfileApi } from "../api/apiClient";
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive breakpoints
+const isTablet = width >= 768;
+const isLargeScreen = width >= 1024;
 
 export default function EditProfileScreen() {
   const { user, setUserState, persistUser, toAbsoluteUrl } = useContext(AppCtx);
@@ -46,32 +53,41 @@ export default function EditProfileScreen() {
     setLoading(true);
 
     try {
-      // Here you would typically make an API call to update the profile
-      // For now, we'll just update the local state
-      const updatedUser = { ...user, name: name.trim(), email: email.trim() };
-      
-      // Update context state
-      if (setUserState) {
-        setUserState(updatedUser);
-      }
-      
-      // Persist to storage
-      if (persistUser) {
-        await persistUser(updatedUser);
-      }
+      // Call the new profile update API endpoint
+      const response = await updateProfileApi({
+        name: name.trim(),
+        email: email.trim()
+      });
 
-      Alert.alert(
-        "Success", 
-        "Profile updated successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => router.back()
-          }
-        ]
-      );
+      if (response.data.success) {
+        const updatedUser = response.data.user;
+        
+        // Update context state
+        if (setUserState) {
+          setUserState(updatedUser);
+        }
+        
+        // Persist to storage
+        if (persistUser) {
+          await persistUser(updatedUser);
+        }
+
+        Alert.alert(
+          "Success", 
+          "Profile updated successfully!",
+          [
+            {
+              text: "OK",
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        throw new Error(response.data.message || "Update failed");
+      }
     } catch (error) {
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to update profile. Please try again.";
+      Alert.alert("Error", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -161,108 +177,118 @@ export default function EditProfileScreen() {
       >
         <ScrollView 
           style={s.scrollView}
-          contentContainerStyle={s.scrollContent}
+          contentContainerStyle={[s.scrollContent, isTablet && s.scrollContentTablet]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Profile Avatar Section */}
-          <View style={s.avatarSection}>
-            <View style={s.avatarContainer}>
-              <View style={s.avatar}>
-                {user?.avatarUrl ? (
-                  <Image
-                    source={{ uri: (toAbsoluteUrl?.(user.avatarUrl) || user.avatarUrl) }}
-                    style={s.avatarImage}
-                  />
-                ) : (
-                  <Text style={s.avatarText}>
-                    {(name || user?.name || "U").charAt(0).toUpperCase()}
+          {/* Main Content Container for responsive layout */}
+          <View style={[s.mainContent, isTablet && s.mainContentTablet]}>
+            {/* Profile Avatar Section */}
+            <View style={[s.avatarSection, isTablet && s.avatarSectionTablet]}>
+              <View style={s.avatarContainer}>
+                <View style={[s.avatar, isTablet && s.avatarTablet]}>
+                  {user?.avatarUrl ? (
+                    <Image
+                      source={{ uri: (toAbsoluteUrl?.(user.avatarUrl) || user.avatarUrl) }}
+                      style={[s.avatarImage, isTablet && s.avatarImageTablet]}
+                    />
+                  ) : (
+                    <Text style={[s.avatarText, isTablet && s.avatarTextTablet]}>
+                      {(name || user?.name || "U").charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Text style={[s.avatarLabel, isTablet && s.avatarLabelTablet]}>Profile Picture</Text>
+              <View style={[s.avatarActions, isTablet && s.avatarActionsTablet]}>
+                <TouchableOpacity
+                  style={[s.avatarBtn, isTablet && s.avatarBtnTablet]}
+                  onPress={pickAvatar}
+                  disabled={avatarUploading}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="cloud-upload" size={isTablet ? 20 : 18} color="#FFFFFF" />
+                  <Text style={[s.avatarBtnText, isTablet && s.avatarBtnTextTablet]}>
+                    {avatarUploading ? "Uploading…" : "Upload Photo"}
                   </Text>
-                )}
-              </View>
-            </View>
-          <Text style={s.avatarLabel}>Profile Picture</Text>
-            <View style={s.avatarActions}>
-              <TouchableOpacity
-                style={s.avatarBtn}
-                onPress={pickAvatar}
-                disabled={avatarUploading}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="cloud-upload" size={18} color="#FFFFFF" />
-                <Text style={s.avatarBtnText}>{avatarUploading ? "Uploading…" : "Upload Photo"}</Text>
-              </TouchableOpacity>
-              {user?.avatarUrl ? (
-                <TouchableOpacity style={s.removeBtn} onPress={removeAvatar} activeOpacity={0.85}>
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  <Text style={s.removeBtnText}>Remove</Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Form Section */}
-          <View style={s.formSection}>
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>Full Name</Text>
-              <View style={s.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#6B7280" style={s.inputIcon} />
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  style={s.input}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#9CA3AF"
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                />
+                {user?.avatarUrl ? (
+                  <TouchableOpacity 
+                    style={[s.removeBtn, isTablet && s.removeBtnTablet]} 
+                    onPress={removeAvatar} 
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={isTablet ? 20 : 18} color="#EF4444" />
+                    <Text style={[s.removeBtnText, isTablet && s.removeBtnTextTablet]}>Remove</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </View>
 
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>Email Address</Text>
-              <View style={s.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#6B7280" style={s.inputIcon} />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  style={s.input}
-                  placeholder="Enter your email address"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+            {/* Form Section */}
+            <View style={[s.formSection, isTablet && s.formSectionTablet]}>
+              <View style={s.inputGroup}>
+                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>Full Name</Text>
+                <View style={[s.inputContainer, isTablet && s.inputContainerTablet]}>
+                  <Ionicons name="person-outline" size={isTablet ? 24 : 20} color="#6B7280" style={s.inputIcon} />
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    style={[s.input, isTablet && s.inputTablet]}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              <View style={s.inputGroup}>
+                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>Email Address</Text>
+                <View style={[s.inputContainer, isTablet && s.inputContainerTablet]}>
+                  <Ionicons name="mail-outline" size={isTablet ? 24 : 20} color="#6B7280" style={s.inputIcon} />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    style={[s.input, isTablet && s.inputTablet]}
+                    placeholder="Enter your email address"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Info Card */}
-          <View style={s.infoCard}>
-            <View style={s.infoIconContainer}>
-              <Ionicons name="information-circle" size={24} color="#10B981" />
-            </View>
-            <View style={s.infoContent}>
-              <Text style={s.infoTitle}>Profile Information</Text>
-              <Text style={s.infoText}>
-                Your profile information helps us personalize your experience and communicate with you about your orders.
-              </Text>
+            {/* Info Card */}
+            <View style={[s.infoCard, isTablet && s.infoCardTablet]}>
+              <View style={s.infoIconContainer}>
+                <Ionicons name="information-circle" size={isTablet ? 28 : 24} color="#10B981" />
+              </View>
+              <View style={s.infoContent}>
+                <Text style={[s.infoTitle, isTablet && s.infoTitleTablet]}>Profile Information</Text>
+                <Text style={[s.infoText, isTablet && s.infoTextTablet]}>
+                  Your profile information helps us personalize your experience and communicate with you about your orders.
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={s.actionContainer}>
+        <View style={[s.actionContainer, isTablet && s.actionContainerTablet]}>
           <TouchableOpacity
-            style={s.cancelButton}
+            style={[s.cancelButton, isTablet && s.cancelButtonTablet]}
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Text style={s.cancelButtonText}>Cancel</Text>
+            <Text style={[s.cancelButtonText, isTablet && s.cancelButtonTextTablet]}>Cancel</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               s.saveButton,
+              isTablet && s.saveButtonTablet,
               (!hasChanges || loading) && s.saveButtonDisabled
             ]}
             onPress={save}
@@ -271,10 +297,10 @@ export default function EditProfileScreen() {
           >
             {loading ? (
               <View style={s.loadingContainer}>
-                <Text style={s.saveButtonText}>Saving...</Text>
+                <Text style={[s.saveButtonText, isTablet && s.saveButtonTextTablet]}>Saving...</Text>
               </View>
             ) : (
-              <Text style={s.saveButtonText}>Save Changes</Text>
+              <Text style={[s.saveButtonText, isTablet && s.saveButtonTextTablet]}>Save Changes</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -339,6 +365,22 @@ const s = StyleSheet.create({
     paddingBottom: 20,
   },
 
+  scrollContentTablet: {
+    paddingHorizontal: 40,
+    paddingBottom: 40,
+  },
+
+  // Main content container for responsive layout
+  mainContent: {
+    flex: 1,
+  },
+
+  mainContentTablet: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
+
   // Avatar Section
   avatarSection: {
     backgroundColor: "#FFFFFF",
@@ -351,6 +393,13 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+  },
+
+  avatarSectionTablet: {
+    paddingVertical: 48,
+    paddingHorizontal: 40,
+    marginBottom: 32,
+    borderRadius: 16,
   },
 
   avatarContainer: {
@@ -372,10 +421,20 @@ const s = StyleSheet.create({
     elevation: 6,
   },
 
+  avatarTablet: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+
   avatarText: {
     fontSize: 40,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+
+  avatarTextTablet: {
+    fontSize: 48,
   },
 
   avatarImage: {
@@ -384,11 +443,22 @@ const s = StyleSheet.create({
     borderRadius: 50,
   },
 
+  avatarImageTablet: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+
   avatarActions: {
     marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+
+  avatarActionsTablet: {
+    marginTop: 16,
+    gap: 16,
   },
 
   avatarBtn: {
@@ -406,10 +476,21 @@ const s = StyleSheet.create({
     elevation: 2,
   },
 
+  avatarBtnTablet: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 10,
+  },
+
   avatarBtnText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
+  },
+
+  avatarBtnTextTablet: {
+    fontSize: 16,
   },
 
   removeBtn: {
@@ -424,10 +505,21 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
 
+  removeBtnTablet: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 10,
+  },
+
   removeBtnText: {
     color: "#EF4444",
     fontSize: 14,
     fontWeight: "700",
+  },
+
+  removeBtnTextTablet: {
+    fontSize: 16,
   },
 
   avatarLabel: {
@@ -437,10 +529,8 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
 
-  avatarSubtext: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
+  avatarLabelTablet: {
+    fontSize: 20,
   },
 
   // Form Section
@@ -448,6 +538,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 20,
     marginBottom: 20,
+  },
+
+  formSectionTablet: {
+    paddingHorizontal: 0,
+    gap: 24,
+    marginBottom: 32,
   },
 
   inputGroup: {
@@ -459,6 +555,11 @@ const s = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     marginBottom: 4,
+  },
+
+  inputLabelTablet: {
+    fontSize: 18,
+    marginBottom: 6,
   },
 
   inputContainer: {
@@ -477,6 +578,12 @@ const s = StyleSheet.create({
     elevation: 2,
   },
 
+  inputContainerTablet: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderRadius: 16,
+  },
+
   inputIcon: {
     marginRight: 12,
   },
@@ -486,6 +593,10 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: "#111827",
     fontWeight: "500",
+  },
+
+  inputTablet: {
+    fontSize: 18,
   },
 
   // Info Card
@@ -500,6 +611,12 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+
+  infoCardTablet: {
+    marginHorizontal: 0,
+    borderRadius: 16,
+    padding: 24,
   },
 
   infoIconContainer: {
@@ -518,10 +635,20 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
 
+  infoTitleTablet: {
+    fontSize: 18,
+    marginBottom: 6,
+  },
+
   infoText: {
     fontSize: 14,
     color: "#6B7280",
     lineHeight: 20,
+  },
+
+  infoTextTablet: {
+    fontSize: 16,
+    lineHeight: 24,
   },
 
   // Action Buttons
@@ -535,6 +662,15 @@ const s = StyleSheet.create({
     gap: 12,
   },
 
+  actionContainerTablet: {
+    paddingHorizontal: 40,
+    paddingVertical: 24,
+    gap: 16,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
+
   cancelButton: {
     flex: 1,
     paddingVertical: 16,
@@ -545,10 +681,19 @@ const s = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
 
+  cancelButtonTablet: {
+    paddingVertical: 18,
+    borderRadius: 16,
+  },
+
   cancelButtonText: {
     fontSize: 16,
     fontWeight: "600",
     color: "#374151",
+  },
+
+  cancelButtonTextTablet: {
+    fontSize: 18,
   },
 
   saveButton: {
@@ -574,6 +719,10 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+
+  saveButtonTextTablet: {
+    fontSize: 18,
   },
 
   loadingContainer: {

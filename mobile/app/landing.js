@@ -21,11 +21,11 @@ import GoAgriLogo from "../components/GoAgriLogo";
 
 const { width, height } = Dimensions.get('window');
   // Responsive image height percentage by device height (picture always taller than green)
-  const imagePct = height < 680 ? 0.62 : height < 820 ? 0.68 : 0.72;
+  const imagePct = height < 680 ? 0.58 : height < 820 ? 0.64 : 0.68;
   // Responsive logo size (even bigger across devices)
-  const logoSize = width < 380 ? 120 : width < 768 ? 140 : 176;
+  const logoSize = width < 380 ? 130 : width < 768 ? 150 : 186;
   // Offset to move the title down in the dark section
-  const titleOffset = height < 680 ? 40 : height < 820 ? 48 : 56;
+  const titleOffset = height < 680 ? 32 : height < 820 ? 40 : 48;
 
 export default function Landing() {
   const fadeAnim = useSharedValue(0);
@@ -61,7 +61,7 @@ export default function Landing() {
             <View
               style={[
                 s.logoBadge,
-                { width: logoSize + 24, height: logoSize + 24, borderRadius: (logoSize + 24) / 2 },
+                { width: logoSize + 32, height: logoSize + 32, borderRadius: (logoSize + 32) / 2 },
               ]}
             >
               <GoAgriLogo width={logoSize} height={logoSize} />
@@ -74,8 +74,7 @@ export default function Landing() {
           <View style={[s.textBlock, { paddingTop: titleOffset }] }>
             <Text style={s.title}>Welcome to Go Agri Trading</Text>
             <Text style={[s.subtitle, s.subtitleUnderTitle]}>
-              Go Agri Trading is a company that sells fertilizers, chemicals,
-              seeds and other farm tools.
+              Your trusted partner for premium fertilizers, chemicals, seeds and farm tools to help your crops thrive.
             </Text>
             
             {/* Bible Verse */}
@@ -89,10 +88,15 @@ export default function Landing() {
 
           <View style={s.ctaBottom}>
             <Link href="/login" asChild>
-              <TouchableOpacity style={s.cta} activeOpacity={0.9}>
+              <TouchableOpacity style={s.cta} activeOpacity={0.8}>
                 <Text style={s.ctaText}>Get Started</Text>
               </TouchableOpacity>
             </Link>
+            
+            {/* Additional info */}
+            <Text style={s.footerText}>
+              Join thousands of farmers who trust us
+            </Text>
           </View>
         </View>
       </Animated.View>
@@ -101,8 +105,8 @@ export default function Landing() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F3F4F6" },
-  scroll: { flexGrow: 1, backgroundColor: "#F3F4F6", minHeight: height },
+  screen: { flex: 1, backgroundColor: "#F8FAFC" },
+  scroll: { flexGrow: 1, backgroundColor: "#F8FAFC", minHeight: height },
   header: { paddingTop: 24, paddingHorizontal: 20, marginBottom: 8 },
   card: {
     backgroundColor: "#FFFFFF",
@@ -114,11 +118,11 @@ const s = StyleSheet.create({
     ...Platform.select({
       default: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
       },
-      android: { elevation: 6 },
+      android: { elevation: 8 },
     }),
   },
   imageWrap: { height: Math.round(height * imagePct), overflow: "hidden" },
@@ -134,75 +138,113 @@ const s = StyleSheet.create({
     zIndex: 2,
   },
   logoBadge: {
-    backgroundColor: "rgba(236, 253, 245, 0.85)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
       default: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
       },
-      android: { elevation: 6 },
+      android: { elevation: 8 },
     }),
   },
   cardBody: {
     backgroundColor: "#064E3B",
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 32,
     flex: 1,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -16,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -20,
     justifyContent: "flex-start",
   },
   textBlock: {
-    gap: 8,
-    paddingTop: 12,
+    gap: 12,
+    paddingTop: 16,
     alignItems: "center",
   },
   ctaBottom: {
     marginTop: "auto",
-    alignItems: "stretch",
+    alignItems: "center",
+    gap: 16,
   },
-  title: { color: "#ECFDF5", fontSize: 28, fontWeight: "900", letterSpacing: -0.6, textAlign: "center" },
-  subtitle: { color: "#D1FAE5", marginTop: 8, fontSize: 16, lineHeight: 22, textAlign: "center" },
-  subtitleUnderTitle: { marginTop: 12 },
+  title: { 
+    color: "#FFFFFF", 
+    fontSize: 32, 
+    fontWeight: "900", 
+    letterSpacing: -0.8, 
+    textAlign: "center",
+    lineHeight: 38,
+  },
+  subtitle: { 
+    color: "#D1FAE5", 
+    marginTop: 12, 
+    fontSize: 17, 
+    lineHeight: 26, 
+    textAlign: "center",
+    paddingHorizontal: 8,
+  },
+  subtitleUnderTitle: { marginTop: 16 },
   verseContainer: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    borderRadius: 12,
-    borderLeftWidth: 3,
+    marginTop: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderRadius: 16,
+    borderLeftWidth: 4,
     borderLeftColor: "#10B981",
+    marginHorizontal: 8,
   },
   verseReference: {
     color: "#10B981",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   verseText: {
-    color: "#D1FAE5",
-    fontSize: 14,
-    lineHeight: 20,
+    color: "#E6FFFA",
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: "center",
     fontStyle: "italic",
   },
   cta: {
-    marginTop: 18,
+    marginTop: 24,
     backgroundColor: "#10B981",
-    paddingVertical: 14,
-    borderRadius: 26,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
     alignItems: "center",
     alignSelf: "stretch",
     width: "100%",
+    ...Platform.select({
+      default: {
+        shadowColor: "#10B981",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
   },
-  ctaText: { color: "#062C22", fontSize: 15, fontWeight: "800" },
+  ctaText: { 
+    color: "#064E3B", 
+    fontSize: 17, 
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  footerText: {
+    color: "#A7F3D0",
+    fontSize: 14,
+    textAlign: "center",
+    fontWeight: "500",
+  },
 });
 
 

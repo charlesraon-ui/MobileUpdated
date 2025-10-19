@@ -32,6 +32,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const validate = () => {
     const e = email.trim().toLowerCase();
@@ -80,81 +82,86 @@ export default function LoginScreen() {
       >
         <View style={s.card}>
           <View style={s.logoRow}>
-            <GoAgriLogo width={48} height={48} />
-          <Text style={s.brand}>Go Agri Trading</Text>
-        </View>
-        <Text style={s.title}>Welcome back</Text>
-        {/* Inline error banner replaced by sticky toast */}
+            <GoAgriLogo width={52} height={52} />
+            <Text style={s.brand}>Go Agri Trading</Text>
+          </View>
+          
+          <Text style={s.title}>Welcome back</Text>
+          <Text style={s.subtitle}>Sign in to your account to continue</Text>
 
-      <Text style={s.label}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        placeholder="you@example.com"
-        placeholderTextColor={placeholderColor}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={s.input}
-        editable={!submitting}
-      />
+          <View style={s.formContainer}>
+            <View style={s.inputGroup}>
+              <Text style={s.label}>Email Address</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email"
+                placeholderTextColor={placeholderColor}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[s.input, emailFocused && s.inputFocused]}
+                editable={!submitting}
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+              />
+            </View>
 
-      <Text style={s.label}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        placeholderTextColor={placeholderColor}
-        secureTextEntry
-        autoCapitalize="none"
-        style={s.input}
-        editable={!submitting}
-      />
+            <View style={s.inputGroup}>
+              <Text style={s.label}>Password</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                placeholderTextColor={placeholderColor}
+                secureTextEntry
+                autoCapitalize="none"
+                style={[s.input, passwordFocused && s.inputFocused]}
+                editable={!submitting}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+              />
+            </View>
 
-      <View style={{ height: 12 }} />
+            {submitting ? (
+              <View style={s.loading}>
+                <ActivityIndicator size="small" color="#10B981" />
+                <Text style={s.loadingText}>Signing you in…</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[s.primaryBtn, submitting && s.btnDisabled]}
+                onPress={onSubmit}
+                disabled={submitting}
+                activeOpacity={0.8}
+              >
+                <Text style={s.primaryBtnText}>Sign In</Text>
+              </TouchableOpacity>
+            )}
 
-      {submitting ? (
-        <View style={s.loading}>
-          <ActivityIndicator />
-          <Text style={{ marginLeft: 8 }}>Signing you in…</Text>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={[s.primaryBtn, submitting && s.btnDisabled]}
-          onPress={onSubmit}
-          disabled={submitting}
-          activeOpacity={0.9}
-        >
-          <Text style={s.primaryBtnText}>Login</Text>
-        </TouchableOpacity>
-      )}
+            {/* Guest Option */}
+            <TouchableOpacity
+              style={s.guestBtn}
+              onPress={() => router.replace("/tabs/home")}
+              activeOpacity={0.8}
+            >
+              <Text style={s.guestBtnText}>Continue as Guest</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={{ height: 16 }} />
+          <View style={s.linksContainer}>
+            <Text style={s.small}>
+              Don't have an account? <Link href="/register" style={s.link}>Sign up</Link>
+            </Text>
+            
+            <Text style={s.small}>
+              <Link href="/forgot-password" style={s.link}>Forgot password?</Link>
+            </Text>
 
-      {/* Maybe Later - Guest Option */}
-      <TouchableOpacity
-        style={s.guestBtn}
-        onPress={() => router.replace("/tabs/home")}
-        activeOpacity={0.9}
-      >
-        <Text style={s.guestBtnText}>Maybe Later (Continue as Guest)</Text>
-      </TouchableOpacity>
-
-      <View style={{ height: 16 }} />
-
-      <Text style={s.small}>
-        Don't have an account? <Link href="/register">Register</Link>
-      </Text>
-
-      <View style={{ height: 8 }} />
-      <Text style={s.small}>
-        <Link href="/forgot-password">Forgot password?</Link>
-      </Text>
-
-        <View style={{ height: 8 }} />
-        <Text style={s.small}>
-          <Link href="/landing">Back to landing</Link>
-        </Text>
+            <Text style={s.small}>
+              <Link href="/landing" style={s.link}>← Back to landing</Link>
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </ImageBackground>
@@ -163,70 +170,167 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   bg: { flex: 1, minHeight: height, overflow: "hidden" },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
-  container: { flex: 1, minHeight: height, padding: 20, paddingTop: topPad, justifyContent: "center" },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+  container: { 
+    flex: 1, 
+    minHeight: height, 
+    padding: 20, 
+    paddingTop: topPad, 
+    justifyContent: "center" 
+  },
   card: {
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 16,
-    padding: 20,
-    paddingTop: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: "rgba(255,255,255,0.98)",
+    borderRadius: 20,
+    padding: 24,
+    paddingTop: 28,
+    ...Platform.select({
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+      },
+      android: { elevation: 10 },
+    }),
     maxWidth: 420,
     alignSelf: "center",
     width: "100%",
   },
-  logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8, paddingTop: 6, width: "100%" },
-  brand: { fontSize: 18, lineHeight: 22, fontWeight: "800", color: "#065F46" },
-  title: { fontSize: 22, fontWeight: "800", marginBottom: 16, color: "#111827" },
-  label: { fontWeight: "700", color: "#374151", marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+  logoRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "center", 
+    gap: 12, 
+    marginBottom: 12, 
+    paddingTop: 8, 
+    width: "100%" 
   },
-  small: { color: "#6B7280", textAlign: "center" },
+  brand: { 
+    fontSize: 20, 
+    lineHeight: 24, 
+    fontWeight: "800", 
+    color: "#065F46",
+    letterSpacing: 0.5,
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: "900", 
+    marginBottom: 8, 
+    color: "#111827",
+    textAlign: "center",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  formContainer: {
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: { 
+    fontWeight: "600", 
+    color: "#374151", 
+    fontSize: 15,
+    marginLeft: 4,
+  },
+  input: {
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#FFFFFF",
+    fontSize: 16,
+    ...Platform.select({
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  inputFocused: {
+    borderColor: "#10B981",
+    shadowColor: "#10B981",
+    shadowOpacity: 0.15,
+  },
+  small: { 
+    color: "#6B7280", 
+    textAlign: "center",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  link: {
+    color: "#10B981",
+    fontWeight: "600",
+  },
   loading: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 16,
+    gap: 12,
+  },
+  loadingText: {
+    color: "#6B7280",
+    fontSize: 16,
+    fontWeight: "500",
   },
   primaryBtn: {
     backgroundColor: "#10B981",
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    ...Platform.select({
+      default: {
+        shadowColor: "#10B981",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  primaryBtnText: { 
+    color: "#FFFFFF", 
+    fontSize: 17, 
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   btnDisabled: { opacity: 0.6 },
   guestBtn: {
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...Platform.select({
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
   },
-  guestBtnText: { color: "#6B7280", fontSize: 15, fontWeight: "600" },
-  
+  guestBtnText: { 
+    color: "#6B7280", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
+  linksContainer: {
+    marginTop: 24,
+    gap: 12,
+    alignItems: "center",
+  },
 });

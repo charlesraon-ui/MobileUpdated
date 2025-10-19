@@ -238,6 +238,9 @@ export const sendDMMessageApi = (userId, text) => api.post(`/api/dm/${userId}`, 
 export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
 export const getUserByIdApi = (userId) => api.get(`/api/users/${userId}`);
 
+// Profile update
+export const updateProfileApi = (payload) => api.put(`/api/users/profile`, payload);
+
 // Group Chats
 export const createGroupChatApi = (name, description, participantIds) => 
   api.post(`/api/group-chats`, { name, description, participantIds });

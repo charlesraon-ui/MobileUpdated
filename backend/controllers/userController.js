@@ -50,6 +50,76 @@ export async function getUserById(req, res) {
  * POST /api/users/profile/upload
  * Accepts single image file field `image` and sets the user's avatarUrl.
  */
+/**
+ * PUT /api/users/profile
+ * Updates user profile information (name, email)
+ */
+export async function updateProfile(req, res) {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { name, email } = req.body;
+
+    // Validation
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Name is required" });
+    }
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, message: "Please enter a valid email address" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ 
+      email: normalizedEmail, 
+      _id: { $ne: req.user.userId } 
+    });
+    
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Email is already taken" });
+    }
+
+    // Update the user
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.userId,
+      { 
+        $set: { 
+          name: name.trim(), 
+          email: normalizedEmail 
+        } 
+      },
+      { new: true }
+    ).select("name email avatarUrl");
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.json({ 
+      success: true, 
+      message: "Profile updated successfully",
+      user: updatedUser 
+    });
+  } catch (e) {
+    console.error("UPDATE_PROFILE_ERROR:", e);
+    return res.status(500).json({ success: false, message: e?.message || "Server error" });
+  }
+}
+
+/**
+ * POST /api/users/profile/upload
+ * Accepts single image file field `image` and sets the user's avatarUrl.
+ */
 export async function uploadProfileImage(req, res) {
   try {
     if (!req.user?.userId) {
