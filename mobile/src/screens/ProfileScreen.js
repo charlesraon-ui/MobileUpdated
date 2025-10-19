@@ -245,6 +245,17 @@ export default function ProfileScreen() {
           icon="location-outline"
           onPress={() => router.push("/(modal)/addresses")}
         />
+        <TouchableOpacity 
+          style={s.viewAllOrdersButton}
+          onPress={() => router.push("/full-orders")}
+          activeOpacity={0.8}
+        >
+          <View style={s.viewAllOrdersContent}>
+            <Ionicons name="receipt-outline" size={20} color="#10B981" />
+            <Text style={s.viewAllOrdersText}>Orders</Text>
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Loyalty Rewards */}
@@ -347,20 +358,7 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Orders Button */}
-      <View style={s.section}>
-        <TouchableOpacity 
-          style={s.viewAllOrdersButton}
-          onPress={() => router.push("/full-orders")}
-          activeOpacity={0.8}
-        >
-          <View style={s.viewAllOrdersContent}>
-            <Ionicons name="receipt-outline" size={20} color="#10B981" />
-            <Text style={s.viewAllOrdersText}>Orders</Text>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </View>
-        </TouchableOpacity>
-      </View>
+
 
       {/* Digital Card Modal */}
       <Modal

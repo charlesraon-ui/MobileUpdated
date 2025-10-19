@@ -31,8 +31,8 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import refundTicketRoutes from "./routes/refundTickets.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import directMessageRoutes from "./routes/directMessageRoutes.js";
-import groupChatRoutes from "./routes/groupChatRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -91,8 +91,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/dm", directMessageRoutes);
-app.use("/api/group-chats", groupChatRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 // Customer-only app - no admin loyalty routes
 
 // Socket.IO authentication middleware
@@ -128,11 +128,7 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.userId} joined DM room: dm_${roomId}`);
   });
   
-  // Join group chat room
-  socket.on('join_group_room', (groupId) => {
-    socket.join(`group_${groupId}`);
-    console.log(`User ${socket.userId} joined group room: group_${groupId}`);
-  });
+
   
   // Leave direct message room
   socket.on('leave_dm_room', (otherUserId) => {
@@ -141,11 +137,7 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.userId} left DM room: dm_${roomId}`);
   });
   
-  // Leave group chat room
-  socket.on('leave_group_room', (groupId) => {
-    socket.leave(`group_${groupId}`);
-    console.log(`User ${socket.userId} left group room: group_${groupId}`);
-  });
+
   
   // Handle typing indicators for DMs
   socket.on('typing_dm', ({ otherUserId, isTyping }) => {
@@ -156,13 +148,7 @@ io.on('connection', (socket) => {
     });
   });
   
-  // Handle typing indicators for groups
-  socket.on('typing_group', ({ groupId, isTyping }) => {
-    socket.to(`group_${groupId}`).emit('user_typing_group', {
-      userId: socket.userId,
-      isTyping
-    });
-  });
+
   
   socket.on('disconnect', () => {
     console.log(`User ${socket.userId} disconnected`);

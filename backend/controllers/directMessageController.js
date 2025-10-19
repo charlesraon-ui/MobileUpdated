@@ -1,5 +1,6 @@
 import DirectMessage from "../models/DirectMessage.js";
 import User from "../models/User.js";
+import { uploadBufferToCloudinary } from "../utils/uploadToCloudinary.js";
 
 export async function listConversations(req, res) {
   try {
@@ -56,37 +57,100 @@ export async function getThreadWithUser(req, res) {
   }
 }
 
+/**
+ * POST /api/direct-messages/upload
+ * Upload an image for direct messages
+ */
+export async function uploadMessageImage(req, res) {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const file = req.file;
+    if (!file || !file.buffer) {
+      return res.status(400).json({ success: false, message: "No image provided" });
+    }
+
+    const result = await uploadBufferToCloudinary(file.buffer, {
+      folder: process.env.CLOUDINARY_ROOT_FOLDER
+        ? `${process.env.CLOUDINARY_ROOT_FOLDER}/messages`
+        : "messages",
+      resource_type: "image",
+      transformation: [{ fetch_format: "auto", quality: "auto" }],
+    });
+
+    const url = result.secure_url || result.url;
+    if (!url) {
+      return res.status(500).json({ success: false, message: "Upload failed" });
+    }
+
+    return res.json({ success: true, imageUrl: url });
+  } catch (error) {
+    console.error("UPLOAD_MESSAGE_IMAGE_ERROR:", error);
+    return res.status(500).json({ success: false, message: error?.message || "Server error" });
+  }
+}
+
 export async function sendDMToUser(req, res) {
   try {
-    const me = req.user?.userId || req.user?.id || req.user?._id;
-    const other = req.params.userId;
-    const text = String(req.body?.text || "").trim();
-    if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
-    if (!other) return res.status(400).json({ success: false, message: "userId is required" });
-    if (!text) return res.status(400).json({ success: false, message: "Message text is required" });
-    
-    const msg = await DirectMessage.create({ senderId: me, recipientId: other, text });
-    
-    // Emit real-time message to both users
-    const io = req.app.get('io');
+    const { recipientId, text, imageUrl } = req.body;
+    const senderId = req.user.userId;
+
+    if (!recipientId) {
+      return res.status(400).json({ success: false, message: "Recipient is required" });
+    }
+
+    // Validate that either text or imageUrl is provided
+    if (!text?.trim() && !imageUrl?.trim()) {
+      return res.status(400).json({ success: false, message: "Either text or image is required" });
+    }
+
+    // Check if recipient exists
+    const recipient = await User.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({ success: false, message: "Recipient not found" });
+    }
+
+    const messageData = {
+      senderId,
+      recipientId,
+    };
+
+    // Add text if provided
+    if (text?.trim()) {
+      messageData.text = text.trim();
+    }
+
+    // Add imageUrl if provided
+    if (imageUrl?.trim()) {
+      messageData.imageUrl = imageUrl.trim();
+    }
+
+    const message = new DirectMessage(messageData);
+    await message.save();
+
+    // Populate sender info for real-time emission
+    await message.populate("senderId", "name email avatarUrl");
+
+    // Emit to recipient if they're online
+    const io = req.app.get("io");
     if (io) {
-      const roomId = [me, other].sort().join('_');
-      io.to(`dm_${roomId}`).emit('new_dm_message', {
-        message: msg,
-        senderId: me,
-        recipientId: other
-      });
-      
-      // Notify recipient
-      io.to(`user_${other}`).emit('new_dm_notification', {
-        senderId: me,
-        message: msg
+      io.to(`user_${recipientId}`).emit("new_direct_message", {
+        _id: message._id,
+        senderId: message.senderId,
+        recipientId: message.recipientId,
+        text: message.text,
+        imageUrl: message.imageUrl,
+        read: message.read,
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt,
       });
     }
-    
-    res.status(201).json({ success: true, message: msg });
-  } catch (e) {
-    console.error("SEND_DM_ERROR:", e);
-    res.status(500).json({ success: false, message: e?.message || "Server error" });
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error("SEND_DM_ERROR:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 }

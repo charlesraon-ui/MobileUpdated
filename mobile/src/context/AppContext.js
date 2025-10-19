@@ -31,6 +31,10 @@ import {
   setToken,
   toAbsoluteUrl,
   googleAuth,
+  getWishlistApi,
+  addToWishlistApi,
+  removeFromWishlistApi,
+  toggleWishlistApi,
 } from "../api/apiClient";
 import { registerPushToken } from "../api/apiClient";
 import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
@@ -42,6 +46,11 @@ export const AppCtx = createContext(null);
 
 export default function AppProvider({ children }) {
   const router = useRouter();
+
+  // Simple test useEffect
+  useEffect(() => {
+    console.log("SIMPLE TEST useEffect is working!");
+  }, []);
 
   // data state
   const [products, setProducts] = useState([]);
@@ -185,27 +194,26 @@ export default function AppProvider({ children }) {
   // Loyalty state
   const [loyalty, setLoyalty] = useState(null);
 
-  // wishlist persistence (client-side)
-  const WISHLIST_KEY = "wishlist";
+  // wishlist persistence (backend API)
   const loadWishlist = useCallback(async () => {
     try {
-      const json = await AsyncStorage.getItem(WISHLIST_KEY);
-      const ids = json ? JSON.parse(json) : [];
-      setWishlist(Array.isArray(ids) ? ids : []);
+      if (!isLoggedIn) {
+        // For guest users, use local storage as fallback
+        const json = await AsyncStorage.getItem("wishlist");
+        const ids = json ? JSON.parse(json) : [];
+        setWishlist(Array.isArray(ids) ? ids : []);
+        return;
+      }
+      
+      const response = await getWishlistApi();
+      const wishlistItems = response.data?.wishlist || [];
+      const productIds = wishlistItems.map(item => String(item._id || item));
+      setWishlist(productIds);
     } catch (e) {
       console.warn("loadWishlist failed:", e?.message);
       setWishlist([]);
     }
-  }, []);
-
-  const saveWishlist = useCallback(async (ids) => {
-    try {
-      setWishlist(ids);
-      await AsyncStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
-    } catch (e) {
-      console.warn("saveWishlist failed:", e?.message);
-    }
-  }, []);
+  }, [isLoggedIn]);
 
   const isInWishlist = useCallback(
     (productId) => (productId ? wishlist.includes(String(productId)) : false),
@@ -216,13 +224,40 @@ export default function AppProvider({ children }) {
     async (product) => {
       const productId = typeof product === "string" ? product : product?._id;
       if (!productId) return null;
-      const idStr = String(productId);
-      const exists = wishlist.includes(idStr);
-      const next = exists ? wishlist.filter((id) => id !== idStr) : [...wishlist, idStr];
-      await saveWishlist(next);
-      return exists ? "removed" : "added";
+      
+      try {
+        if (!isLoggedIn) {
+          // For guest users, use local storage
+          const idStr = String(productId);
+          const exists = wishlist.includes(idStr);
+          const next = exists ? wishlist.filter((id) => id !== idStr) : [...wishlist, idStr];
+          setWishlist(next);
+          await AsyncStorage.setItem("wishlist", JSON.stringify(next));
+          return exists ? "removed" : "added";
+        }
+
+        const response = await toggleWishlistApi(productId);
+        const action = response.data?.action; // 'added' or 'removed'
+        
+        // Update local state
+        const idStr = String(productId);
+        if (action === "added") {
+          setWishlist(prev => [...prev.filter(id => id !== idStr), idStr]);
+        } else {
+          setWishlist(prev => prev.filter(id => id !== idStr));
+        }
+        
+        return action;
+      } catch (e) {
+        console.warn("toggleWishlist failed:", e?.message);
+        showToast({ 
+          type: "error", 
+          message: "Failed to update wishlist. Please try again." 
+        });
+        return null;
+      }
     },
-    [wishlist, saveWishlist]
+    [wishlist, isLoggedIn, showToast]
   );
 
   // boot
@@ -247,13 +282,31 @@ export default function AppProvider({ children }) {
           // ignore
         }
 
-        const [prod, cats, bundlesResp] = await Promise.all([
-          getProducts(),
-          getCategories().catch(() => ({ data: [] })),
-          getBundles().catch(() => ({ data: [] })),
-        ]);
+        let prod, cats, bundlesResp;
+        try {
+          prod = await getProducts();
+        } catch (error) {
+          console.error("DEBUG: getProducts() failed:", error);
+          console.error("DEBUG: Error details:", error.message, error.stack);
+          prod = { data: [] };
+        }
 
-        setProducts(Array.isArray(prod?.data) ? prod.data : []);
+        try {
+          cats = await getCategories();
+        } catch (error) {
+          console.error("DEBUG: getCategories() failed:", error);
+          cats = { data: [] };
+        }
+
+        try {
+          bundlesResp = await getBundles();
+        } catch (error) {
+          console.error("DEBUG: getBundles() failed:", error);
+          bundlesResp = { data: [] };
+        }
+
+        const productsArray = Array.isArray(prod?.data) ? prod.data : [];
+        setProducts(productsArray);
         setBundles(Array.isArray(bundlesResp?.data) ? bundlesResp.data : []);
         
         const map = {};
@@ -876,7 +929,15 @@ const handlePlaceOrder = async (opts = {}) => {
   const categoryLabelOf = (p) => {
     const c = p?.category;
     if (!c) return "Uncategorized";
-    if (typeof c === "string") return categoryMap[c] || c;
+    if (typeof c === "string") {
+      // First check if it's a valid category name (not an ID)
+      // Category IDs are typically long hex strings, category names are readable
+      if (c.length < 20 && !/^[0-9a-f]{24}$/i.test(c)) {
+        return c; // It's already a category name
+      }
+      // Otherwise, try to look it up in categoryMap (it's an ID)
+      return categoryMap[c] || c;
+    }
     if (typeof c === "object") return c?.name || c?.categoryName || "Uncategorized";
     return "Uncategorized";
   };
@@ -897,9 +958,11 @@ const handlePlaceOrder = async (opts = {}) => {
   }, [products, selectedCategory, searchQuery, categoryMap]);
 
   const recommendedProducts = useMemo(() => {
-    return lastAddedCategory
+    const result = lastAddedCategory
       ? (products || []).filter((p) => categoryLabelOf(p) === lastAddedCategory).slice(0, 3)
       : (products || []).slice(0, 3);
+    
+    return result;
   }, [products, lastAddedCategory, categoryMap]);
 
   const cartTotal = useMemo(

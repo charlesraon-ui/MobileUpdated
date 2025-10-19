@@ -2,9 +2,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useContext, useRef, useState, useEffect } from "react";
 import { useLocalSearchParams, router } from "expo-router";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image, Alert } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { AppCtx } from "../context/AppContext";
-import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi, getUserByIdApi } from "../api/apiClient";
+import { getMyMessagesApi, sendMessageApi, getDMThreadApi, sendDMMessageApi, getUserByIdApi, uploadDirectMessageImageFromUri } from "../api/apiClient";
 import Avatar from "../components/Avatar";
 import socketService from "../services/socketService";
 
@@ -115,6 +116,63 @@ export default function ChatScreen() {
     }
   };
 
+  const pickImage = async () => {
+    try {
+      setSending(true);
+      
+      // Request permission only on native; web does not require
+      if (Platform.OS !== "web") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permission required", "Please allow photo library access");
+          setSending(false);
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (result?.canceled) {
+        setSending(false);
+        return;
+      }
+
+      const asset = (result?.assets || [])[0];
+      if (!asset?.uri) {
+        setSending(false);
+        return;
+      }
+
+      // Upload the image first
+      const uploadResponse = await uploadDirectMessageImageFromUri(asset);
+      const imageUrl = uploadResponse?.imageUrl;
+      
+      if (!imageUrl) {
+        throw new Error("Upload failed");
+      }
+
+      // Send the message with the image URL
+      const { data } = targetUserId 
+        ? await sendDMMessageApi(String(targetUserId), { imageUrl }) 
+        : await sendMessageApi({ imageUrl });
+      
+      const msg = data?.message || null;
+      if (msg) setMessages((prev) => [...(prev || []), msg]);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+      
+    } catch (e) {
+      console.warn("Image upload error:", e?.message || e);
+      Alert.alert("Error", "Failed to send image. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={s.header}>
@@ -159,7 +217,14 @@ export default function ChatScreen() {
             const mine = String(m?.senderRole || "customer") === "customer";
             return (
               <View key={m?._id || String(m.createdAt)} style={[s.bubble, mine ? s.mine : s.theirs]}>
-                <Text style={s.bubbleText}>{m?.text}</Text>
+                {m?.imageUrl && (
+                  <Image 
+                    source={{ uri: m.imageUrl }} 
+                    style={s.messageImage}
+                    resizeMode="cover"
+                  />
+                )}
+                {m?.text && <Text style={s.bubbleText}>{m.text}</Text>}
                 <Text style={s.bubbleMeta}>{new Date(m?.createdAt).toLocaleString()}</Text>
               </View>
             );
@@ -168,6 +233,9 @@ export default function ChatScreen() {
         <View style={{ height: 8 }} />
       </ScrollView>
       <View style={s.inputRow}>
+        <TouchableOpacity style={[s.imageBtn, sending && { opacity: 0.6 }]} onPress={pickImage} disabled={sending}>
+          <Ionicons name="image" size={18} color={GREEN} />
+        </TouchableOpacity>
         <TextInput
           style={s.input}
           placeholder="Type your message"
@@ -200,6 +268,8 @@ const s = StyleSheet.create({
   bubbleText: { color: "#111827", fontWeight: "600" },
   bubbleMeta: { marginTop: 6, fontSize: 10, color: GRAY },
   inputRow: { flexDirection: "row", alignItems: "center", padding: 12, borderTopWidth: 1, borderColor: BORDER, backgroundColor: "#FFFFFF", gap: 8 },
+  imageBtn: { borderWidth: 1, borderColor: GREEN, borderRadius: 12, padding: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   input: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, backgroundColor: "#F3F4F6", color: "#111827" },
   sendBtn: { backgroundColor: GREEN, borderRadius: 12, padding: 12, alignItems: "center", justifyContent: "center" },
+  messageImage: { width: 200, height: 150, borderRadius: 8, marginBottom: 8 },
 });

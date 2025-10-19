@@ -36,6 +36,12 @@ export default function HomeScreen() {
     setSelectedCategory,
   } = useContext(AppCtx);
 
+  // Debug logging
+  console.log("HomeScreen DEBUG: products:", products);
+  console.log("HomeScreen DEBUG: products length:", products?.length);
+  console.log("HomeScreen DEBUG: recommendedProducts:", recommendedProducts);
+  console.log("HomeScreen DEBUG: recommendedProducts length:", recommendedProducts?.length);
+
   // show banner once after login/register
   const [showWelcome, setShowWelcome] = useState(false);
   const fadeAnim = new Animated.Value(0);
@@ -80,6 +86,7 @@ export default function HomeScreen() {
   };
 
   const ProductCard = ({ product }) => {
+    
     const rawImg = product?.imageUrl || product?.images?.[0] || null;
     const img = rawImg ? (toAbsoluteUrl?.(rawImg) || rawImg) : null;
     const saved = isInWishlist?.(product?._id);
@@ -207,7 +214,7 @@ export default function HomeScreen() {
           if (isBundle) {
             router.push(`/bundle-detail?id=${item?._id || ''}`);
           } else {
-            router.push(`/tabs/product-detail?id=${item?._id || ''}`);
+            router.push(`/product-detail?id=${item?._id || ''}`);
           }
         }}
       >

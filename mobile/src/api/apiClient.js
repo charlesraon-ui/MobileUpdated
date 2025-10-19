@@ -232,7 +232,11 @@ export const sendMessageApi = (text) => api.post(`/api/messages`, { text });
 // Direct Messages (user-to-user)
 export const getConversationsApi = () => api.get(`/api/dm/conversations`);
 export const getDMThreadApi = (userId) => api.get(`/api/dm/${userId}`);
-export const sendDMMessageApi = (userId, text) => api.post(`/api/dm/${userId}`, { text });
+export const sendDMMessageApi = (userId, payload) => {
+  // Support both old format (userId, text) and new format (userId, { text, imageUrl })
+  const data = typeof payload === 'string' ? { text: payload } : payload;
+  return api.post(`/api/dm/${userId}`, { recipientId: userId, ...data });
+};
 
 // User search
 export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
@@ -241,20 +245,25 @@ export const getUserByIdApi = (userId) => api.get(`/api/users/${userId}`);
 // Profile update
 export const updateProfileApi = (payload) => api.put(`/api/users/profile`, payload);
 
-// Group Chats
-export const createGroupChatApi = (name, description, participantIds) => 
-  api.post(`/api/group-chats`, { name, description, participantIds });
-export const getUserGroupChatsApi = () => api.get(`/api/group-chats`);
-export const getGroupChatMessagesApi = (groupChatId, page = 1, limit = 50) => 
-  api.get(`/api/group-chats/${groupChatId}/messages`, { params: { page, limit } });
-export const sendGroupMessageApi = (groupChatId, text) => 
-  api.post(`/api/group-chats/${groupChatId}/messages`, { text });
-export const addParticipantApi = (groupChatId, userId) => 
-  api.post(`/api/group-chats/${groupChatId}/participants`, { userId });
-export const removeParticipantApi = (groupChatId, userId) => 
-  api.delete(`/api/group-chats/${groupChatId}/participants`, { data: { userId } });
-export const leaveGroupChatApi = (groupChatId) => 
-  api.post(`/api/group-chats/${groupChatId}/leave`);
+// Upload a single direct message image and return server response
+export const uploadDirectMessageImageFromUri = async (img) => {
+  if (!img) return null;
+  const form = new FormData();
+  const uri = typeof img === 'string' ? img : img.uri;
+  const name = (typeof img === 'object' && (img.fileName || img.name)) || `message_${Date.now()}.jpg`;
+  const type = (typeof img === 'object' && img.type) || 'image/jpeg';
+  form.append('image', { uri, name, type });
+  const res = await api.post(`/api/direct-messages/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data; // expect { imageUrl } or similar
+};
+
+/** ------------- Wishlist ------------- */
+export const getWishlistApi = () => api.get(`/api/wishlist`);
+export const addToWishlistApi = (productId) => api.post(`/api/wishlist/add`, { productId });
+export const removeFromWishlistApi = (productId) => api.delete(`/api/wishlist/remove/${productId}`);
+export const toggleWishlistApi = (productId) => api.post(`/api/wishlist/toggle`, { productId });
 
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string

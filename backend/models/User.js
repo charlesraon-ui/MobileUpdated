@@ -13,6 +13,9 @@ const userSchema = new mongoose.Schema({
   // Profile
   avatarUrl: { type: String },
 
+  // Wishlist
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+
   // Loyalty fields
   loyaltyPoints: { type: Number, default: 0 },
   loyaltyTier: {

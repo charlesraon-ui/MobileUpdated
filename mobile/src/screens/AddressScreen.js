@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import Toast from "../../components/Toast";
 import { Colors } from "../../constants/theme";
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -71,7 +72,18 @@ export default function AddressesScreen() {
   return (
     <>
     <View style={s.container}>
-      <Text style={s.title}>Manage Addresses</Text>
+      {/* Header with back button */}
+      <View style={s.header}>
+        <TouchableOpacity 
+          style={s.backButton} 
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#374151" />
+        </TouchableOpacity>
+        <Text style={s.title}>Manage Addresses</Text>
+        <View style={s.placeholder} />
+      </View>
       {/* Register-style inputs */}
       <Text style={s.label}>Street</Text>
       <TextInput
@@ -201,7 +213,21 @@ export default function AddressesScreen() {
 const C = Colors.light;
 const s = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: C.surface },
-  title: { fontSize: 20, fontWeight: "800", marginBottom: 12, color: C.text },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  title: { fontSize: 20, fontWeight: "800", color: C.text, flex: 1, textAlign: "center" },
+  placeholder: { width: 40 }, // To balance the header layout
   subTitle: { fontSize: 16, fontWeight: "700", marginTop: 12, color: C.text },
   label: { fontWeight: "700", color: C.muted, marginTop: 8 },
   input: {
