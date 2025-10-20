@@ -18,6 +18,7 @@ import "./models/Vehicle.js";
 // Customer-only app - no admin routes
 import authRoutes from "./routes/authRoutes.js";
 import bundleRoutes from "./routes/bundleRoutes.js";
+import adminBundleRoutes from "./routes/adminBundleRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
@@ -87,6 +88,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/payment", paymentRoutes); // (if you really need this alias)
 app.use("/api/bundles", bundleRoutes);
+app.use("/api/admin/bundles", adminBundleRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
