@@ -73,39 +73,7 @@ export default function ProductsScreen() {
   });
 }, [bundles, searchQuery]);
 
-const renderBundlesSection = () => {
-  if (!filteredBundles || filteredBundles.length === 0) return null;
-  
-  return (
-    <View style={styles.bundlesSection}>
-      <View style={styles.sectionHeader}>
-        <Ionicons name="gift-outline" size={24} color="#10B981" />
-        <Text style={styles.sectionTitle}>Special Bundles</Text>
-        <View style={styles.bundleBadge}>
-          <Text style={styles.bundleBadgeText}>{filteredBundles.length}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.sectionSubtitle}>
-        Save more with our curated product bundles
-      </Text>
-      
-      {filteredBundles.map((bundle) => (
-        <BundleCard
-          key={bundle._id}
-          bundle={bundle}
-          onPress={() => router.push(`/bundle-detail?id=${bundle._id}`)}
-        />
-      ))}
-      
-      <View style={styles.bundleDivider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>Individual Products</Text>
-        <View style={styles.dividerLine} />
-      </View>
-    </View>
-  );
-};
+
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -532,6 +500,35 @@ const renderBundlesSection = () => {
   const topSearchHeader = (
     <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
       <SearchBar onOpenFilters={openFilterModal} />
+      
+      {/* Special Bundles Button */}
+      {bundles && bundles.length > 0 && (
+        <TouchableOpacity
+          style={styles.bundlesBox}
+          activeOpacity={0.85}
+          onPress={() => router.push('/bundles')}
+        >
+          <View style={styles.bundlesBoxContent}>
+            <View style={styles.bundlesBoxLeft}>
+              <View style={styles.bundlesIconContainer}>
+                <Text style={styles.bundlesIcon}>🎁</Text>
+              </View>
+              <View style={styles.bundlesTextContainer}>
+                <Text style={styles.bundlesTitle}>Special Bundles</Text>
+                <Text style={styles.bundlesSubtitle}>
+                  {bundles.length} exclusive bundle{bundles.length !== 1 ? 's' : ''} available
+                </Text>
+                <Text style={styles.bundlesDescription}>
+                  Save more with our curated product bundles
+                </Text>
+              </View>
+            </View>
+            <View style={styles.bundlesBoxRight}>
+              <Text style={styles.bundlesChevron}>›</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -671,7 +668,6 @@ const renderBundlesSection = () => {
   return (
     <View style={styles.container}>
       {renderHeader()}
-      {renderBundlesSection()}
 
       <FlatList
         data={gridProducts}
@@ -1336,12 +1332,77 @@ dividerLine: {
 },
 
 dividerText: {
-  fontSize: 14,
-  fontWeight: "600",
-  color: "#6B7280",
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
-},
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+
+  // Bundles Box Styles (matching HomeScreen)
+  bundlesBox: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  bundlesBoxContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  bundlesBoxLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bundlesIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f9ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  bundlesIcon: {
+    fontSize: 28,
+  },
+  bundlesTextContainer: {
+    flex: 1,
+  },
+  bundlesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  bundlesSubtitle: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  bundlesDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
+  },
+  bundlesBoxRight: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 10,
+  },
+  bundlesChevron: {
+    fontSize: 24,
+    color: '#6B7280',
+    fontWeight: '300',
+  },
 });
 
 

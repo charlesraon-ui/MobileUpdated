@@ -34,6 +34,7 @@ export default function HomeScreen() {
     toggleWishlist,
     isInWishlist,
     setSelectedCategory,
+    loyalty,
   } = useContext(AppCtx);
 
   // Debug logging
@@ -286,17 +287,36 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.headerSubtitle}>What would you like to explore today?</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.profileButton} 
-              onPress={() => router.push("/tabs/profile")}
-              activeOpacity={0.8}
-            >
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileAvatarText}>
-                  {user?.name?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              {/* Loyalty Points Display */}
+               {loyalty?.points !== undefined && (
+                 <TouchableOpacity 
+                   style={styles.pointsContainer}
+                   onPress={() => router.push("/tabs/profile")}
+                   activeOpacity={0.8}
+                 >
+                   <Text style={styles.pointsIcon}>💎</Text>
+                   <View style={styles.pointsInfo}>
+                     <Text style={styles.pointsText}>{loyalty.points}</Text>
+                     {loyalty.tier && (
+                       <Text style={styles.tierText}>{loyalty.tier}</Text>
+                     )}
+                   </View>
+                 </TouchableOpacity>
+               )}
+              
+              <TouchableOpacity 
+                style={styles.profileButton} 
+                onPress={() => router.push("/tabs/profile")}
+                activeOpacity={0.8}
+              >
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>
+                    {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* One-time Welcome banner (login/register) */}
@@ -356,25 +376,34 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Best Offers */}
-        {bestOffers.length > 0 && (
+        {/* Special Bundles */}
+        {bundles.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Best Offers</Text>
-              <TouchableOpacity onPress={() => router.push('/tabs/products')}>
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.productsScroll}
-              contentContainerStyle={styles.productsScrollContent}
+            <TouchableOpacity
+              style={styles.bundlesBox}
+              activeOpacity={0.85}
+              onPress={() => router.push('/bundles')}
             >
-              {bestOffers.map((o, idx) => (
-                <OfferCard key={(o.item?._id || idx) + '-' + o.type} data={o} />
-              ))}
-            </ScrollView>
+              <View style={styles.bundlesBoxContent}>
+                <View style={styles.bundlesBoxLeft}>
+                  <View style={styles.bundlesIconContainer}>
+                    <Text style={styles.bundlesIcon}>🎁</Text>
+                  </View>
+                  <View style={styles.bundlesTextContainer}>
+                    <Text style={styles.bundlesTitle}>Special Bundles</Text>
+                    <Text style={styles.bundlesSubtitle}>
+                      {bundles.length} exclusive bundle{bundles.length !== 1 ? 's' : ''} available
+                    </Text>
+                    <Text style={styles.bundlesDescription}>
+                      Save more with our curated product bundles
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.bundlesBoxRight}>
+                  <Text style={styles.bundlesChevron}>›</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -513,8 +542,48 @@ export default function HomeScreen() {
     fontWeight: "500",
   },
   
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  
+  pointsContainer: {
+     flexDirection: "row",
+     alignItems: "center",
+     backgroundColor: "rgba(255, 255, 255, 0.15)",
+     borderRadius: 20,
+     paddingHorizontal: 12,
+     paddingVertical: 8,
+     borderWidth: 1,
+     borderColor: "rgba(255, 255, 255, 0.3)",
+   },
+   
+   pointsIcon: {
+     fontSize: 16,
+     marginRight: 6,
+   },
+   
+   pointsInfo: {
+     alignItems: "flex-end",
+   },
+   
+   pointsText: {
+     color: "#FFFFFF",
+     fontSize: 14,
+     fontWeight: "700",
+   },
+   
+   tierText: {
+     color: "rgba(255, 255, 255, 0.8)",
+     fontSize: 10,
+     fontWeight: "600",
+     textTransform: "uppercase",
+     letterSpacing: 0.5,
+   },
+  
   profileButton: {
-    marginLeft: 16,
+    marginLeft: 0,
   },
   
   profileAvatar: {
@@ -1081,6 +1150,71 @@ export default function HomeScreen() {
     fontSize: 15,
     fontWeight: "700",
     color: "#10B981",
+  },
+
+  // Bundles Box Styles
+  bundlesBox: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  bundlesBoxContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  bundlesBoxLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bundlesIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f9ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  bundlesIcon: {
+    fontSize: 28,
+  },
+  bundlesTextContainer: {
+    flex: 1,
+  },
+  bundlesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  bundlesSubtitle: {
+    fontSize: 14,
+    color: Colors.light.accent,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  bundlesDescription: {
+    fontSize: 12,
+    color: Colors.light.muted,
+    lineHeight: 16,
+  },
+  bundlesBoxRight: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 10,
+  },
+  bundlesChevron: {
+    fontSize: 24,
+    color: Colors.light.muted,
+    fontWeight: '300',
   },
 
   bottomSpacer: {

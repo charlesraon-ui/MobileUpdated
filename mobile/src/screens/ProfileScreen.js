@@ -256,51 +256,16 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
           </View>
         </TouchableOpacity>
-      </View>
-
-      {/* Loyalty Rewards */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Loyalty Rewards</Text>
-        <InfoCard
-          icon="🎁"
-          title="Rewards Program"
-          subtitle="Tiered by monthly spend (see mechanics below)"
-        />
-        {/* Mechanics box */}
-        <View style={s.mechanicsBox}>
-          <Text style={s.mechanicsTitle}>Program Mechanics</Text>
-          <Text style={s.mechanicsItem}>• Minimum spend is calculated per month.</Text>
-          <Text style={s.mechanicsItem}>• Sprout — ₱5,000 monthly spend.</Text>
-          <Text style={s.mechanicsItem}>• Seedling — ₱15,000 monthly spend.</Text>
-          <Text style={s.mechanicsItem}>• Cultivator — ₱40,000 monthly spend.</Text>
-          <Text style={s.mechanicsItem}>• Bloom — ₱75,000 monthly spend.</Text>
-          <Text style={s.mechanicsItem}>• Harvester — ₱100,000 and above monthly spend.</Text>
-        </View>
-        <InfoCard
-          icon="⭐"
-          title="Current Status"
-          subtitle={user?.loyaltyStatus || "Not yet earned"}
-        />
-        {/* Removed Issue Card button per request */}
-        <TouchableOpacity
-          style={s.viewCardBtn}
-          activeOpacity={0.85}
-          onPress={async () => {
-            if (!isLoggedIn) return;
-            setCardLoading(true);
-            setCardVisible(true);
-            try {
-              const { data } = await getDigitalCard();
-              setCard(data?.card || null);
-            } catch (e) {
-              setCard(null);
-            } finally {
-              setCardLoading(false);
-            }
-          }}
+        <TouchableOpacity 
+          style={s.loyaltyButton}
+          onPress={() => router.push("/digital-card")}
+          activeOpacity={0.8}
         >
-          <Ionicons name="card-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={s.viewCardText}>View Digital Card</Text>
+          <View style={s.loyaltyButtonContent}>
+            <Ionicons name="card-outline" size={20} color="#8B5CF6" />
+            <Text style={s.loyaltyButtonText}>Loyalty Rewards</Text>
+            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -1323,6 +1288,29 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#10B981",
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  loyaltyButton: {
+    backgroundColor: "#F5F3FF",
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+  },
+
+  loyaltyButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    justifyContent: "space-between",
+  },
+
+  loyaltyButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8B5CF6",
     flex: 1,
     marginLeft: 12,
   },

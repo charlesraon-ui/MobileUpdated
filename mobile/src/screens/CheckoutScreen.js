@@ -44,6 +44,13 @@ export default function CheckoutScreen() {
     handlePlaceOrder,
     isLoggedIn,
     refreshAuthedData,
+    // reward redemption
+    availableRewards,
+    appliedReward,
+    rewardDiscount,
+    applyRewardDiscount,
+    removeRewardDiscount,
+    loadAvailableRewards,
   } = useContext(AppCtx);
 
   const [deliveryMethod, setDeliveryMethod] = useState("in-house");
@@ -69,6 +76,13 @@ export default function CheckoutScreen() {
       });
     }, [isLoggedIn])
   );
+
+  // Load available rewards
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadAvailableRewards();
+    }
+  }, [isLoggedIn, loadAvailableRewards]);
 
   // Helper functions
   const getDeliveryFee = (method) => {
@@ -267,7 +281,13 @@ export default function CheckoutScreen() {
           {Number(loyaltyDiscountPct) > 0 && (
             <View style={s.summaryRow}>
               <Text style={s.summaryLabel}>Loyalty Discount ({Number(loyaltyDiscountPct)}%)</Text>
-              <Text style={s.summaryValue}>-₱{(cartTotal - cartTotalAfterDiscount).toFixed(2)}</Text>
+              <Text style={s.summaryValue}>-₱{(cartTotal * (loyaltyDiscountPct / 100)).toFixed(2)}</Text>
+            </View>
+          )}
+          {rewardDiscount > 0 && (
+            <View style={s.summaryRow}>
+              <Text style={s.summaryLabel}>Reward Discount ({appliedReward?.name})</Text>
+              <Text style={s.summaryValue}>-₱{rewardDiscount.toFixed(2)}</Text>
             </View>
           )}
           <View style={s.summaryRow}>
@@ -408,6 +428,50 @@ export default function CheckoutScreen() {
                   <Text style={s.pickupNoteText}>Please bring a valid ID when picking up</Text>
                 </View>
               </View>
+            </View>
+          )}
+
+          {/* Rewards Section */}
+          {isLoggedIn && availableRewards.length > 0 && (
+            <View style={s.sectionContainer}>
+              <View style={s.sectionHeader}>
+                <Ionicons name="gift-outline" size={22} color={GREEN} />
+                <Text style={s.sectionTitle}>Apply Rewards</Text>
+              </View>
+              
+              {appliedReward ? (
+                <View style={s.appliedRewardCard}>
+                  <View style={s.appliedRewardInfo}>
+                    <Ionicons name="checkmark-circle" size={20} color={GREEN} />
+                    <View style={s.appliedRewardText}>
+                      <Text style={s.appliedRewardName}>{appliedReward.name}</Text>
+                      <Text style={s.appliedRewardDiscount}>-₱{rewardDiscount.toFixed(2)} discount applied</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={s.removeRewardBtn}
+                    onPress={removeRewardDiscount}
+                  >
+                    <Ionicons name="close" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={s.rewardsGrid}>
+                  {availableRewards.map((reward, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={s.rewardCard}
+                      onPress={() => applyRewardDiscount(reward)}
+                    >
+                      <View style={s.rewardIcon}>
+                        <Ionicons name="gift" size={20} color={GREEN} />
+                      </View>
+                      <Text style={s.rewardName}>{reward.name}</Text>
+                      <Text style={s.rewardDiscount}>₱{reward.discountAmount} off</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
@@ -711,4 +775,80 @@ const s = StyleSheet.create({
     color: "#FFFFFF", fontWeight: "700", fontSize: 14,
   },
   bottomSpacer: { height: 32 },
+
+  // Rewards styles
+  rewardsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  rewardCard: {
+    flex: 1,
+    minWidth: "45%",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  rewardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  rewardName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  rewardDiscount: {
+    fontSize: 12,
+    color: "#10B981",
+    fontWeight: "700",
+  },
+  appliedRewardCard: {
+    backgroundColor: "#DCFCE7",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#10B981",
+  },
+  appliedRewardInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  appliedRewardText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  appliedRewardName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  appliedRewardDiscount: {
+    fontSize: 12,
+    color: "#059669",
+    fontWeight: "500",
+  },
+  removeRewardBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

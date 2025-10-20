@@ -38,10 +38,15 @@ import {
   addToWishlistApi,
   removeFromWishlistApi,
   toggleWishlistApi,
+  getLoyaltyStatus,
+  issueLoyaltyCard,
+  getDigitalCard,
+  getAvailableRewards,
+  redeemReward,
+  getRedemptionHistory,
 } from "../api/apiClient";
 import { imageCache } from "../utils/imageCache";
 // import { registerPushToken } from "../api/apiClient";
-// import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
 // import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 import socketService from "../services/socketService";
@@ -225,6 +230,15 @@ export default function AppProvider({ children }) {
 
   // Loyalty state
   const [loyalty, setLoyalty] = useState(null);
+  
+  // Reward state
+  const [availableRewards, setAvailableRewards] = useState([]);
+  const [redemptionHistory, setRedemptionHistory] = useState([]);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  
+  // Reward redemption state
+  const [appliedReward, setAppliedReward] = useState(null);
+  const [rewardDiscount, setRewardDiscount] = useState(0);
 
   // wishlist persistence (backend API)
   const loadWishlist = useCallback(async () => {
@@ -591,7 +605,111 @@ export default function AppProvider({ children }) {
     }
   }, [router]);
 
-  // guard with alert
+  // Load available rewards
+  const loadAvailableRewards = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      setRewardsLoading(true);
+      const response = await getAvailableRewards();
+      setAvailableRewards(response.data?.rewards || []);
+    } catch (error) {
+      console.error('Failed to load available rewards:', error);
+      setAvailableRewards([]);
+    } finally {
+      setRewardsLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  // Load redemption history
+  const loadRedemptionHistory = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      const response = await getRedemptionHistory();
+      setRedemptionHistory(response.data?.redemptions || []);
+    } catch (error) {
+      console.error('Failed to load redemption history:', error);
+      setRedemptionHistory([]);
+    }
+  }, [isLoggedIn]);
+
+  // Redeem a reward
+  const handleRedeemReward = useCallback(async (rewardName) => {
+    if (!isLoggedIn) {
+      showToast({
+        type: "error",
+        message: "Please login to redeem rewards"
+      });
+      return false;
+    }
+
+    try {
+      setRewardsLoading(true);
+      const response = await redeemReward(rewardName);
+      
+      if (response.data?.success) {
+        showToast({
+          type: "success",
+          message: response.data.message || "Reward redeemed successfully!"
+        });
+        
+        // Refresh loyalty status and rewards
+        await refreshLoyalty();
+        await loadAvailableRewards();
+        await loadRedemptionHistory();
+        
+        return true;
+      } else {
+        showToast({
+          type: "error",
+          message: response.data?.message || "Failed to redeem reward"
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to redeem reward:', error);
+      showToast({
+        type: "error",
+        message: error.response?.data?.message || "Failed to redeem reward"
+      });
+      return false;
+    } finally {
+      setRewardsLoading(false);
+    }
+  }, [isLoggedIn, showToast, refreshLoyalty, loadAvailableRewards, loadRedemptionHistory]);
+
+  // Apply reward for checkout discount
+  const applyRewardDiscount = useCallback((reward) => {
+    if (!reward || !reward.discountAmount) return;
+    
+    setAppliedReward(reward);
+    setRewardDiscount(Number(reward.discountAmount));
+    
+    showToast({
+      type: "success",
+      message: `Applied ${reward.name} - ₱${reward.discountAmount} discount!`
+    });
+  }, [showToast]);
+
+  // Remove applied reward
+  const removeRewardDiscount = useCallback(() => {
+    setAppliedReward(null);
+    setRewardDiscount(0);
+    
+    showToast({
+      type: "info",
+      message: "Reward discount removed"
+    });
+  }, [showToast]);
+
+  // Clear reward discount (called after successful order)
+  const clearRewardDiscount = useCallback(() => {
+    setAppliedReward(null);
+    setRewardDiscount(0);
+  }, []);
+
+  // ensureAuthedguard with alert
   const ensureAuthed = () => {
     if (!isLoggedIn) {
       // TODO: Replace with web-compatible alert
@@ -710,6 +828,24 @@ export default function AppProvider({ children }) {
   };
 
   // ---------------- BUNDLE ACTIONS ----------------
+  const fetchBundles = async () => {
+    try {
+      console.log("🔍 fetchBundles: Starting to fetch bundles...");
+      const res = await getBundles();
+      console.log("🔍 fetchBundles: Raw response:", res);
+      console.log("🔍 fetchBundles: Response data:", res?.data);
+      const bundlesArray = Array.isArray(res?.data) ? res.data : [];
+      console.log("🔍 fetchBundles: Bundles array:", bundlesArray);
+      console.log("🔍 fetchBundles: Bundles array length:", bundlesArray.length);
+      setBundles(bundlesArray);
+      console.log("🔍 fetchBundles: Bundles set successfully");
+    } catch (e) {
+      console.warn("fetchBundles failed:", e.message);
+      console.error("fetchBundles error details:", e);
+      setBundles([]);
+    }
+  };
+
   const fetchBundleDetail = async (id) => {
     try {
       const res = await getBundleApi(id);
@@ -921,6 +1057,7 @@ const handlePlaceOrder = async (opts = {}) => {
       setCart([]);
       setDeliveryAddress("");
       setGcashNumber("");
+      clearRewardDiscount(); // Clear applied reward discount
 
       refreshAuthedData?.(user);
       console.log("🔥 ORDER PLACEMENT DEBUG: COD order completed successfully");
@@ -1153,8 +1290,10 @@ const handlePlaceOrder = async (opts = {}) => {
   const loyaltyDiscountPct = Number(loyalty?.discountPercentage || 0);
   const cartTotalAfterDiscount = useMemo(() => {
     const pct = loyaltyDiscountPct > 0 ? loyaltyDiscountPct : 0;
-    return Math.max(0, cartTotal * (1 - pct / 100));
-  }, [cartTotal, loyaltyDiscountPct]);
+    const afterLoyaltyDiscount = cartTotal * (1 - pct / 100);
+    const afterRewardDiscount = Math.max(0, afterLoyaltyDiscount - rewardDiscount);
+    return Math.max(0, afterRewardDiscount);
+  }, [cartTotal, loyaltyDiscountPct, rewardDiscount]);
 
   // Product details + reviews
   const fetchProductDetail = async (id) => {
@@ -1251,6 +1390,7 @@ const handlePlaceOrder = async (opts = {}) => {
 
     // bundles
     bundleDetail,
+    fetchBundles,
     fetchBundleDetail,
     handleAddBundleToCart,
 
@@ -1263,6 +1403,21 @@ const handlePlaceOrder = async (opts = {}) => {
 
     // loyalty
     loyalty,
+
+    // rewards
+    availableRewards,
+    redemptionHistory,
+    rewardsLoading,
+    loadAvailableRewards,
+    loadRedemptionHistory,
+    handleRedeemReward,
+    
+    // reward redemption
+    appliedReward,
+    rewardDiscount,
+    applyRewardDiscount,
+    removeRewardDiscount,
+    clearRewardDiscount,
 
     // toast helpers
     showToast,

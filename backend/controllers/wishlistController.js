@@ -128,15 +128,17 @@ export const toggleWishlist = async (req, res) => {
 
     const isInWishlist = user.wishlist.includes(productId);
     
+    let newWishlist;
     if (isInWishlist) {
       // Remove from wishlist
-      user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+      newWishlist = user.wishlist.filter(id => id.toString() !== productId);
     } else {
       // Add to wishlist
-      user.wishlist.push(productId);
+      newWishlist = [...user.wishlist, productId];
     }
 
-    await user.save();
+    // Use findByIdAndUpdate to avoid validation issues
+    await User.findByIdAndUpdate(userId, { wishlist: newWishlist });
 
     const action = isInWishlist ? "removed" : "added";
     
@@ -144,7 +146,7 @@ export const toggleWishlist = async (req, res) => {
       message: isInWishlist ? "Product removed from wishlist" : "Product added to wishlist",
       action: action,
       isInWishlist: !isInWishlist,
-      wishlistCount: user.wishlist.length 
+      wishlistCount: newWishlist.length 
     });
   } catch (error) {
     console.error("Toggle wishlist error:", error);

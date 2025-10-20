@@ -151,7 +151,23 @@ export const createOrder = (payload) => api.post(`/api/orders`, payload);
 export const createMyOrder = (payload) => api.post(`/api/orders/me`, payload);
 
 /** ------------- Bundles ------------- */
-export const getBundles = () => api.get(`/api/bundles`);
+export const getBundles = async () => {
+  console.log("🔥 API: getBundles() called");
+  try {
+    console.log("🔥 API: Making request to /api/bundles...");
+    const response = await api.get(`/api/bundles`);
+    console.log("🔥 API: getBundles() response status:", response.status);
+    console.log("🔥 API: getBundles() response data:", response.data);
+    console.log("🔥 API: getBundles() response data type:", typeof response.data);
+    console.log("🔥 API: getBundles() response data length:", response.data?.length);
+    return response;
+  } catch (error) {
+    console.error("🔥 API: getBundles() error:", error);
+    console.error("🔥 API: getBundles() error message:", error.message);
+    console.error("🔥 API: getBundles() error response:", error.response);
+    throw error;
+  }
+};
 export const getBundleApi = (id) => api.get(`/api/bundles/${id}`);
 
 /** ------------- Deliveries ------------- */
@@ -200,6 +216,15 @@ export const getLoyaltyStatus = () =>
 
 export const issueLoyaltyCard = () =>
   withFallbackPost(`/api/loyalty/issue-card`, {}, `/api/app/loyalty/issue-card`);
+
+export const getAvailableRewards = () =>
+  withFallbackGet(`/api/loyalty/rewards`, `/api/app/loyalty/rewards`);
+
+export const redeemReward = (rewardName) =>
+  withFallbackPost(`/api/loyalty/redeem`, { rewardName }, `/api/app/loyalty/redeem`);
+
+export const getRedemptionHistory = () =>
+  withFallbackGet(`/api/loyalty/redemptions`, `/api/app/loyalty/redemptions`);
 
 /** ------------- Refunds ------------- */
 export const getOrderRefundStatus = (orderId) =>
@@ -282,7 +307,7 @@ export const uploadDirectMessageImageFromUri = async (img) => {
 /** ------------- Wishlist ------------- */
 export const getWishlistApi = () => api.get(`/api/wishlist`);
 export const addToWishlistApi = (productId) => api.post(`/api/wishlist/add`, { productId });
-export const removeFromWishlistApi = (productId) => api.delete(`/api/wishlist/remove/${productId}`);
+export const removeFromWishlistApi = (productId) => api.delete(`/api/wishlist/remove`, { data: { productId } });
 export const toggleWishlistApi = (productId) => api.post(`/api/wishlist/toggle`, { productId });
 
 /** ------------- Support Chat ------------- */

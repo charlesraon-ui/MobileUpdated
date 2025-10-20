@@ -69,8 +69,23 @@ export default function WishlistScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await toggleWishlist(productId);
+              console.log("🔥 WISHLIST REMOVE: Starting removal for product:", productId);
+              console.log("🔥 WISHLIST REMOVE: Current wishlist length:", wishlist.length);
+              
+              const result = await toggleWishlist(productId);
+              console.log("🔥 WISHLIST REMOVE: Toggle result:", result);
+              
+              if (result === "removed") {
+                console.log("🔥 WISHLIST REMOVE: Successfully removed, reloading wishlist");
+                // Force reload the wishlist to ensure UI updates
+                await loadWishlist();
+                Alert.alert("Success", `"${productName}" removed from wishlist`);
+              } else {
+                console.log("🔥 WISHLIST REMOVE: Unexpected result:", result);
+                Alert.alert("Warning", "Item may not have been removed properly");
+              }
             } catch (error) {
+              console.error("🔥 WISHLIST REMOVE: Error:", error);
               Alert.alert("Error", "Failed to remove item from wishlist");
             }
           }

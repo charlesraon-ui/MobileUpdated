@@ -180,22 +180,119 @@ export const getLoyaltyInfo = async (req, res) => {
 export const redeemReward = async (req, res) => {
   try {
     const { rewardName } = req.body;
-    const user = await User.findById(req.user.id);
-    if (!rewardName) return res.status(400).json({ message: "rewardName is required" });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const userId = req.user?.userId || req.user?.id;
+    
+    if (!rewardName) {
+      return res.status(400).json({ success: false, message: "rewardName is required" });
+    }
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      return res.status(404).json({ success: false, message: "Loyalty record not found" });
+    }
 
     const reward = rewards.find((r) => r.name === rewardName);
-    if (!reward) return res.status(400).json({ message: "Invalid reward" });
-    const currentPoints = Number(user.loyaltyPoints) || 0;
-    if (currentPoints < reward.cost) return res.status(400).json({ message: "Not enough points" });
+    if (!reward) {
+      return res.status(400).json({ success: false, message: "Invalid reward" });
+    }
 
-    user.loyaltyPoints = currentPoints - reward.cost;
-    if (!Array.isArray(user.loyaltyHistory)) user.loyaltyHistory = [];
-    user.loyaltyHistory.push({ action: "redeemed", rewardName, points: reward.cost, at: new Date() });
-    await user.save();
+    const currentPoints = Number(loyalty.points) || 0;
+    if (currentPoints < reward.cost) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Not enough points",
+        required: reward.cost,
+        available: currentPoints
+      });
+    }
 
-    res.json({ message: `Reward redeemed: ${rewardName}`, loyaltyPoints: user.loyaltyPoints });
+    // Deduct points and add to history
+    loyalty.points = currentPoints - reward.cost;
+    loyalty.pointsHistory.push({
+      points: -reward.cost,
+      source: "reward_redeemed",
+      rewardName: rewardName,
+      createdAt: new Date(),
+    });
+
+    await loyalty.save();
+
+    res.json({ 
+      success: true,
+      message: `Reward redeemed: ${reward.description}`,
+      reward: {
+        name: rewardName,
+        description: reward.description,
+        cost: reward.cost
+      },
+      remainingPoints: loyalty.points
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error redeeming reward" });
+    console.error("REDEEM_REWARD_ERROR:", err);
+    res.status(500).json({ success: false, message: "Error redeeming reward" });
+  }
+};
+
+// Get available rewards
+export const getAvailableRewards = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    const currentPoints = loyalty?.points || 0;
+
+    const availableRewards = rewards.map(reward => ({
+      ...reward,
+      canRedeem: currentPoints >= reward.cost,
+      pointsNeeded: Math.max(0, reward.cost - currentPoints)
+    }));
+
+    res.json({
+      success: true,
+      rewards: availableRewards,
+      currentPoints
+    });
+  } catch (error) {
+    console.error("GET_AVAILABLE_REWARDS_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get redemption history
+export const getRedemptionHistory = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      return res.status(404).json({ success: false, message: "Loyalty record not found" });
+    }
+
+    const redemptions = loyalty.pointsHistory
+      .filter(entry => entry.source === "reward_redeemed")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(entry => ({
+        rewardName: entry.rewardName,
+        points: Math.abs(entry.points),
+        redeemedAt: entry.createdAt,
+        description: rewards.find(r => r.name === entry.rewardName)?.description || "Unknown reward"
+      }));
+
+    res.json({
+      success: true,
+      redemptions
+    });
+  } catch (error) {
+    console.error("GET_REDEMPTION_HISTORY_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

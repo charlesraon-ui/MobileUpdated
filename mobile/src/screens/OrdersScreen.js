@@ -575,6 +575,8 @@ export default function OrdersScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+
         {orders.length === 0 ? (
           <View style={s.empty}>
             <View style={s.emptyIconContainer}>
@@ -1179,6 +1181,7 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+
 
   // Modal styles
   modalContainer: {
