@@ -97,13 +97,7 @@ export default function CustomerSupportScreen() {
       title: "FAQ",
       description: "Find quick answers",
       icon: "❓",
-      action: () => {
-        Alert.alert(
-          "FAQ",
-          "Frequently asked questions section coming soon!",
-          [{ text: "OK" }]
-        );
-      },
+      action: () => router.push("/faq"),
     },
   ];
   // Ticket submission form removed; chat is the primary support channel.

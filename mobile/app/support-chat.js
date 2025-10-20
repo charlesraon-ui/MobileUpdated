@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,11 @@ import {
   closeSupportChatApi
 } from '../src/api/apiClient';
 import socketService from '../src/services/socketService';
+import { AppCtx } from '../src/context/AppContext';
 
 export default function SupportChatScreen() {
   const router = useRouter();
+  const { user } = useContext(AppCtx);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -36,6 +38,18 @@ export default function SupportChatScreen() {
   const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
+    // Check if user is authenticated
+    if (!user) {
+      Alert.alert(
+        'Authentication Required',
+        'Please log in to access customer support chat.',
+        [
+          { text: 'OK', onPress: () => router.replace('/login') }
+        ]
+      );
+      return;
+    }
+
     initializeChat();
     setupSocketListeners();
 
@@ -45,7 +59,7 @@ export default function SupportChatScreen() {
       }
       cleanupSocketListeners();
     };
-  }, []);
+  }, [user]);
 
   const initializeChat = async () => {
     try {
@@ -66,7 +80,19 @@ export default function SupportChatScreen() {
       }
     } catch (error) {
       console.error('Error initializing chat:', error);
-      Alert.alert('Error', 'Failed to start support chat');
+      
+      // Check for authentication error
+      if (error.response?.status === 401) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please log in again.',
+          [
+            { text: 'OK', onPress: () => router.replace('/login') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to start support chat. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -137,8 +163,20 @@ export default function SupportChatScreen() {
       // Message will be added via socket listener
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message');
-      setNewMessage(messageText); // Restore message on error
+      
+      // Check for authentication error
+      if (error.response?.status === 401) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please log in again.',
+          [
+            { text: 'OK', onPress: () => router.replace('/login') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to send message. Please try again.');
+        setNewMessage(messageText); // Restore message on error
+      }
     } finally {
       setSending(false);
     }

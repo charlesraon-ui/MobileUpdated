@@ -39,6 +39,7 @@ import {
   removeFromWishlistApi,
   toggleWishlistApi,
 } from "../api/apiClient";
+import { imageCache } from "../utils/imageCache";
 // import { registerPushToken } from "../api/apiClient";
 // import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
 // import { registerForPushNotificationsAsync } from "../utils/notifications";
@@ -238,8 +239,20 @@ export default function AppProvider({ children }) {
       
       const response = await getWishlistApi();
       const wishlistItems = response.data?.wishlist || [];
-      const productIds = wishlistItems.map(item => String(item._id || item));
-      setWishlist(productIds);
+      // Store full product objects for display, not just IDs
+      setWishlist(wishlistItems);
+      
+      // Preload wishlist images for better performance
+      const imageUrls = wishlistItems
+        .map(item => item?.imageUrl)
+        .filter(Boolean)
+        .map(url => toAbsoluteUrl(url));
+      
+      if (imageUrls.length > 0) {
+        imageCache.preloadBatch(imageUrls).catch(e => 
+          console.warn("Wishlist image preload failed:", e?.message)
+        );
+      }
     } catch (e) {
       console.warn("loadWishlist failed:", e?.message);
       setWishlist([]);
@@ -247,7 +260,11 @@ export default function AppProvider({ children }) {
   }, [isLoggedIn]);
 
   const isInWishlist = useCallback(
-    (productId) => (productId ? wishlist.includes(String(productId)) : false),
+    (productId) => {
+      if (!productId) return false;
+      // Check if product exists in wishlist (wishlist now contains full objects)
+      return wishlist.some(item => String(item._id || item) === String(productId));
+    },
     [wishlist]
   );
 
@@ -267,11 +284,11 @@ export default function AppProvider({ children }) {
       try {
         if (!isLoggedIn) {
           console.log("🔥 WISHLIST DEBUG: Guest user - using local storage");
-          // For guest users, use local storage
+          // For guest users, use local storage (store IDs only for guests)
           const idStr = String(productId);
-          const exists = wishlist.includes(idStr);
+          const exists = wishlist.some(item => String(item._id || item) === idStr);
           console.log("🔥 WISHLIST DEBUG: Product exists in wishlist:", exists);
-          const next = exists ? wishlist.filter((id) => id !== idStr) : [...wishlist, idStr];
+          const next = exists ? wishlist.filter((item) => String(item._id || item) !== idStr) : [...wishlist, idStr];
           console.log("🔥 WISHLIST DEBUG: Next wishlist state:", next);
           setWishlist(next);
           await AsyncStorage.setItem("wishlist", JSON.stringify(next));
@@ -286,15 +303,8 @@ export default function AppProvider({ children }) {
         const action = response.data?.action; // 'added' or 'removed'
         console.log("🔥 WISHLIST DEBUG: API action:", action);
         
-        // Update local state
-        const idStr = String(productId);
-        if (action === "added") {
-          console.log("🔥 WISHLIST DEBUG: Adding to local state");
-          setWishlist(prev => [...prev.filter(id => id !== idStr), idStr]);
-        } else {
-          console.log("🔥 WISHLIST DEBUG: Removing from local state");
-          setWishlist(prev => prev.filter(id => id !== idStr));
-        }
+        // Reload wishlist to get updated full product objects
+        await loadWishlist();
         
         return action;
       } catch (e) {
@@ -309,7 +319,7 @@ export default function AppProvider({ children }) {
         return null;
       }
     },
-    [wishlist, isLoggedIn, showToast]
+    [wishlist, isLoggedIn, showToast, loadWishlist]
   );
 
   console.log("🔥 APPCONTEXT: About to register boot useEffect...");
@@ -385,6 +395,19 @@ export default function AppProvider({ children }) {
         console.log("🚀 APPCONTEXT BOOT: Setting products array:", productsArray);
         console.log("🚀 APPCONTEXT BOOT: Products array length:", productsArray.length);
         setProducts(productsArray);
+        
+        // Preload product images for better performance
+        const productImageUrls = productsArray
+          .map(item => item?.imageUrl)
+          .filter(Boolean)
+          .map(url => toAbsoluteUrl(url))
+          .slice(0, 20); // Limit to first 20 images to avoid overwhelming the cache
+        
+        if (productImageUrls.length > 0) {
+          imageCache.preloadBatch(productImageUrls).catch(e => 
+            console.warn("Product image preload failed:", e?.message)
+          );
+        }
         
         const bundlesArray = Array.isArray(bundlesResp?.data) ? bundlesResp.data : [];
         console.log("🚀 APPCONTEXT BOOT: Setting bundles array:", bundlesArray);
@@ -600,7 +623,28 @@ export default function AppProvider({ children }) {
 
   // ---------------- CART ACTIONS ----------------
   const handleAddToCart = async (product) => {
+    // Check if product is out of stock
+    if (product.stock === 0 || product.stock < 0) {
+      showToast({
+        type: "error",
+        message: "This product is out of stock",
+      });
+      return;
+    }
+
+    // Check if adding one more would exceed available stock
     const idx = cart.findIndex((i) => i.productId === product._id);
+    const currentQuantity = idx > -1 ? cart[idx].quantity : 0;
+    const newQuantity = currentQuantity + 1;
+
+    if (product.stock && newQuantity > product.stock) {
+      showToast({
+        type: "error",
+        message: `Only ${product.stock} items available in stock`,
+      });
+      return;
+    }
+
     const updated =
       idx > -1
         ? cart.map((i, k) => (k === idx ? { ...i, quantity: Number(i.quantity || 0) + 1 } : i))
@@ -640,6 +684,17 @@ export default function AppProvider({ children }) {
 
   const incrementCartQty = (productId) => {
     const current = cart.find((i) => i.productId === productId)?.quantity || 0;
+    const product = products.find((p) => p._id === productId);
+    
+    // Check stock availability
+    if (product && product.stock && Number(current) + 1 > product.stock) {
+      showToast({
+        type: "error",
+        message: `Only ${product.stock} items available in stock`,
+      });
+      return;
+    }
+    
     return setQty(productId, Number(current) + 1);
   };
   const decrementCartQty = (productId) => {
@@ -1190,6 +1245,7 @@ const handlePlaceOrder = async (opts = {}) => {
 
     // wishlist
     wishlist,
+    loadWishlist,
     toggleWishlist,
     isInWishlist,
 

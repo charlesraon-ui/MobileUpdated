@@ -1,7 +1,7 @@
 // app/user-search.js
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { 
   ActivityIndicator, 
   FlatList, 
@@ -13,12 +13,14 @@ import {
 } from "react-native";
 import { searchUsersApi } from "../src/api/apiClient";
 import Avatar from "../src/components/Avatar";
+import { AppCtx } from "../src/context/AppContext";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
 const GRAY = "#6B7280";
 
 export default function UserSearchScreen() {
+  const { isLoggedIn } = useContext(AppCtx);
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,13 @@ export default function UserSearchScreen() {
   const inputRef = useRef(null);
 
   const debouncedQuery = useMemo(() => query.trim(), [query]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace("/login");
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     let active = true;
@@ -49,7 +58,15 @@ export default function UserSearchScreen() {
         }
       } catch (e) {
         if (active) {
-          setError(e?.response?.data?.message || e?.message || "Failed to search users");
+          const status = e?.response?.status;
+          let errorMessage = e?.response?.data?.message || e?.message || "Failed to search users";
+          
+          // Handle authentication errors specifically
+          if (status === 401) {
+            errorMessage = "Please log in to search for users";
+          }
+          
+          setError(errorMessage);
           setUsers([]);
         }
       } finally {
@@ -142,12 +159,21 @@ export default function UserSearchScreen() {
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={() => setQuery(query + " ")} // Trigger search again
-            >
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
+            {error.includes("log in") ? (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => router.push("/login")}
+              >
+                <Text style={styles.retryButtonText}>Go to Login</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => setQuery(query + " ")} // Trigger search again
+              >
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : query.length === 0 ? (
           <View style={styles.emptyState}>

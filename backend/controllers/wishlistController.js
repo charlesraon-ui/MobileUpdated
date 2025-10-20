@@ -9,7 +9,7 @@ export const getWishlist = async (req, res) => {
     
     const user = await User.findById(userId).populate({
       path: 'wishlist',
-      select: '_id name price imageUrl images category categoryName description stock'
+      select: '_id name price imageUrl category categoryName description stock reviews'
     });
     
     if (!user) {
@@ -21,10 +21,12 @@ export const getWishlist = async (req, res) => {
       _id: item._id,
       name: item.name,
       price: item.price,
-      imageUrl: item.imageUrl || (Array.isArray(item.images) ? item.images[0] : ""),
+      imageUrl: item.imageUrl,
+      images: item.imageUrl ? [item.imageUrl] : [], // Create images array for frontend compatibility
       category: item.category || item.categoryName,
       description: item.description,
-      stock: item.stock
+      stock: item.stock,
+      reviews: item.reviews || []
     }));
 
     res.json({ 
