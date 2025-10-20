@@ -100,16 +100,29 @@ export default function CheckoutScreen() {
 
   // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
-    if (disabled) return;
+    console.log("🚀 ORDER DEBUG: onPlace function called");
+    console.log("🚀 ORDER DEBUG: disabled state:", disabled);
+    console.log("🚀 ORDER DEBUG: cart:", cart);
+    console.log("🚀 ORDER DEBUG: paymentMethod:", paymentMethod);
+    console.log("🚀 ORDER DEBUG: deliveryMethod:", deliveryMethod);
+    console.log("🚀 ORDER DEBUG: deliveryAddress:", deliveryAddress);
+    console.log("🚀 ORDER DEBUG: isLoggedIn:", isLoggedIn);
+    
+    if (disabled) {
+      console.log("🚀 ORDER DEBUG: Order disabled, returning early");
+      return;
+    }
     
     setPlacing(true);
 
     try {
       // ✅ CALCULATE TOTALS FIRST - THIS WAS THE BUG!
       const { deliveryFee, subtotal, total } = calculateOrderTotals();
+      console.log("🚀 ORDER DEBUG: Calculated totals - deliveryFee:", deliveryFee, "subtotal:", subtotal, "total:", total);
 
       // ✅ E-PAYMENT FLOW
       if (paymentMethod === "E-Payment") {
+        console.log("🚀 ORDER DEBUG: E-Payment flow selected");
         showToast("Creating payment session...");
 
         // Build proper payload structure
@@ -139,15 +152,18 @@ export default function CheckoutScreen() {
         const checkoutUrl = response?.data?.payment?.checkoutUrl;
 
         if (!checkoutUrl) {
+          console.log("🚀 ORDER DEBUG: No checkout URL received - response:", response);
           throw new Error("No checkout URL received from payment provider");
         }
 
+        console.log("🚀 ORDER DEBUG: Opening checkout URL:", checkoutUrl);
         showToast("Redirecting to payment...");
         
         // Open payment URL
         const canOpen = await Linking.canOpenURL(checkoutUrl);
         
         if (!canOpen) {
+          console.log("🚀 ORDER DEBUG: Cannot open URL:", checkoutUrl);
           throw new Error("Cannot open payment URL");
         }
 
@@ -169,40 +185,53 @@ export default function CheckoutScreen() {
       }
 
       // ✅ COD FLOW
+      console.log("🚀 ORDER DEBUG: COD flow selected");
       showToast("Placing order...");
       
-      const res = await handlePlaceOrder({
+      const codPayload = {
         deliveryType: deliveryMethod,
         address: deliveryMethod === "pickup"
           ? "Poblacion 1, Moncada\nTarlac, Philippines"
           : deliveryAddress.trim(),
         total,
         deliveryFee,
-      });
+      };
+      
+      console.log("🚀 ORDER DEBUG: COD payload:", codPayload);
+      
+      const res = await handlePlaceOrder(codPayload);
+      console.log("🚀 ORDER DEBUG: COD API response:", res);
       
       if (res?.success) {
         const orderId = res.order?._id || res.order?.id;
         const shortId = String(orderId || "").slice(-6).toUpperCase();
         
+        console.log("🚀 ORDER DEBUG: Order placed successfully - orderId:", orderId, "shortId:", shortId);
         showToast(`Order #${shortId} placed!`);
         
         setTimeout(() => {
           router.replace("/tabs/profile");
         }, 1000);
       } else {
+        console.log("🚀 ORDER DEBUG: COD order failed - res:", res);
         throw new Error(res?.message || "Order creation failed");
       }
 
     } catch (error) {
       console.error("❌ Place order error:", error);
+      console.log("🚀 ORDER DEBUG: Full error object:", JSON.stringify(error, null, 2));
+      console.log("🚀 ORDER DEBUG: Error response:", error?.response);
+      console.log("🚀 ORDER DEBUG: Error response data:", error?.response?.data);
       
       const errorMessage = 
         error?.response?.data?.message || 
         error?.message || 
         "Failed to place order. Please try again.";
       
+      console.log("🚀 ORDER DEBUG: Final error message:", errorMessage);
       Alert.alert("Order Failed", errorMessage);
     } finally {
+      console.log("🚀 ORDER DEBUG: Setting placing to false");
       setPlacing(false);
     }
   };

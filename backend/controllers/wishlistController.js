@@ -136,8 +136,11 @@ export const toggleWishlist = async (req, res) => {
 
     await user.save();
 
+    const action = isInWishlist ? "removed" : "added";
+    
     res.json({ 
       message: isInWishlist ? "Product removed from wishlist" : "Product added to wishlist",
+      action: action,
       isInWishlist: !isInWishlist,
       wishlistCount: user.wishlist.length 
     });

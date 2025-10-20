@@ -4,13 +4,27 @@ import Product from "../models/Products.js";
 
 // ---- helpers ----
 const toPlain = (docs = []) =>
-  docs.map((d) => ({
-    _id: d._id,
-    name: d.name,
-    price: d.price,
-    imageUrl: d.imageUrl || (Array.isArray(d.images) ? d.images[0] : ""),
-    category: d.category || d.categoryName || null,
-  }));
+  docs.map((d) => {
+    // Calculate average rating and review count
+    const reviews = d.reviews || [];
+    const averageRating = reviews.length > 0 
+      ? reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviews.length 
+      : 0;
+    
+    return {
+      _id: d._id,
+      name: d.name,
+      price: d.price,
+      imageUrl: d.imageUrl || (Array.isArray(d.images) ? d.images[0] : ""),
+      category: d.category || d.categoryName || null,
+      reviews: reviews,
+      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+      reviewCount: reviews.length,
+      stock: d.stock || 0,
+      weightKg: d.weightKg,
+      tags: d.tags || []
+    };
+  });
 
 const normCat = (c) => {
   if (!c) return null;

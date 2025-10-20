@@ -228,8 +228,15 @@ export default function ProductDetailScreen() {
     if (!item) return null;
     
     const imgSrc = item.imageUrl || "https://via.placeholder.com/120x120.png?text=Item";
+    const averageRating = item.averageRating || 0;
+    const reviewCount = item.reviewCount || 0;
+    
     return (
-      <View style={s.recoRow}>
+      <TouchableOpacity 
+        style={s.recoRow}
+        onPress={() => router.push(`/product-detail?id=${item._id}`)}
+        activeOpacity={0.7}
+      >
         <Image 
           source={{ uri: imgSrc }} 
           style={s.recoImg}
@@ -238,16 +245,28 @@ export default function ProductDetailScreen() {
         <View style={{ flex: 1 }}>
           <Text style={s.recoName} numberOfLines={2}>{item.name || 'Product'}</Text>
           <Text style={s.recoPrice}>₱{Number(item.price || 0).toLocaleString("en-PH")}</Text>
+          {averageRating > 0 && (
+            <View style={s.recoRatingContainer}>
+              <Text style={s.recoStarIcon}>★</Text>
+              <Text style={s.recoRatingText}>
+                {averageRating.toFixed(1)} ({reviewCount} review{reviewCount !== 1 ? 's' : ''})
+              </Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity 
-          onPress={() => handleAddToCartPress(item)}
+          onPress={(e) => {
+            e.stopPropagation();
+            handleAddToCartPress(item);
+          }}
           activeOpacity={0.7}
+          style={s.recoAddButton}
         >
           <Text style={s.recoAdd}>Add</Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
-  }, [handleAddToCartPress]);
+  }, [handleAddToCartPress, router]);
 
   const renderRecoItem = useCallback(({ item }) => <RecoRow item={item} />, [RecoRow]);
 
@@ -314,6 +333,10 @@ export default function ProductDetailScreen() {
 
   const p = productDetail;
   const saved = isInWishlist?.(p?._id);
+  
+  // Debug: Log product data to understand the structure
+  console.log('Product Detail Data:', p);
+  console.log('Product Stock:', p?.stock);
 
   return (
     <View style={s.container}>
@@ -378,6 +401,24 @@ export default function ProductDetailScreen() {
               <View style={s.ratingBadge}>
                 {renderStars(averageRating)}
                 <Text style={s.ratingText}>({p.reviews?.length || 0})</Text>
+              </View>
+            </View>
+
+            {/* Stock Information */}
+            <View style={s.stockContainer}>
+              <View style={s.stockIconContainer}>
+                <Text style={[s.stockIcon, { color: p.stock > 0 ? (p.stock <= 10 ? "#F59E0B" : "#10B981") : "#EF4444" }]}>
+                  {p.stock > 0 ? (p.stock <= 10 ? "⚠️" : "✅") : "❌"}
+                </Text>
+              </View>
+              <View style={s.stockInfo}>
+                <Text style={s.stockLabel}>Stock Available</Text>
+                <Text style={[
+                  s.stockValue,
+                  { color: p.stock > 0 ? (p.stock <= 10 ? "#F59E0B" : "#10B981") : "#EF4444" }
+                ]}>
+                  {p.stock > 0 ? `${p.stock} units` : "Out of stock"}
+                </Text>
               </View>
             </View>
 
@@ -627,6 +668,23 @@ const s = StyleSheet.create({
   ratingBadge: { flexDirection: "row", alignItems: "center" },
   ratingText: { fontSize: 14, color: "#6B7280", marginLeft: 8, fontWeight: "500" },
 
+  // Stock Information Styles
+  stockContainer: {
+    flexDirection: "row", alignItems: "center", marginTop: 12, paddingVertical: 12,
+    paddingHorizontal: 16, backgroundColor: "#F9FAFB", borderRadius: 12,
+    borderWidth: 1, borderColor: "#E5E7EB",
+  },
+  stockIconContainer: {
+    width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFFFFF",
+    alignItems: "center", justifyContent: "center", marginRight: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
+  },
+  stockIcon: { fontSize: 16 },
+  stockInfo: { flex: 1 },
+  stockLabel: { fontSize: 12, fontWeight: "600", color: "#6B7280", marginBottom: 2 },
+  stockValue: { fontSize: 16, fontWeight: "700" },
+
   weightContainer: { flexDirection: "row", alignItems: "center", marginBottom: 16, paddingHorizontal: 4 },
   weightLabel: { fontSize: 14, color: "#6B7280", fontWeight: "500", marginRight: 8 },
   weightValue: {
@@ -669,7 +727,30 @@ const s = StyleSheet.create({
   recoImg: { width: 56, height: 56, borderRadius: 8, backgroundColor: "#F3F4F6" },
   recoName: { flex: 1, fontWeight: "700", color: "#111827" },
   recoPrice: { color: "#059669", fontWeight: "800", marginTop: 2 },
-  recoAdd: { color: "#2563EB", fontWeight: "800" },
+  recoRatingContainer: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    marginTop: 4 
+  },
+  recoStarIcon: { 
+    fontSize: 12, 
+    color: "#F59E0B", 
+    marginRight: 4 
+  },
+  recoRatingText: { 
+    fontSize: 12, 
+    color: "#6B7280", 
+    fontWeight: "600" 
+  },
+  recoAddButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "#EBF8FF",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB"
+  },
+  recoAdd: { color: "#2563EB", fontWeight: "800", fontSize: 12 },
 
   // Reviews
   reviewsSection: { marginTop: 24, paddingHorizontal: 16 },

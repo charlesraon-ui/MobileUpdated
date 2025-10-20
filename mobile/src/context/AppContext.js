@@ -1,7 +1,10 @@
+console.warn("🔥🔥🔥 APPCONTEXT FILE IS BEING LOADED! 🔥🔥🔥");
+console.log("🔥🔥🔥 APPCONTEXT FILE IS BEING LOADED! 🔥🔥🔥");
+
 import { useRouter } from "expo-router";
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
+// import { Alert } from "react-native";
 import Toast from "../../components/Toast";
 import {
   addReviewApi,
@@ -36,23 +39,28 @@ import {
   removeFromWishlistApi,
   toggleWishlistApi,
 } from "../api/apiClient";
-import { registerPushToken } from "../api/apiClient";
-import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
-import { registerForPushNotificationsAsync } from "../utils/notifications";
+// import { registerPushToken } from "../api/apiClient";
+// import { getLoyaltyStatus, issueLoyaltyCard, getDigitalCard } from "../api/apiClient";
+// import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 import socketService from "../services/socketService";
 
 export const AppCtx = createContext(null);
 
 export default function AppProvider({ children }) {
+  console.warn("🚀🚀🚀 AppProvider function is being called!");
+  console.log("🚀🚀🚀 AppProvider function is being called!");
+  console.warn("🔥 APPCONTEXT: AppProvider component is STARTING initialization...");
+  console.log("🔥 APPCONTEXT: AppProvider component is STARTING initialization...");
+  console.log("🔥 APPCONTEXT: Component render count:", Math.random());
+  console.log("🔥 APPCONTEXT: About to define router and initRef...");
+  
   const router = useRouter();
+  console.log("🔥 APPCONTEXT: Router defined successfully");
+  const initRef = useRef(false);
+  console.log("🔥 APPCONTEXT: initRef defined successfully");
 
-  // Simple test useEffect
-  useEffect(() => {
-    console.log("SIMPLE TEST useEffect is working!");
-  }, []);
-
-  // data state
+  // data state - MOVED BEFORE INITIALIZATION
   const [products, setProducts] = useState([]);
   const [bundles, setBundles] = useState([]);
   const [cart, setCart] = useState([]);
@@ -81,10 +89,33 @@ export default function AppProvider({ children }) {
   }, []);
   const hideToast = useCallback(() => {
     setToastVisible(false);
-    setToastMessage("");
-    setToastActionLabel("");
-    setToastAction(null);
   }, []);
+
+  // Ref-based initialization since useEffect doesn't run in SSR
+  if (!initRef.current) {
+    console.log("🚀 APPCONTEXT REF INIT: Starting initialization...");
+    initRef.current = true;
+    
+    // Initialize products immediately
+    Promise.resolve().then(async () => {
+      try {
+        console.log("🚀 APPCONTEXT REF INIT: About to call getProducts()...");
+        const prod = await getProducts();
+        console.log("🚀 APPCONTEXT REF INIT: getProducts() SUCCESS:", prod);
+        console.log("🚀 APPCONTEXT REF INIT: Products data:", prod?.data);
+        console.log("🚀 APPCONTEXT REF INIT: Products length:", prod?.data?.length);
+        
+        const productsArray = Array.isArray(prod?.data) ? prod.data : [];
+        console.log("🚀 APPCONTEXT REF INIT: Setting products array:", productsArray);
+        console.log("🚀 APPCONTEXT REF INIT: Products array length:", productsArray.length);
+        setProducts(productsArray);
+      } catch (error) {
+        console.error("🚀 APPCONTEXT REF INIT: getProducts() failed:", error);
+        console.error("🚀 APPCONTEXT REF INIT: Error details:", error.message, error.stack);
+        setProducts([]);
+      }
+     });
+   }
 
   // UX flags
   const [justMergedFromGuest, setJustMergedFromGuest] = useState(false);
@@ -222,33 +253,54 @@ export default function AppProvider({ children }) {
 
   const toggleWishlist = useCallback(
     async (product) => {
+      console.log("🔥 WISHLIST DEBUG: toggleWishlist called with:", product);
       const productId = typeof product === "string" ? product : product?._id;
-      if (!productId) return null;
+      console.log("🔥 WISHLIST DEBUG: productId:", productId);
+      console.log("🔥 WISHLIST DEBUG: isLoggedIn:", isLoggedIn);
+      console.log("🔥 WISHLIST DEBUG: current wishlist:", wishlist);
+      
+      if (!productId) {
+        console.log("🔥 WISHLIST DEBUG: No productId, returning null");
+        return null;
+      }
       
       try {
         if (!isLoggedIn) {
+          console.log("🔥 WISHLIST DEBUG: Guest user - using local storage");
           // For guest users, use local storage
           const idStr = String(productId);
           const exists = wishlist.includes(idStr);
+          console.log("🔥 WISHLIST DEBUG: Product exists in wishlist:", exists);
           const next = exists ? wishlist.filter((id) => id !== idStr) : [...wishlist, idStr];
+          console.log("🔥 WISHLIST DEBUG: Next wishlist state:", next);
           setWishlist(next);
           await AsyncStorage.setItem("wishlist", JSON.stringify(next));
-          return exists ? "removed" : "added";
+          const action = exists ? "removed" : "added";
+          console.log("🔥 WISHLIST DEBUG: Guest action:", action);
+          return action;
         }
 
+        console.log("🔥 WISHLIST DEBUG: Logged in user - calling API");
         const response = await toggleWishlistApi(productId);
+        console.log("🔥 WISHLIST DEBUG: API response:", response);
         const action = response.data?.action; // 'added' or 'removed'
+        console.log("🔥 WISHLIST DEBUG: API action:", action);
         
         // Update local state
         const idStr = String(productId);
         if (action === "added") {
+          console.log("🔥 WISHLIST DEBUG: Adding to local state");
           setWishlist(prev => [...prev.filter(id => id !== idStr), idStr]);
         } else {
+          console.log("🔥 WISHLIST DEBUG: Removing from local state");
           setWishlist(prev => prev.filter(id => id !== idStr));
         }
         
         return action;
       } catch (e) {
+        console.error("🔥 WISHLIST DEBUG: toggleWishlist failed:", e);
+        console.error("🔥 WISHLIST DEBUG: Error message:", e?.message);
+        console.error("🔥 WISHLIST DEBUG: Error response:", e?.response);
         console.warn("toggleWishlist failed:", e?.message);
         showToast({ 
           type: "error", 
@@ -260,17 +312,31 @@ export default function AppProvider({ children }) {
     [wishlist, isLoggedIn, showToast]
   );
 
+  console.log("🔥 APPCONTEXT: About to register boot useEffect...");
+
   // boot
   useEffect(() => {
+    console.log("🚀🚀🚀 APPCONTEXT USEEFFECT: Starting initialization...");
+    console.warn("🚀🚀🚀 APPCONTEXT USEEFFECT: Starting initialization...");
+    console.log("🚀 APPCONTEXT BOOT: Starting initialization...");
     (async () => {
       try {
+        console.log("🚀 APPCONTEXT BOOT: Getting token...");
         await getToken(); // prime axios Authorization if token exists
+        console.log("🚀 APPCONTEXT BOOT: Reading user...");
         const u = await readUser();
-        if (u) setUserState(u);
+        if (u) {
+          console.log("🚀 APPCONTEXT BOOT: User found:", u);
+          setUserState(u);
+        } else {
+          console.log("🚀 APPCONTEXT BOOT: No user found");
+        }
 
+        console.log("🚀 APPCONTEXT BOOT: Loading wishlist...");
         await loadWishlist();
         // load addresses for current user
         const uid = (u?._id || u?.id || u?.email || "guest");
+        console.log("🚀 APPCONTEXT BOOT: Loading addresses for uid:", uid);
         await loadAddresses(`${ADDR_KEY_PREFIX}${uid}`);
         await loadDefaultAddress(`${DEFAULT_ADDR_KEY_PREFIX}${uid}`);
 
@@ -282,37 +348,54 @@ export default function AppProvider({ children }) {
           // ignore
         }
 
+        console.log("🚀 APPCONTEXT BOOT: Starting API calls...");
         let prod, cats, bundlesResp;
         try {
+          console.log("🚀 APPCONTEXT BOOT: About to call getProducts()...");
           prod = await getProducts();
+          console.log("🚀 APPCONTEXT BOOT: getProducts() SUCCESS:", prod);
+          console.log("🚀 APPCONTEXT BOOT: Products data:", prod?.data);
+          console.log("🚀 APPCONTEXT BOOT: Products length:", prod?.data?.length);
         } catch (error) {
-          console.error("DEBUG: getProducts() failed:", error);
-          console.error("DEBUG: Error details:", error.message, error.stack);
+          console.error("🚀 APPCONTEXT BOOT: getProducts() failed:", error);
+          console.error("🚀 APPCONTEXT BOOT: Error details:", error.message, error.stack);
+          console.error("🚀 APPCONTEXT BOOT: Error response:", error.response);
           prod = { data: [] };
         }
 
         try {
+          console.log("🚀 APPCONTEXT BOOT: About to call getCategories()...");
           cats = await getCategories();
+          console.log("🚀 APPCONTEXT BOOT: getCategories() SUCCESS:", cats);
         } catch (error) {
-          console.error("DEBUG: getCategories() failed:", error);
+          console.error("🚀 APPCONTEXT BOOT: getCategories() failed:", error);
           cats = { data: [] };
         }
 
         try {
+          console.log("🚀 APPCONTEXT BOOT: About to call getBundles()...");
           bundlesResp = await getBundles();
+          console.log("🚀 APPCONTEXT BOOT: getBundles() SUCCESS:", bundlesResp);
         } catch (error) {
-          console.error("DEBUG: getBundles() failed:", error);
+          console.error("🚀 APPCONTEXT BOOT: getBundles() failed:", error);
           bundlesResp = { data: [] };
         }
 
         const productsArray = Array.isArray(prod?.data) ? prod.data : [];
+        console.log("🚀 APPCONTEXT BOOT: Setting products array:", productsArray);
+        console.log("🚀 APPCONTEXT BOOT: Products array length:", productsArray.length);
         setProducts(productsArray);
-        setBundles(Array.isArray(bundlesResp?.data) ? bundlesResp.data : []);
+        
+        const bundlesArray = Array.isArray(bundlesResp?.data) ? bundlesResp.data : [];
+        console.log("🚀 APPCONTEXT BOOT: Setting bundles array:", bundlesArray);
+        console.log("🚀 APPCONTEXT BOOT: Bundles array length:", bundlesArray.length);
+        setBundles(bundlesArray);
         
         const map = {};
         (cats.data || []).forEach((c) => {
           map[String(c._id)] = c.name || c.categoryName || "";
         });
+        console.log("🚀 APPCONTEXT BOOT: Setting category map:", map);
         setCategoryMap(map);
 
         if (u) {
@@ -488,14 +571,15 @@ export default function AppProvider({ children }) {
   // guard with alert
   const ensureAuthed = () => {
     if (!isLoggedIn) {
-      Alert.alert(
-        "Login Required",
-        "You need to login or create an account to continue.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Login", onPress: () => router.push("/login") },
-        ]
-      );
+      // TODO: Replace with web-compatible alert
+      // Alert.alert(
+      //   "Login Required",
+      //   "You need to login or create an account to continue.",
+      //   [
+      //     { text: "Cancel", style: "cancel" },
+      //     { text: "Login", onPress: () => router.push("/login") },
+      //   ]
+      // );
       return false;
     }
     return true;
@@ -626,6 +710,11 @@ export default function AppProvider({ children }) {
 // ---------------- PLACE ORDER ----------------
 // Accept options so checkout can pass deliveryType (e.g., "pickup") and address
 const handlePlaceOrder = async (opts = {}) => {
+  console.log("🔥 ORDER PLACEMENT DEBUG: handlePlaceOrder called with:", opts);
+  console.log("🔥 ORDER PLACEMENT DEBUG: isLoggedIn:", isLoggedIn);
+  console.log("🔥 ORDER PLACEMENT DEBUG: user:", user);
+  console.log("🔥 ORDER PLACEMENT DEBUG: cart:", cart);
+  
   if (!ensureAuthed()) return { success: false, message: "Not logged in" };
 
   const {
@@ -639,8 +728,13 @@ const handlePlaceOrder = async (opts = {}) => {
   const addrRaw = addressInput != null ? String(addressInput) : String((deliveryAddress || ""));
   const addr = addrRaw.trim();
 
+  console.log("🔥 ORDER PLACEMENT DEBUG: deliveryType:", deliveryType);
+  console.log("🔥 ORDER PLACEMENT DEBUG: address:", addr);
+  console.log("🔥 ORDER PLACEMENT DEBUG: paymentMethod:", paymentMethod);
+
   // Require address for delivery types, but allow empty for pickup
   if (deliveryType !== "pickup" && !addr) {
+    console.log("🔥 ORDER PLACEMENT DEBUG: No delivery address provided");
     return { success: false, message: "Delivery address is required" };
   }
   
@@ -658,10 +752,16 @@ const handlePlaceOrder = async (opts = {}) => {
   const deliveryFee = Number.isFinite(Number(deliveryFeeInput)) ? Number(deliveryFeeInput) : getDeliveryFee(deliveryType);
   const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0 ? Number(totalInput) : (discountedSubtotal + deliveryFee);
 
+  console.log("🔥 ORDER PLACEMENT DEBUG: Calculated values:");
+  console.log("🔥 ORDER PLACEMENT DEBUG: rawSubtotal:", rawSubtotal);
+  console.log("🔥 ORDER PLACEMENT DEBUG: discountedSubtotal:", discountedSubtotal);
+  console.log("🔥 ORDER PLACEMENT DEBUG: deliveryFee:", deliveryFee);
+  console.log("🔥 ORDER PLACEMENT DEBUG: total:", total);
+
   try {
     // 🎯 CHECK PAYMENT METHOD
     if (paymentMethod === "E-Payment") {
-      console.log("💳 E-Payment selected, redirecting to PayMongo...");
+      console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment selected, redirecting to PayMongo...");
       
       try {
         // Build proper payload structure for E-Payment
@@ -680,19 +780,27 @@ const handlePlaceOrder = async (opts = {}) => {
           channel: "multi" // Support all payment methods
         };
 
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment payload:", ePaymentPayload);
+
         console.log("📤 Sending E-Payment payload:", JSON.stringify(ePaymentPayload, null, 2));
         
+        console.log("🔥 ORDER PLACEMENT DEBUG: Calling createEPaymentOrder API...");
         const response = await createEPaymentOrder(ePaymentPayload);
-        console.log("✅ E-Payment response:", response.data);
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment API response:", response);
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment response data:", response.data);
         
         const checkoutUrl = response.data?.payment?.checkoutUrl;
+        console.log("🔥 ORDER PLACEMENT DEBUG: Extracted checkoutUrl:", checkoutUrl);
+        
         if (!checkoutUrl) {
+          console.log("🔥 ORDER PLACEMENT DEBUG: No checkout URL found in response");
           return { success: false, message: "Failed to create payment link" };
         }
 
         // Open PayMongo checkout
-        console.log("🔗 Opening PayMongo URL:", checkoutUrl);
+        console.log("🔥 ORDER PLACEMENT DEBUG: Opening PayMongo URL:", checkoutUrl);
         const canOpen = await Linking.canOpenURL(checkoutUrl);
+        console.log("🔥 ORDER PLACEMENT DEBUG: Can open URL:", canOpen);
         
         if (canOpen) {
           await Linking.openURL(checkoutUrl);
@@ -705,10 +813,13 @@ const handlePlaceOrder = async (opts = {}) => {
             pending: true
           };
         } else {
+          console.log("🔥 ORDER PLACEMENT DEBUG: Cannot open payment URL");
           return { success: false, message: "Cannot open payment URL" };
         }
       } catch (error) {
-        console.error("E-Payment error:", error.response?.data || error.message);
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment error:", error);
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment error response:", error.response);
+        console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment error data:", error.response?.data);
         return { 
           success: false, 
           message: error.response?.data?.message || "Payment processing failed. Please try again." 
@@ -717,7 +828,7 @@ const handlePlaceOrder = async (opts = {}) => {
       
     } else {
       // COD flow
-      console.log("💵 COD payment selected");
+      console.log("🔥 ORDER PLACEMENT DEBUG: COD payment selected");
       
       // Build proper payload structure for COD
       const codPayload = {
@@ -735,24 +846,37 @@ const handlePlaceOrder = async (opts = {}) => {
         paymentMethod: "COD"
       };
 
-      console.log("📤 Sending COD payload:", JSON.stringify(codPayload, null, 2));
+      console.log("🔥 ORDER PLACEMENT DEBUG: COD payload:", codPayload);
+      console.log("🔥 ORDER PLACEMENT DEBUG: Calling createMyOrder API...");
        
        const resp = await createMyOrder(codPayload);
+      console.log("🔥 ORDER PLACEMENT DEBUG: COD API response:", resp);
+      
       const order =
         resp?.data?._id ? resp.data : resp?.data?.order ? resp.data.order : resp?._id ? resp : null;
-      if (!order?._id) return { success: false, message: "Order creation failed." };
+      console.log("🔥 ORDER PLACEMENT DEBUG: Extracted order:", order);
+      
+      if (!order?._id) {
+        console.log("🔥 ORDER PLACEMENT DEBUG: No order ID found, creation failed");
+        return { success: false, message: "Order creation failed." };
+      }
 
+      console.log("🔥 ORDER PLACEMENT DEBUG: Order created successfully, updating state...");
       setOrders((prev) => (order ? [order, ...(prev || [])] : prev || []));
       setCart([]);
       setDeliveryAddress("");
       setGcashNumber("");
 
       refreshAuthedData?.(user);
+      console.log("🔥 ORDER PLACEMENT DEBUG: COD order completed successfully");
       return { success: true, order };
     }
     
   } catch (e) {
-    console.error("❌ Place order failed:", e?.message);
+    console.log("🔥 ORDER PLACEMENT DEBUG: Place order failed with error:", e);
+    console.log("🔥 ORDER PLACEMENT DEBUG: Error message:", e?.message);
+    console.log("🔥 ORDER PLACEMENT DEBUG: Error response:", e?.response);
+    console.log("🔥 ORDER PLACEMENT DEBUG: Error response data:", e?.response?.data);
     return { 
       success: false, 
       message: e?.response?.data?.message || e?.message || "Order failed" 
@@ -882,11 +1006,12 @@ const handlePlaceOrder = async (opts = {}) => {
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);
     // Show info and route user to login; they can login after confirming via email
-    Alert.alert(
-      "Check your email",
-      "We sent a verification link to your Gmail. Open it to confirm account creation. After confirming, return to the app to login.",
-      [{ text: "OK", onPress: () => router.replace("/login") }]
-    );
+    // TODO: Replace with web-compatible alert
+    // Alert.alert(
+    //   "Check your email",
+    //   "We sent a verification link to your Gmail. Open it to confirm account creation. After confirming, return to the app to login.",
+    //   [{ text: "OK", onPress: () => router.replace("/login") }]
+    // );
   };
 
   const doGoogleAuth = async ({ accessToken }) => {
@@ -989,14 +1114,15 @@ const handlePlaceOrder = async (opts = {}) => {
   const submitReview = async (productId, rating, comment, imageUrls = []) => {
     const token = await getToken();
     if (!token) {
-      Alert.alert(
-        "Login Required",
-        "You need to login or create an account before posting a review.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Login", onPress: () => router.push("/login") },
-        ]
-      );
+      // TODO: Replace with web-compatible alert
+      // Alert.alert(
+      //   "Login Required",
+      //   "You need to login or create an account before posting a review.",
+      //   [
+      //     { text: "Cancel", style: "cancel" },
+      //     { text: "Login", onPress: () => router.push("/login") },
+      //   ]
+      // );
       return;
     }
     try {
@@ -1097,6 +1223,8 @@ const handlePlaceOrder = async (opts = {}) => {
     saveAddresses,
     setDefaultAddress,
   };
+
+  console.log("🔥 APPCONTEXT: About to return JSX...");
 
   return (
     <AppCtx.Provider value={value}>

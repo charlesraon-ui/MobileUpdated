@@ -3,17 +3,14 @@ import axios from "axios";
 import Constants from "expo-constants";
 
 /** ------------- Config (single source of truth) ------------- */
-const API_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  process.env.EXPO_PUBLIC_API_URL ||
-  "http://localhost:5000";
+const API_URL = "http://localhost:5000";
 
 console.log("API_URL in app:", API_URL);
 
 /** ------------- Axios instance ------------- */
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 30000, // Increased timeout to 30 seconds
   headers: { "Content-Type": "application/json" },
 });
 
@@ -32,9 +29,15 @@ api.interceptors.request.use(async (config) => {
 });
 
 api.interceptors.response.use(
-  (r) => r,
+  (r) => {
+    console.log("AXIOS SUCCESS:", r?.config?.url, "status:", r?.status);
+    return r;
+  },
   (err) => {
-    console.warn("AXIOS ERR:", err?.message, "url:", err?.config?.url);
+    console.error("AXIOS ERR:", err?.message, "url:", err?.config?.url);
+    console.error("AXIOS ERR status:", err?.response?.status);
+    console.error("AXIOS ERR data:", err?.response?.data);
+    console.error("AXIOS ERR code:", err?.code);
     return Promise.reject(err);
   }
 );
@@ -110,7 +113,23 @@ export const googleAuth = (payload) => api.post(`/api/auth/google`, payload);
 export const requestPasswordReset = (email) => api.post(`/api/auth/password/forgot`, { email });
 export const completePasswordReset = (token, password) => api.post(`/api/auth/password/reset`, { token, password });
 
-export const getProducts   = () => api.get(`/api/products`);
+export const getProducts = async () => {
+  console.log("🔥 API: getProducts() called");
+  try {
+    console.log("🔥 API: Making request to /api/products...");
+    const response = await api.get(`/api/products`);
+    console.log("🔥 API: getProducts() response status:", response.status);
+    console.log("🔥 API: getProducts() response data:", response.data);
+    console.log("🔥 API: getProducts() response data type:", typeof response.data);
+    console.log("🔥 API: getProducts() response data length:", response.data?.length);
+    return response;
+  } catch (error) {
+    console.error("🔥 API: getProducts() error:", error);
+    console.error("🔥 API: getProducts() error message:", error.message);
+    console.error("🔥 API: getProducts() error response:", error.response);
+    throw error;
+  }
+};
 export const getProductApi = (id) => api.get(`/api/products/${id}`);
 export const getCategories = () => api.get(`/api/categories`);
 
@@ -240,6 +259,7 @@ export const sendDMMessageApi = (userId, payload) => {
 
 // User search
 export const searchUsersApi = (q) => api.get(`/api/users/search`, { params: { q } });
+export const getAdminUsersApi = () => api.get(`/api/users/admins`);
 export const getUserByIdApi = (userId) => api.get(`/api/users/${userId}`);
 
 // Profile update
@@ -264,6 +284,16 @@ export const getWishlistApi = () => api.get(`/api/wishlist`);
 export const addToWishlistApi = (productId) => api.post(`/api/wishlist/add`, { productId });
 export const removeFromWishlistApi = (productId) => api.delete(`/api/wishlist/remove/${productId}`);
 export const toggleWishlistApi = (productId) => api.post(`/api/wishlist/toggle`, { productId });
+
+/** ------------- Support Chat ------------- */
+export const createSupportChatApi = () => api.post(`/api/support-chat/create`);
+export const getSupportMessagesApi = (roomId) => api.get(`/api/support-chat/${roomId}/messages`);
+export const sendSupportMessageApi = (roomId, message) => api.post(`/api/support-chat/${roomId}/message`, { message });
+export const closeSupportChatApi = (roomId) => api.post(`/api/support-chat/${roomId}/close`);
+
+// Admin functions
+export const getPendingSupportChatsApi = () => api.get(`/api/support-chat/pending`);
+export const acceptSupportChatApi = (roomId) => api.post(`/api/support-chat/${roomId}/accept`);
 
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string

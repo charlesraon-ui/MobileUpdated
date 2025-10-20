@@ -33,6 +33,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import directMessageRoutes from "./routes/directMessageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
+import supportChatRoutes from "./routes/supportChatRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -93,6 +94,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/dm", directMessageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/support-chat", supportChatRoutes);
 // Customer-only app - no admin loyalty routes
 
 // Socket.IO authentication middleware
@@ -115,11 +117,24 @@ io.use((socket, next) => {
 });
 
 // Socket.IO connection handling
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   console.log(`User ${socket.userId} connected`);
   
   // Join user to their personal room for notifications
   socket.join(`user_${socket.userId}`);
+  
+  // Check if user is admin and join admin room
+  try {
+    const User = (await import('./models/User.js')).default;
+    const user = await User.findById(socket.userId);
+    if (user && ['admin', 'superadmin'].includes(user.role)) {
+      socket.join('admin_room');
+      socket.isAdmin = true;
+      console.log(`Admin ${socket.userId} joined admin room`);
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error);
+  }
   
   // Join direct message room
   socket.on('join_dm_room', (otherUserId) => {
@@ -128,16 +143,12 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.userId} joined DM room: dm_${roomId}`);
   });
   
-
-  
   // Leave direct message room
   socket.on('leave_dm_room', (otherUserId) => {
     const roomId = [socket.userId, otherUserId].sort().join('_');
     socket.leave(`dm_${roomId}`);
     console.log(`User ${socket.userId} left DM room: dm_${roomId}`);
   });
-  
-
   
   // Handle typing indicators for DMs
   socket.on('typing_dm', ({ otherUserId, isTyping }) => {
@@ -148,7 +159,25 @@ io.on('connection', (socket) => {
     });
   });
   
-
+  // Support chat functionality
+  socket.on('join_support_room', (roomId) => {
+    socket.join(`support_${roomId}`);
+    console.log(`User ${socket.userId} joined support room: support_${roomId}`);
+  });
+  
+  socket.on('leave_support_room', (roomId) => {
+    socket.leave(`support_${roomId}`);
+    console.log(`User ${socket.userId} left support room: support_${roomId}`);
+  });
+  
+  // Handle typing indicators for support chat
+  socket.on('typing_support', ({ roomId, isTyping }) => {
+    socket.to(`support_${roomId}`).emit('user_typing_support', {
+      userId: socket.userId,
+      isTyping,
+      isAdmin: socket.isAdmin || false
+    });
+  });
   
   socket.on('disconnect', () => {
     console.log(`User ${socket.userId} disconnected`);

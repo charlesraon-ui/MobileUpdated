@@ -149,9 +149,26 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               <Pressable
                 onPress={async (e) => {
                   e.stopPropagation();
-                  const action = await toggleWishlist?.(product?._id);
-                  if (action === "added") Alert.alert("Added to wishlist");
-                  else if (action === "removed") Alert.alert("Removed from wishlist");
+                  console.log("🔥 WISHLIST DEBUG: Button pressed for product:", product?._id);
+                  console.log("🔥 WISHLIST DEBUG: toggleWishlist function exists:", !!toggleWishlist);
+                  console.log("🔥 WISHLIST DEBUG: Current saved state:", saved);
+                  
+                  try {
+                    const action = await toggleWishlist?.(product?._id);
+                    console.log("🔥 WISHLIST DEBUG: Action result:", action);
+                    
+                    if (action === "added") {
+                      console.log("🔥 WISHLIST DEBUG: Showing added alert");
+                      Alert.alert("Added to wishlist");
+                    } else if (action === "removed") {
+                      console.log("🔥 WISHLIST DEBUG: Showing removed alert");
+                      Alert.alert("Removed from wishlist");
+                    } else {
+                      console.log("🔥 WISHLIST DEBUG: No action or failed:", action);
+                    }
+                  } catch (error) {
+                    console.error("🔥 WISHLIST DEBUG: Error in wishlist toggle:", error);
+                  }
                 }}
                 style={[s.overlayHeartButton, saved && s.overlayHeartActive]}
               >

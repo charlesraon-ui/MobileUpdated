@@ -15,6 +15,7 @@ export async function searchUsers(req, res) {
     // Transform the response to match frontend expectations
     const transformedUsers = users.map(user => ({
       _id: user._id,
+      name: user.name,
       firstName: user.name ? user.name.split(' ')[0] : '',
       lastName: user.name ? user.name.split(' ').slice(1).join(' ') : '',
       email: user.email,
@@ -42,6 +43,34 @@ export async function getUserById(req, res) {
     res.json({ success: true, user });
   } catch (e) {
     console.error("GET_USER_BY_ID_ERROR:", e);
+    res.status(500).json({ success: false, message: e?.message || "Server error" });
+  }
+}
+
+export async function getAdminUsers(req, res) {
+  try {
+    // Get all users with admin or superadmin role
+    const adminUsers = await User.find({ 
+      role: { $in: ["admin", "superadmin"] } 
+    })
+      .select("name email avatarUrl role")
+      .limit(20)
+      .lean();
+    
+    // Transform the response to match frontend expectations
+    const transformedUsers = adminUsers.map(user => ({
+      _id: user._id,
+      name: user.name || user.email,
+      firstName: user.name ? user.name.split(' ')[0] : '',
+      lastName: user.name ? user.name.split(' ').slice(1).join(' ') : '',
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      role: user.role
+    }));
+    
+    res.json({ success: true, data: { users: transformedUsers } });
+  } catch (e) {
+    console.error("GET_ADMIN_USERS_ERROR:", e);
     res.status(500).json({ success: false, message: e?.message || "Server error" });
   }
 }

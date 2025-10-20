@@ -11,8 +11,9 @@ export default function TabsLayout() {
 }
 
 function TabsInner() {
-  const { orders = [], cart = [] } = useContext(AppCtx);
+  const { orders = [], cart = [], wishlist = [] } = useContext(AppCtx);
   const cartItemCount = cart.reduce((total, item) => total + (item.quantity || 0), 0);
+  const wishlistItemCount = wishlist.length;
 
   // Custom tab bar icon with badge
   const TabBarIcon = ({ name, color, size, badgeCount }) => (
@@ -134,7 +135,12 @@ function TabsInner() {
           title: "Wishlist",
           tabBarLabel: "Wishlist",
           tabBarIcon: ({ color, size }) => (
-            <TabBarIcon name="heart-outline" color={color} size={size + 2} />
+            <TabBarIcon 
+              name="heart-outline" 
+              color={color} 
+              size={size + 2} 
+              badgeCount={wishlistItemCount}
+            />
           ),
         }}
       />

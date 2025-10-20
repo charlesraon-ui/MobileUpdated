@@ -332,8 +332,10 @@ export default function HomeScreen() {
           )}
         </View>
 
+
+
         {/* Search Bar */}
-        <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
           <SearchBar />
         </View>
 

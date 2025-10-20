@@ -89,9 +89,9 @@ export default function CustomerSupportScreen() {
     },
     {
       title: "Live Chat",
-      description: "Chat with us online",
+      description: "Chat with support team in real-time",
       icon: "💬",
-      action: () => router.push("/chat"),
+      action: () => router.push("/support-chat"),
     },
     {
       title: "FAQ",

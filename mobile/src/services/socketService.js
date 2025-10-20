@@ -77,6 +77,31 @@ class SocketService {
     this.socket.on('user_typing_group', (data) => {
       this.emit('user_typing_group', data);
     });
+
+    // Support chat listeners
+    this.socket.on('new_support_request', (data) => {
+      this.emit('new_support_request', data);
+    });
+
+    this.socket.on('admin_joined', (data) => {
+      this.emit('admin_joined', data);
+    });
+
+    this.socket.on('new_support_message', (data) => {
+      this.emit('new_support_message', data);
+    });
+
+    this.socket.on('user_typing_support', (data) => {
+      this.emit('user_typing_support', data);
+    });
+
+    this.socket.on('support_chat_closed', (data) => {
+      this.emit('support_chat_closed', data);
+    });
+
+    this.socket.on('support_chat_taken', (data) => {
+      this.emit('support_chat_taken', data);
+    });
   }
 
   // Join rooms
@@ -114,6 +139,25 @@ class SocketService {
   sendTypingGroup(groupId, isTyping) {
     if (this.socket && this.isConnected) {
       this.socket.emit('typing_group', { groupId, isTyping });
+    }
+  }
+
+  // Support chat methods
+  joinSupportRoom(roomId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('join_support_room', roomId);
+    }
+  }
+
+  leaveSupportRoom(roomId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('leave_support_room', roomId);
+    }
+  }
+
+  sendTypingSupport(roomId, isTyping) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('typing_support', { roomId, isTyping });
     }
   }
 
