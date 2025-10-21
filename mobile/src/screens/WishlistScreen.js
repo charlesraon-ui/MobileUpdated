@@ -17,7 +17,6 @@ import { AppCtx } from "../context/AppContext";
 import { platformShadow } from "../utils/shadow";
 import { Colors, Radii } from "../../constants/theme";
 
-const { width } = Dimensions.get('window');
 const PLACEHOLDER = "https://via.placeholder.com/400x300.png?text=No+Image";
 const C = Colors.light;
 
@@ -37,9 +36,12 @@ function pickImage(product, toAbsoluteUrl) {
 }
 
 export default function WishlistScreen() {
-  const { user, wishlist, loadWishlist, toggleWishlist, toAbsoluteUrl, categoryLabelOf } = useContext(AppCtx);
+  const { user, wishlist, loadWishlist, toggleWishlist, toAbsoluteUrl, categoryLabelOf, isLoggedIn } = useContext(AppCtx);
   const [loading, setLoading] = useState(true);
   const [imageStates, setImageStates] = useState({});
+
+  // Get screen width inside component
+  const { width } = Dimensions.get('window');
 
   // Responsive grid calculation
   const columns = width >= 1200 ? 4 : width >= 992 ? 3 : width >= 768 ? 3 : 2;
@@ -47,51 +49,58 @@ export default function WishlistScreen() {
 
   useEffect(() => {
     const fetchWishlist = async () => {
-      if (user) {
+      try {
         setLoading(true);
         await loadWishlist();
-        setLoading(false);
-      } else {
+      } catch (error) {
+        console.error("Error loading wishlist:", error);
+      } finally {
         setLoading(false);
       }
     };
+
     fetchWishlist();
   }, [user, loadWishlist]);
 
-  const handleRemoveFromWishlist = async (productId, productName) => {
+  const confirmRemoveFromWishlist = (productId, productName) => {
     Alert.alert(
       "Remove from Wishlist",
-      `Remove "${productName}" from your wishlist?`,
+      `Are you sure you want to remove "${productName}" from your wishlist?`,
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
         {
           text: "Remove",
           style: "destructive",
-          onPress: async () => {
-            try {
-              console.log("🔥 WISHLIST REMOVE: Starting removal for product:", productId);
-              console.log("🔥 WISHLIST REMOVE: Current wishlist length:", wishlist.length);
-              
-              const result = await toggleWishlist(productId);
-              console.log("🔥 WISHLIST REMOVE: Toggle result:", result);
-              
-              if (result === "removed") {
-                console.log("🔥 WISHLIST REMOVE: Successfully removed, reloading wishlist");
-                // Force reload the wishlist to ensure UI updates
-                await loadWishlist();
-                Alert.alert("Success", `"${productName}" removed from wishlist`);
-              } else {
-                console.log("🔥 WISHLIST REMOVE: Unexpected result:", result);
-                Alert.alert("Warning", "Item may not have been removed properly");
-              }
-            } catch (error) {
-              console.error("🔥 WISHLIST REMOVE: Error:", error);
-              Alert.alert("Error", "Failed to remove item from wishlist");
-            }
-          }
+          onPress: () => handleRemoveFromWishlist(productId, productName)
         }
       ]
     );
+  };
+
+  const handleRemoveFromWishlist = async (productId, productName) => {
+
+    try {
+      // Find the product in the wishlist
+      const product = wishlist.find(item => item._id === productId);
+      if (!product) {
+  
+        return;
+      }
+
+
+      
+      // Call toggleWishlist to remove the item
+      const result = await toggleWishlist(product);
+      
+      // Reload the wishlist to reflect changes
+      await loadWishlist();
+      
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+    }
   };
 
   const renderWishlistItem = ({ item }) => {
@@ -152,7 +161,7 @@ export default function WishlistScreen() {
             {/* Remove Button */}
             <TouchableOpacity
               style={styles.removeButton}
-              onPress={() => handleRemoveFromWishlist(item._id, item.name)}
+              onPress={() => confirmRemoveFromWishlist(item._id, item.name)}
               activeOpacity={0.8}
             >
               <Ionicons name="heart" size={20} color="#EF4444" />
@@ -210,7 +219,7 @@ export default function WishlistScreen() {
               
               <TouchableOpacity
                 style={[styles.actionButton, styles.removeActionButton]}
-                onPress={() => handleRemoveFromWishlist(item._id, item.name)}
+                onPress={() => confirmRemoveFromWishlist(item._id, item.name)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="trash-outline" size={16} color="#FFFFFF" />

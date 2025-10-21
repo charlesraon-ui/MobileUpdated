@@ -97,3 +97,63 @@ export const Shadows = {
   medium: { opacity: 0.1, radius: 12, y: 6 },
   strong: { opacity: 0.12, radius: 16, y: 8 },
 };
+
+// Responsive breakpoints for different device sizes
+export const Breakpoints = {
+  xs: 320,    // Small phones
+  sm: 375,    // Standard phones
+  md: 414,    // Large phones
+  lg: 768,    // Tablets
+  xl: 1024,   // Large tablets
+  xxl: 1200,  // Desktop/large screens
+};
+
+// Responsive utilities
+export const ResponsiveUtils = {
+  // Get responsive value based on screen width
+  getResponsiveValue: (width: number, values: { xs?: any, sm?: any, md?: any, lg?: any, xl?: any, xxl?: any }) => {
+    if (width >= Breakpoints.xxl && values.xxl !== undefined) return values.xxl;
+    if (width >= Breakpoints.xl && values.xl !== undefined) return values.xl;
+    if (width >= Breakpoints.lg && values.lg !== undefined) return values.lg;
+    if (width >= Breakpoints.md && values.md !== undefined) return values.md;
+    if (width >= Breakpoints.sm && values.sm !== undefined) return values.sm;
+    return values.xs;
+  },
+  
+  // Get number of columns for grid layouts
+  getGridColumns: (width: number) => {
+    if (width >= Breakpoints.xxl) return 6;
+    if (width >= Breakpoints.xl) return 4;
+    if (width >= Breakpoints.lg) return 3;
+    if (width >= Breakpoints.md) return 2;
+    return 2;
+  },
+  
+  // Get category chip columns
+  getCategoryColumns: (width: number) => {
+    if (width >= Breakpoints.xl) return 6;
+    if (width >= Breakpoints.lg) return 5;
+    if (width >= Breakpoints.md) return 4;
+    return 4;
+  },
+  
+  // Get responsive padding
+  getResponsivePadding: (width: number) => {
+    if (width >= Breakpoints.xl) return 32;
+    if (width >= Breakpoints.lg) return 24;
+    if (width >= Breakpoints.md) return 20;
+    return 16;
+  },
+  
+  // Get responsive font size
+  getResponsiveFontSize: (width: number, baseSize: number) => {
+    const scale = width >= Breakpoints.lg ? 1.1 : width >= Breakpoints.md ? 1.05 : 1;
+    return Math.round(baseSize * scale);
+  },
+  
+  // Check if device is tablet or larger
+  isTablet: (width: number) => width >= Breakpoints.lg,
+  
+  // Check if device is large screen
+  isLargeScreen: (width: number) => width >= Breakpoints.xl,
+};

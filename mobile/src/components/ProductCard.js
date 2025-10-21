@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import {
   Animated,
+  Dimensions,
   Image,
   Pressable,
   StyleSheet,
@@ -11,7 +12,7 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import { platformShadow } from "../utils/shadow";
-import { Colors, Radii } from "../../constants/theme";
+import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
 
 const PLACEHOLDER = "https://via.placeholder.com/400x300.png?text=No+Image";
 const C = Colors.light;
@@ -35,6 +36,8 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   const { handleAddToCart, categoryLabelOf, toAbsoluteUrl, toggleWishlist, isInWishlist } = useContext(AppCtx);
   const [imageLoading, setImageLoading] = useState(true);
   const [scaleValue] = useState(new Animated.Value(1));
+  
+  const s = getStyles();
   
   const img = pickImage(product, toAbsoluteUrl);
   const saved = isInWishlist?.(product?._id);
@@ -278,7 +281,12 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = () => {
+  const { width } = Dimensions.get('window');
+  const isTablet = ResponsiveUtils.isTablet(width);
+  const responsiveFontSize = (baseSize) => ResponsiveUtils.getResponsiveFontSize(width, baseSize);
+  
+  return StyleSheet.create({
   cardContainer: {
     marginBottom: 16,
   },
@@ -298,10 +306,10 @@ const s = StyleSheet.create({
   
   imageContainer: {
     position: "relative",
-    height: 180,
+    height: isTablet ? 220 : 180,
     overflow: "hidden",
   },
-  compactImageHeight: { height: 120 },
+  compactImageHeight: { height: isTablet ? 140 : 120 },
   
   image: {
     width: "100%",
@@ -350,7 +358,7 @@ const s = StyleSheet.create({
   
   outOfStockText: {
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: responsiveFontSize(11),
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -368,7 +376,7 @@ const s = StyleSheet.create({
   
   discountText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: "700",
   },
 
@@ -446,14 +454,14 @@ const s = StyleSheet.create({
   },
   
   name: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: "800",
     color: C.text,
-    lineHeight: 24,
+    lineHeight: responsiveFontSize(24),
     marginBottom: 12,
     letterSpacing: -0.2,
   },
-  compactName: { fontSize: 13, lineHeight: 18, marginBottom: 8 },
+  compactName: { fontSize: responsiveFontSize(13), lineHeight: responsiveFontSize(18), marginBottom: 8 },
   
   detailsContainer: {
     flexDirection: "row",
@@ -531,24 +539,24 @@ const s = StyleSheet.create({
     fontWeight: "700",
     marginRight: 2,
   },
-  compactCurrency: { fontSize: 12 },
+  compactCurrency: { fontSize: responsiveFontSize(12) },
   
   price: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     color: C.accent,
     fontWeight: "900",
     letterSpacing: -0.5,
   },
-  compactPrice: { fontSize: 16 },
+  compactPrice: { fontSize: responsiveFontSize(16) },
   
   originalPrice: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     color: "#9CA3AF",
     fontWeight: "600",
     textDecorationLine: "line-through",
     marginLeft: 8,
   },
-  compactOriginalPrice: { fontSize: 12 },
+  compactOriginalPrice: { fontSize: responsiveFontSize(12) },
   
   addButton: {
     backgroundColor: C.accent,
@@ -578,11 +586,11 @@ const s = StyleSheet.create({
   
   addButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-  compactAddText: { fontSize: 13 },
+  compactAddText: { fontSize: responsiveFontSize(13) },
   
   addButtonTextDisabled: {
     color: "#9CA3AF",
@@ -670,4 +678,5 @@ const s = StyleSheet.create({
     color: "#D97706",
     fontWeight: "700",
   },
-});
+  });
+};

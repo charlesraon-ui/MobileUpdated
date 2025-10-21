@@ -18,6 +18,7 @@ import Constants from "expo-constants";
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
+import { ResponsiveUtils } from "../../constants/theme";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -27,6 +28,7 @@ const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 :
 export default function LoginScreen() {
   const { doLogin } = useContext(AppCtx);
   const router = useRouter();
+  const { width } = Dimensions.get('window');
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,6 +67,173 @@ export default function LoginScreen() {
       setSubmitting(false);
     }
   };
+
+  const s = StyleSheet.create({
+    bg: { flex: 1, minHeight: height, overflow: "hidden" },
+    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+    container: { 
+      flex: 1, 
+      minHeight: height, 
+      padding: 20, 
+      paddingTop: topPad, 
+      justifyContent: "center" 
+    },
+    card: {
+      backgroundColor: "rgba(255,255,255,0.98)",
+      borderRadius: 20,
+      padding: 24,
+      paddingTop: 28,
+      ...Platform.select({
+        default: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.2,
+          shadowRadius: 20,
+        },
+        android: { elevation: 10 },
+      }),
+      maxWidth: 420,
+      alignSelf: "center",
+      width: "100%",
+    },
+    logoRow: { 
+      flexDirection: "row", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      gap: 12, 
+      marginBottom: 12, 
+      paddingTop: 8, 
+      width: "100%" 
+    },
+    brand: { 
+      fontSize: ResponsiveUtils.isTablet(width) ? 24 : 20, 
+      lineHeight: ResponsiveUtils.isTablet(width) ? 28 : 24, 
+      fontWeight: "800", 
+      color: "#065F46",
+      letterSpacing: 0.5,
+    },
+    title: { 
+      fontSize: ResponsiveUtils.isTablet(width) ? 32 : 28, 
+      fontWeight: "900", 
+      marginBottom: 8, 
+      color: "#111827",
+      textAlign: "center",
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      color: "#6B7280",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    formContainer: {
+      gap: 20,
+    },
+    inputGroup: {
+      gap: 8,
+    },
+    label: { 
+      fontWeight: "600", 
+      color: "#374151", 
+      fontSize: ResponsiveUtils.isTablet(width) ? 17 : 15,
+      marginLeft: 4,
+    },
+    input: {
+      borderWidth: 2,
+      borderColor: "#E5E7EB",
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      backgroundColor: "#FFFFFF",
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      ...Platform.select({
+        default: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+        },
+        android: { elevation: 2 },
+      }),
+    },
+    inputFocused: {
+      borderColor: "#10B981",
+      shadowColor: "#10B981",
+      shadowOpacity: 0.15,
+    },
+    small: { 
+      color: "#6B7280", 
+      textAlign: "center",
+      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
+      lineHeight: 20,
+    },
+    link: {
+      color: "#10B981",
+      fontWeight: "600",
+    },
+    loading: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      gap: 12,
+    },
+    loadingText: {
+      color: "#6B7280",
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      fontWeight: "500",
+    },
+    primaryBtn: {
+      backgroundColor: "#10B981",
+      paddingVertical: 16,
+      borderRadius: 14,
+      alignItems: "center",
+      ...Platform.select({
+        default: {
+          shadowColor: "#10B981",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        },
+        android: { elevation: 4 },
+      }),
+    },
+    primaryBtnText: { 
+      color: "#FFFFFF", 
+      fontSize: ResponsiveUtils.isTablet(width) ? 19 : 17, 
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    btnDisabled: { opacity: 0.6 },
+    guestBtn: {
+      backgroundColor: "#F9FAFB",
+      borderWidth: 2,
+      borderColor: "#E5E7EB",
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: "center",
+      ...Platform.select({
+        default: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+        },
+        android: { elevation: 2 },
+      }),
+    },
+    guestBtnText: { 
+      color: "#6B7280", 
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16, 
+      fontWeight: "600" 
+    },
+    linksContainer: {
+      marginTop: 24,
+      gap: 12,
+      alignItems: "center",
+    },
+  });
 
   return (
     <ImageBackground
@@ -167,170 +336,3 @@ export default function LoginScreen() {
     </ImageBackground>
   );
 }
-
-const s = StyleSheet.create({
-  bg: { flex: 1, minHeight: height, overflow: "hidden" },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
-  container: { 
-    flex: 1, 
-    minHeight: height, 
-    padding: 20, 
-    paddingTop: topPad, 
-    justifyContent: "center" 
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.98)",
-    borderRadius: 20,
-    padding: 24,
-    paddingTop: 28,
-    ...Platform.select({
-      default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-      },
-      android: { elevation: 10 },
-    }),
-    maxWidth: 420,
-    alignSelf: "center",
-    width: "100%",
-  },
-  logoRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    justifyContent: "center", 
-    gap: 12, 
-    marginBottom: 12, 
-    paddingTop: 8, 
-    width: "100%" 
-  },
-  brand: { 
-    fontSize: 20, 
-    lineHeight: 24, 
-    fontWeight: "800", 
-    color: "#065F46",
-    letterSpacing: 0.5,
-  },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "900", 
-    marginBottom: 8, 
-    color: "#111827",
-    textAlign: "center",
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  formContainer: {
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: { 
-    fontWeight: "600", 
-    color: "#374151", 
-    fontSize: 15,
-    marginLeft: 4,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    fontSize: 16,
-    ...Platform.select({
-      default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  inputFocused: {
-    borderColor: "#10B981",
-    shadowColor: "#10B981",
-    shadowOpacity: 0.15,
-  },
-  small: { 
-    color: "#6B7280", 
-    textAlign: "center",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  link: {
-    color: "#10B981",
-    fontWeight: "600",
-  },
-  loading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    gap: 12,
-  },
-  loadingText: {
-    color: "#6B7280",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  primaryBtn: {
-    backgroundColor: "#10B981",
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    ...Platform.select({
-      default: {
-        shadowColor: "#10B981",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: { elevation: 4 },
-    }),
-  },
-  primaryBtnText: { 
-    color: "#FFFFFF", 
-    fontSize: 17, 
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  btnDisabled: { opacity: 0.6 },
-  guestBtn: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    ...Platform.select({
-      default: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  guestBtnText: { 
-    color: "#6B7280", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  linksContainer: {
-    marginTop: 24,
-    gap: 12,
-    alignItems: "center",
-  },
-});

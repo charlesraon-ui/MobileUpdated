@@ -13,11 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
 import { AppCtx } from "../context/AppContext";
-import SearchBar from "../components/SearchBar";
-import { Colors, Radii } from "../../constants/theme";
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const {
@@ -36,6 +33,8 @@ export default function HomeScreen() {
     setSelectedCategory,
     loyalty,
   } = useContext(AppCtx);
+
+  const { width } = Dimensions.get('window');
 
   // Debug logging
   console.log("HomeScreen DEBUG: products:", products);
@@ -275,64 +274,725 @@ export default function HomeScreen() {
     return user ? `${timeGreeting}, ${user.name?.split(' ')[0] || 'there'}!` : `${timeGreeting}!`;
   };
 
+  const responsivePadding = ResponsiveUtils.getResponsivePadding(width);
+  const categoryColumns = ResponsiveUtils.getCategoryColumns(width);
+  const categoryChipWidth = (width - (responsivePadding * 2) - ((categoryColumns - 1) * 12)) / categoryColumns;
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.light.surface,
+    },
+    // Center content and limit max width on wide screens
+    pageWrap: {
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: 1200,
+    },
+    
+    // Header
+    header: {
+      backgroundColor: Colors.light.accent,
+      paddingTop: 50,
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+    },
+    
+    headerContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    
+    greetingContainer: {
+      flex: 1,
+    },
+    
+    greeting: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: "#FFFFFF",
+      marginBottom: 4,
+      letterSpacing: -0.5,
+    },
+    
+    headerSubtitle: {
+      fontSize: 16,
+      color: "rgba(255, 255, 255, 0.8)",
+      fontWeight: "500",
+    },
+    
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    
+    pointsContainer: {
+       flexDirection: "row",
+       alignItems: "center",
+       backgroundColor: "rgba(255, 255, 255, 0.15)",
+       borderRadius: 20,
+       paddingHorizontal: 12,
+       paddingVertical: 8,
+       borderWidth: 1,
+       borderColor: "rgba(255, 255, 255, 0.3)",
+     },
+     
+     pointsIcon: {
+       fontSize: 16,
+       marginRight: 6,
+     },
+     
+     pointsInfo: {
+       alignItems: "flex-end",
+     },
+     
+     pointsText: {
+       color: "#FFFFFF",
+       fontSize: 14,
+       fontWeight: "700",
+     },
+     
+     tierText: {
+       color: "rgba(255, 255, 255, 0.8)",
+       fontSize: 10,
+       fontWeight: "600",
+       textTransform: "uppercase",
+       letterSpacing: 0.5,
+     },
+    
+    profileButton: {
+      marginLeft: 0,
+    },
+    
+    profileAvatar: {
+      width: 44,
+      height: 44,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "rgba(255, 255, 255, 0.3)",
+    },
+    
+    profileAvatarText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+
+    // Welcome banner
+    bannerWelcome: {
+      marginTop: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      borderRadius: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backdropFilter: "blur(10px)",
+    },
+    
+    bannerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    
+    bannerIcon: {
+      fontSize: 24,
+      marginRight: 12,
+    },
+    
+    bannerWelcomeTxt: { 
+      color: "#FFFFFF", 
+      fontWeight: "600",
+      fontSize: 16,
+      flex: 1,
+    },
+    
+    bannerCloseButton: {
+      padding: 4,
+    },
+    
+    bannerWelcomeClose: { 
+      color: "#FFFFFF", 
+      fontWeight: "700",
+      fontSize: 18,
+    },
+
+    // Search
+    searchSection: {
+      backgroundColor: Colors.light.card,
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.light.surface,
+      borderRadius: Radii.lg,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+    },
+    
+    searchIcon: {
+      fontSize: 18,
+      marginRight: 12,
+    },
+    
+    searchPlaceholder: {
+      fontSize: 16,
+      color: Colors.light.muted,
+      flex: 1,
+      fontWeight: "500",
+    },
+    
+    searchButton: {
+      backgroundColor: Colors.light.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: Radii.md,
+    },
+    
+    searchButtonText: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+
+    // Sections
+    section: {
+      backgroundColor: Colors.light.card,
+      marginTop: 8,
+      paddingHorizontal: 20,
+      paddingVertical: 24,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    
+    sectionTitle: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: Colors.light.text,
+      letterSpacing: -0.3,
+    },
+    
+    seeAllText: {
+      fontSize: 16,
+      color: Colors.light.accent,
+      fontWeight: "600",
+    },
+
+    // Categories
+    categoriesChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+
+    categoryChip: {
+      width: categoryChipWidth,
+      minWidth: ResponsiveUtils.isTablet(width) ? 100 : 80,
+      backgroundColor: Colors.light.surface,
+      borderRadius: Radii.lg,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+      paddingVertical: ResponsiveUtils.isTablet(width) ? 12 : 10,
+      paddingHorizontal: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    categoryChipIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+
+    categoryChipIcon: {
+      fontSize: 18,
+    },
+
+    categoryChipLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: Colors.light.text,
+      textAlign: 'center',
+      textTransform: 'capitalize',
+    },
+
+    // Products
+    productsScroll: {
+      marginHorizontal: -20,
+    },
+    
+    productsScrollContent: {
+      paddingHorizontal: 20,
+      paddingRight: 40,
+    },
+    
+    productCard: {
+      width: ResponsiveUtils.isTablet(width) ? 200 : 170,
+      backgroundColor: Colors.light.card,
+      borderRadius: Radii.lg,
+      marginRight: 16,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+      overflow: 'hidden',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    
+    productImageContainer: {
+      height: ResponsiveUtils.isTablet(width) ? 150 : 130,
+      position: 'relative',
+    },
+    
+    wishlistHeart: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    
+    wishlistHeartActive: {
+      backgroundColor: '#FEE2E2',
+    },
+    
+    wishlistHeartIcon: {
+      fontSize: 16,
+      color: '#9CA3AF',
+    },
+    
+    wishlistHeartIconActive: {
+      color: '#DC2626',
+    },
+    
+    priceTag: {
+      position: 'absolute',
+      bottom: 8,
+      left: 8,
+      backgroundColor: Colors.light.accent,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    priceTagText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    
+    ratingChip: {
+      position: 'absolute',
+      bottom: 8,
+      right: 8,
+      backgroundColor: '#FEF3C7',
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    ratingChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#D97706',
+    },
+    
+    productImage: {
+      width: "100%",
+      height: "100%",
+    },
+    
+    productImagePlaceholder: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: Colors.light.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    
+    productImageText: {
+      fontSize: 32,
+    },
+    
+    productInfo: {
+      padding: 14,
+      paddingTop: 12,
+    },
+    
+    productName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: Colors.light.text,
+      marginBottom: 8,
+      lineHeight: 20,
+    },
+    
+    productMeta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 4,
+    },
+    
+    productCategory: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: Colors.light.muted,
+      textTransform: "capitalize",
+      flex: 1,
+    },
+    
+    stockIndicator: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: "#10B981",
+      backgroundColor: "#ECFDF5",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      textAlign: "center",
+    },
+    
+    lowStock: {
+      color: "#DC2626",
+      backgroundColor: "#FEF2F2",
+    },
+    
+    productFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    
+    productPrice: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: Colors.light.accent,
+    },
+    
+    ratingBadge: {
+      backgroundColor: "#FEF3C7",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    
+    ratingText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: "#D97706",
+    },
+
+    // Best Offers
+    offersScroll: {
+      marginHorizontal: -20,
+    },
+    
+    offersScrollContent: {
+      paddingHorizontal: 20,
+      paddingRight: 40,
+    },
+    
+    offerCard: {
+      width: ResponsiveUtils.isTablet(width) ? 180 : 150,
+      backgroundColor: Colors.light.card,
+      borderRadius: Radii.lg,
+      marginRight: 16,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+      overflow: 'hidden',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    
+    offerImageWrap: {
+      height: ResponsiveUtils.isTablet(width) ? 120 : 100,
+      position: 'relative',
+    },
+    
+    offerImage: {
+      width: "100%",
+      height: "100%",
+    },
+    
+    offerImagePlaceholder: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: Colors.light.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    
+    bundleTag: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      backgroundColor: '#8B5CF6',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    
+    bundleTagText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    
+    offerInfo: {
+      padding: 12,
+    },
+    
+    offerName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: Colors.light.text,
+      marginBottom: 6,
+    },
+    
+    offerPrice: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: Colors.light.accent,
+    },
+
+    // Features
+    featuresContainer: {
+      marginTop: 4,
+      gap: 12,
+    },
+    
+    featureCard: {
+      backgroundColor: Colors.light.surface,
+      borderRadius: Radii.lg,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+    },
+    
+    featureContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    
+    featureIconContainer: {
+      width: 48,
+      height: 48,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    featureIcon: {
+      fontSize: 20,
+    },
+    
+    featureText: {
+      flex: 1,
+    },
+    
+    featureTitle: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: "#111827",
+      marginBottom: 4,
+    },
+    
+    featureSubtitle: {
+      fontSize: 14,
+      color: "#6B7280",
+      fontWeight: "500",
+    },
+    
+    chevron: {
+      fontSize: 24,
+      color: "#9CA3AF",
+      fontWeight: "300",
+    },
+
+    // Empty State
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 48,
+    },
+    
+    emptyStateIcon: {
+      fontSize: 56,
+      marginBottom: 20,
+    },
+    
+    emptyStateTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#111827",
+      marginBottom: 8,
+    },
+    
+    emptyStateText: {
+      fontSize: 16,
+      color: "#6B7280",
+      textAlign: "center",
+      lineHeight: 24,
+    },
+
+    // Offer Banner
+    offerBanner: {
+      backgroundColor: '#F59E0B',
+      borderRadius: Radii.lg,
+      padding: 20,
+      marginTop: 4,
+    },
+    
+    offerBannerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    
+    offerBannerText: {
+      flex: 1,
+    },
+    
+    offerBannerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#FFFFFF",
+      marginBottom: 4,
+    },
+    
+    offerBannerSubtitle: {
+      fontSize: 14,
+      color: "rgba(255, 255, 255, 0.9)",
+      fontWeight: "500",
+    },
+    
+    offerButton: {
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: Radii.md,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.3)",
+    },
+    
+    offerButtonText: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+
+    // Bottom spacing
+    bottomSpacer: {
+      height: 32,
+    },
+  });
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#10B981" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.light.accent} />
       
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}>
+      <View style={styles.pageWrap}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.greetingContainer}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.headerSubtitle}>What would you like to explore today?</Text>
+              <Text style={styles.headerSubtitle}>
+                {user ? "Ready to shop?" : "Welcome to our store!"}
+              </Text>
             </View>
+            
             <View style={styles.headerRight}>
-              {/* Loyalty Points Display */}
-               {loyalty?.points !== undefined && (
-                 <TouchableOpacity 
-                   style={styles.pointsContainer}
-                   onPress={() => router.push("/tabs/profile")}
-                   activeOpacity={0.8}
-                 >
-                   <Text style={styles.pointsIcon}>💎</Text>
-                   <View style={styles.pointsInfo}>
-                     <Text style={styles.pointsText}>{loyalty.points}</Text>
-                     {loyalty.tier && (
-                       <Text style={styles.tierText}>{loyalty.tier}</Text>
-                     )}
-                   </View>
-                 </TouchableOpacity>
-               )}
+              {/* Loyalty Points */}
+              {user && loyalty && (
+                <View style={styles.pointsContainer}>
+                  <Text style={styles.pointsIcon}>⭐</Text>
+                  <View style={styles.pointsInfo}>
+                    <Text style={styles.pointsText}>{loyalty.points || 0}</Text>
+                    <Text style={styles.tierText}>{loyalty.tier || 'Bronze'}</Text>
+                  </View>
+                </View>
+              )}
               
+              {/* Profile Avatar */}
               <TouchableOpacity 
-                style={styles.profileButton} 
-                onPress={() => router.push("/tabs/profile")}
+                style={styles.profileButton}
+                onPress={() => user ? router.push('/tabs/profile') : router.push('/login')}
                 activeOpacity={0.8}
               >
                 <View style={styles.profileAvatar}>
                   <Text style={styles.profileAvatarText}>
-                    {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                    {user ? (user.name?.[0]?.toUpperCase() || '👤') : '👤'}
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* One-time Welcome banner (login/register) */}
+          {/* Welcome Banner */}
           {showWelcome && (
             <Animated.View style={[styles.bannerWelcome, { opacity: fadeAnim }]}>
               <View style={styles.bannerContent}>
-                <Text style={styles.bannerIcon}>
-                  {justRegistered ? '🎉' : '👋'}
-                </Text>
+                <Text style={styles.bannerIcon}>🎉</Text>
                 <Text style={styles.bannerWelcomeTxt}>
-                  {justRegistered
-                    ? `Welcome to our store, ${justLoggedInName}!`
-                    : `Welcome back, ${justLoggedInName}!`}
+                  {justRegistered 
+                    ? `Welcome to our store, ${justLoggedInName}!` 
+                    : `Welcome back, ${justLoggedInName}!`
+                  }
                 </Text>
               </View>
-              <TouchableOpacity
+              <TouchableOpacity 
+                style={styles.bannerCloseButton}
                 onPress={() => {
                   Animated.timing(fadeAnim, {
                     toValue: 0,
@@ -344,880 +1004,155 @@ export default function HomeScreen() {
                     setJustRegistered(false);
                   });
                 }}
-                style={styles.bannerCloseButton}
               >
-                <Text style={styles.bannerWelcomeClose}>✕</Text>
+                <Text style={styles.bannerWelcomeClose}>×</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
         </View>
 
-
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <SearchBar />
-        </View>
-
-        {/* Categories - Dynamic from context */}
-        {categories && categories.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Shop by Category</Text>
-              <TouchableOpacity onPress={() => router.push("/tabs/products")}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.categoriesChipsRow}>
-              {categories.slice(0, 8).map((category, index) => (
-                <CategoryCard key={category} category={category} index={index} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Special Bundles */}
-        {bundles.length > 0 && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.bundlesBox}
-              activeOpacity={0.85}
-              onPress={() => router.push('/bundles')}
-            >
-              <View style={styles.bundlesBoxContent}>
-                <View style={styles.bundlesBoxLeft}>
-                  <View style={styles.bundlesIconContainer}>
-                    <Text style={styles.bundlesIcon}>🎁</Text>
-                  </View>
-                  <View style={styles.bundlesTextContainer}>
-                    <Text style={styles.bundlesTitle}>Special Bundles</Text>
-                    <Text style={styles.bundlesSubtitle}>
-                      {bundles.length} exclusive bundle{bundles.length !== 1 ? 's' : ''} available
-                    </Text>
-                    <Text style={styles.bundlesDescription}>
-                      Save more with our curated product bundles
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.bundlesBoxRight}>
-                  <Text style={styles.bundlesChevron}>›</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Recommended Products */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
-            {recommendedProducts.length > 0 && (
-              <TouchableOpacity onPress={() => router.push("/tabs/products")}>
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {recommendedProducts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>🛍️</Text>
-              <Text style={styles.emptyStateTitle}>Discover Amazing Products</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Browse our catalog to get personalized recommendations
-              </Text>
-              <TouchableOpacity
-                style={styles.browseButton}
-                onPress={() => router.push("/tabs/products")}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.browseButtonText}>Start Shopping</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.productsScroll}
-              contentContainerStyle={styles.productsScrollContent}
-            >
-              {recommendedProducts.slice(0, 10).map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* Quick Features */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.featuresContainer}>
-            <FeatureCard
-              title="My Orders"
-              subtitle="Track your purchases"
-              icon="📦"
-              onPress={() => router.push("/tabs/profile")}
-            />
-            <FeatureCard
-              title="My Profile"
-              subtitle="Manage your account"
-              icon="👤"
-              onPress={() => router.push("/tabs/profile")}
-            />
-            <FeatureCard
-              title="Customer Support"
-              subtitle="Get help anytime"
-              icon="💬"
-              onPress={() => router.push("/support")}
-            />
-          </View>
-        </View>
-
-        {/* Special Offers Banner */}
-        <View style={styles.section}>
+        {/* Search */}
+        <View style={styles.searchSection}>
           <TouchableOpacity 
-            style={styles.offerBanner}
-            onPress={() => router.push("/tabs/products")}
+            style={styles.searchBar}
+            onPress={() => router.push('/search')}
             activeOpacity={0.8}
           >
-            <View style={styles.offerContent}>
-              <View style={styles.offerText}>
-                <Text style={styles.offerTitle}>🎉 Special Deals</Text>
-                <Text style={styles.offerSubtitle}>Discover great products at amazing prices</Text>
-              </View>
-              <View style={styles.offerButton}>
-                <Text style={styles.offerButtonText}>Shop Now</Text>
-              </View>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <Text style={styles.searchPlaceholder}>Search products...</Text>
+            <View style={styles.searchButton}>
+              <Text style={styles.searchButtonText}>Search</Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Categories */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Categories</Text>
+              <TouchableOpacity onPress={() => router.push('/tabs/products')}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.categoriesChipsRow}>
+              {(categories || []).slice(0, 8).map((category, index) => (
+                <CategoryCard key={category} category={category} index={index} />
+              ))}
+            </View>
+          </View>
+
+          {/* Recommended Products */}
+          {recommendedProducts && recommendedProducts.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recommended for You</Text>
+                <TouchableOpacity onPress={() => router.push('/tabs/products')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.productsScroll}
+                contentContainerStyle={styles.productsScrollContent}
+              >
+                {recommendedProducts.map((product) => (
+                  <ProductCard key={product._id} product={product} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Best Offers */}
+          {bestOffers.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Best Offers</Text>
+                <TouchableOpacity onPress={() => router.push('/tabs/products')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.offersScroll}
+                contentContainerStyle={styles.offersScrollContent}
+              >
+                {bestOffers.map((offer, index) => (
+                  <OfferCard key={`${offer.type}-${offer.item?._id || index}`} data={offer} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Features */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Explore</Text>
+            </View>
+            
+            <View style={styles.featuresContainer}>
+              <FeatureCard
+                title="All Products"
+                subtitle="Browse our complete catalog"
+                icon="🛍️"
+                onPress={() => router.push('/tabs/products')}
+              />
+              
+              <FeatureCard
+                title="Product Bundles"
+                subtitle="Save more with bundle deals"
+                icon="📦"
+                onPress={() => router.push('/bundles')}
+              />
+              
+              {user && (
+                <FeatureCard
+                  title="My Wishlist"
+                  subtitle="View your saved items"
+                  icon="❤️"
+                  onPress={() => router.push('/tabs/wishlist')}
+                />
+              )}
+              
+              <FeatureCard
+                title="Customer Support"
+                subtitle="Get help when you need it"
+                icon="💬"
+                onPress={() => Alert.alert("Support", "Contact us at support@example.com")}
+              />
+            </View>
+          </View>
+
+          {/* Special Offer Banner */}
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={styles.offerBanner}
+              onPress={() => router.push('/tabs/products')}
+              activeOpacity={0.9}
+            >
+              <View style={styles.offerBannerContent}>
+                <View style={styles.offerBannerText}>
+                  <Text style={styles.offerBannerTitle}>🎉 Special Offer!</Text>
+                  <Text style={styles.offerBannerSubtitle}>
+                    Get up to 50% off on selected items
+                  </Text>
+                </View>
+                <View style={styles.offerButton}>
+                  <Text style={styles.offerButtonText}>Shop Now</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom Spacing */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </View>
     </View>
   );
 }
-
-  const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.surface,
-  },
-  // Center content and limit max width on wide screens
-  pageWrap: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 1200,
-  },
-  
-  // Header
-  header: {
-    backgroundColor: Colors.light.accent,
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  
-  greetingContainer: {
-    flex: 1,
-  },
-  
-  greeting: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  
-  headerSubtitle: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "500",
-  },
-  
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  
-  pointsContainer: {
-     flexDirection: "row",
-     alignItems: "center",
-     backgroundColor: "rgba(255, 255, 255, 0.15)",
-     borderRadius: 20,
-     paddingHorizontal: 12,
-     paddingVertical: 8,
-     borderWidth: 1,
-     borderColor: "rgba(255, 255, 255, 0.3)",
-   },
-   
-   pointsIcon: {
-     fontSize: 16,
-     marginRight: 6,
-   },
-   
-   pointsInfo: {
-     alignItems: "flex-end",
-   },
-   
-   pointsText: {
-     color: "#FFFFFF",
-     fontSize: 14,
-     fontWeight: "700",
-   },
-   
-   tierText: {
-     color: "rgba(255, 255, 255, 0.8)",
-     fontSize: 10,
-     fontWeight: "600",
-     textTransform: "uppercase",
-     letterSpacing: 0.5,
-   },
-  
-  profileButton: {
-    marginLeft: 0,
-  },
-  
-  profileAvatar: {
-    width: 44,
-    height: 44,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  
-  profileAvatarText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  // Welcome banner
-  bannerWelcome: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backdropFilter: "blur(10px)",
-  },
-  
-  bannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  
-  bannerIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  
-  bannerWelcomeTxt: { 
-    color: "#FFFFFF", 
-    fontWeight: "600",
-    fontSize: 16,
-    flex: 1,
-  },
-  
-  bannerCloseButton: {
-    padding: 4,
-  },
-  
-  bannerWelcomeClose: { 
-    color: "#FFFFFF", 
-    fontWeight: "700",
-    fontSize: 18,
-  },
-
-  // Search
-  searchSection: {
-    backgroundColor: Colors.light.card,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radii.lg,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 12,
-  },
-  
-  searchPlaceholder: {
-    fontSize: 16,
-    color: Colors.light.muted,
-    flex: 1,
-    fontWeight: "500",
-  },
-  
-  searchButton: {
-    backgroundColor: Colors.light.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: Radii.md,
-  },
-  
-  searchButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  // Sections
-  section: {
-    backgroundColor: Colors.light.card,
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.light.text,
-    letterSpacing: -0.3,
-  },
-  
-  seeAllText: {
-    fontSize: 16,
-    color: Colors.light.accent,
-    fontWeight: "600",
-  },
-
-  // Categories
-  categoriesChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-
-  categoryChip: {
-    width: (width - 80) / 4, // 4 per row on phones
-    minWidth: 80,
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  categoryChipIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-
-  categoryChipIcon: {
-    fontSize: 18,
-  },
-
-  categoryChipLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.light.text,
-    textAlign: 'center',
-    textTransform: 'capitalize',
-  },
-
-  // Products
-  productsScroll: {
-    marginHorizontal: -20,
-  },
-  
-  productsScrollContent: {
-    paddingHorizontal: 20,
-    paddingRight: 40,
-  },
-  
-  productCard: {
-    width: 170,
-    backgroundColor: Colors.light.card,
-    borderRadius: 16,
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
-  },
-  
-  productImageContainer: {
-    height: 130,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: "hidden",
-    position: "relative",
-  },
-
-  // Overlays on product image
-  wishlistHeart: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  wishlistHeartActive: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FCA5A5',
-  },
-  wishlistHeartIcon: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '700',
-  },
-  wishlistHeartIconActive: {
-    color: '#DC2626',
-  },
-
-  priceTag: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(16,185,129,0.92)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  priceTagText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  ratingChip: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(254,243,199,0.92)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  ratingChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#D97706',
-  },
-  
-  productImage: {
-    width: "100%",
-    height: "100%",
-  },
-  
-  productImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: Colors.light.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  
-  productImageText: {
-    fontSize: 32,
-  },
-  
-  productInfo: {
-    padding: 14,
-    paddingTop: 12,
-  },
-  
-  productName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.light.text,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  
-  productMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  
-  productCategory: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: Colors.light.muted,
-    textTransform: "capitalize",
-    flex: 1,
-  },
-  
-  stockIndicator: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#10B981",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    textAlign: "center",
-  },
-  
-  lowStock: {
-    color: "#DC2626",
-    backgroundColor: "#FEF2F2",
-  },
-  
-  productFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  
-  productPrice: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.light.accent,
-  },
-  
-  ratingBadge: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  
-  ratingText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#D97706",
-  },
-
-  // Features
-  featuresContainer: {
-    marginTop: 4,
-    gap: 12,
-  },
-  
-  featureCard: {
-    backgroundColor: Colors.light.surface,
-    borderRadius: Radii.lg,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  
-  featureContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  
-  featureIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  featureIcon: {
-    fontSize: 20,
-  },
-  
-  featureText: {
-    flex: 1,
-  },
-  
-  featureTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  
-  featureSubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  
-  chevron: {
-    fontSize: 24,
-    color: "#9CA3AF",
-    fontWeight: "300",
-  },
-
-  // Empty State
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 48,
-  },
-  
-  emptyStateIcon: {
-    fontSize: 56,
-    marginBottom: 20,
-  },
-  
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  
-  browseButton: {
-    backgroundColor: "#10B981",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  
-  browseButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  // Offer Banner
-  offerBanner: {
-    backgroundColor: "#10B981",
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-
-  // Best Offers cards
-  offerCard: {
-    width: 220,
-    backgroundColor: Colors.light.card,
-    borderRadius: Radii.lg,
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    overflow: 'hidden',
-  },
-  offerImageWrap: {
-    height: 120,
-    position: 'relative',
-  },
-  offerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  offerImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.light.surface,
-  },
-  bundleTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  bundleTagText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  offerInfo: {
-    padding: 12,
-  },
-  offerName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-    marginBottom: 6,
-  },
-  offerPrice: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.light.accent,
-  },
-  
-  offerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  
-  offerText: {
-    flex: 1,
-  },
-  
-  offerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 6,
-  },
-  
-  offerSubtitle: {
-    fontSize: 15,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontWeight: "500",
-  },
-  
-  offerButton: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  
-  offerButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#10B981",
-  },
-
-  // Bundles Box Styles
-  bundlesBox: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
-  },
-  bundlesBoxContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-  },
-  bundlesBoxLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bundlesIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  bundlesIcon: {
-    fontSize: 28,
-  },
-  bundlesTextContainer: {
-    flex: 1,
-  },
-  bundlesTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-    marginBottom: 4,
-  },
-  bundlesSubtitle: {
-    fontSize: 14,
-    color: Colors.light.accent,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  bundlesDescription: {
-    fontSize: 12,
-    color: Colors.light.muted,
-    lineHeight: 16,
-  },
-  bundlesBoxRight: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingLeft: 10,
-  },
-  bundlesChevron: {
-    fontSize: 24,
-    color: Colors.light.muted,
-    fontWeight: '300',
-  },
-
-  bottomSpacer: {
-    height: 100,
-  },
-});

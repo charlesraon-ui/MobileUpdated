@@ -19,13 +19,12 @@ import * as ImagePicker from "expo-image-picker";
 import { AppCtx } from "../context/AppContext";
 import { uploadProfileImageFromUri, updateProfileApi } from "../api/apiClient";
 
-const { width, height } = Dimensions.get('window');
-
-// Responsive breakpoints
-const isTablet = width >= 768;
-const isLargeScreen = width >= 1024;
-
 export default function EditProfileScreen() {
+  const { width, height } = Dimensions.get('window');
+
+  // Responsive breakpoints
+  const isTablet = width >= 768;
+  const isLargeScreen = width >= 1024;
   const { user, setUserState, persistUser, toAbsoluteUrl } = useContext(AppCtx);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");

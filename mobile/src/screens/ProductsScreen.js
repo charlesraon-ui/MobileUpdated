@@ -21,10 +21,10 @@ import BundleCard from "../components/BundleCard";
 import ProductCard from "../components/ProductCard";
 import SearchBar from "../components/SearchBar";
 import { AppCtx } from "../context/AppContext";
-
-const { width } = Dimensions.get('window');
+import { ResponsiveUtils } from "../../constants/theme";
 
 export default function ProductsScreen() {
+  const { width } = Dimensions.get('window');
   const {
     products,
     bundles,
@@ -196,9 +196,10 @@ export default function ProductsScreen() {
   };
 
   const filteredProducts = getFilteredAndSortedProducts();
-  // More mobile-friendly grid: ensure at least 2 columns for phones
-  const columns = viewMode === "list" ? 1 : (width >= 1200 ? 5 : width >= 992 ? 4 : width >= 768 ? 3 : 2);
-  const columnGap = columns >= 4 ? 24 : columns === 3 ? 20 : 16;
+  
+  // Responsive grid columns
+  const columns = viewMode === "list" ? 1 : (ResponsiveUtils.isTablet(width) ? 3 : 2);
+  const columnGap = ResponsiveUtils.isTablet(width) ? 20 : 16;
 
   const onRefresh = async () => {
     setRefreshing(true);

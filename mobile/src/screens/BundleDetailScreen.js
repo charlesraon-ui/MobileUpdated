@@ -17,8 +17,6 @@ import {
 import { Colors, Radii } from "../../constants/theme";
 import { AppCtx } from "../context/AppContext";
 
-const { width } = Dimensions.get("window");
-
 export default function BundleDetailScreen() {
   const { id } = useLocalSearchParams();
   const {

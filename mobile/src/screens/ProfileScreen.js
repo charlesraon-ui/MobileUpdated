@@ -13,12 +13,12 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard, getMyRefundTicketsApi } from "../api/apiClient";
+import { ResponsiveUtils } from "../../constants/theme";
 // Avatar upload removed
-
-const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser, orders } = useContext(AppCtx);
+  const { width, height } = Dimensions.get('window');
   const [cardVisible, setCardVisible] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
   const [card, setCard] = useState(null);
@@ -28,6 +28,8 @@ export default function ProfileScreen() {
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [refundMap, setRefundMap] = useState({});
   // Avatar upload removed
+
+
 
   // Safely format dates coming from backend, avoiding RangeError on invalid values
   const formatDateSafe = (input) => {
@@ -179,6 +181,797 @@ export default function ProfileScreen() {
     setSelectedOrder(order);
     setOrderModalVisible(true);
   };
+
+  const s = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#F8FAFC",
+    },
+
+    // Login Prompt
+    loginPrompt: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 32,
+    },
+    
+    loginIcon: {
+      marginBottom: 24,
+    },
+    
+    loginTitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 28 : 24,
+      fontWeight: "700",
+      color: "#111827",
+      marginBottom: 8,
+    },
+    
+    loginSubtitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      color: "#6B7280",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 24,
+    },
+
+    // Profile Header
+    profileHeader: {
+      backgroundColor: "#FFFFFF",
+      paddingVertical: 32,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      marginBottom: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    
+    avatarContainer: {
+      marginBottom: 16,
+    },
+    
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: "#10B981",
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#10B981",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    
+    avatarText: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 36 : 32,
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+    
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    avatarActions: {
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    avatarBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "#10B981",
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      shadowColor: "#10B981",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    avatarBtnText: {
+      color: "#FFFFFF",
+      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
+      fontWeight: "700",
+    },
+    removeBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "#FFFFFF",
+      borderWidth: 1,
+      borderColor: "#FEE2E2",
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    removeBtnText: {
+      color: "#EF4444",
+      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
+      fontWeight: "700",
+    },
+    
+    userName: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 26 : 22,
+      fontWeight: "700",
+      color: "#111827",
+      marginBottom: 4,
+    },
+    
+    userEmail: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      color: "#6B7280",
+    },
+
+    // Sections
+    section: {
+      marginBottom: 20,
+      paddingHorizontal: 16,
+    },
+    
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    
+    sectionTitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 20 : 18,
+      fontWeight: "700",
+      color: "#111827",
+    },
+    
+    reviewCount: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      color: "#6B7280",
+      marginLeft: 8,
+    },
+
+    // Profile Buttons
+    profileButton: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      marginBottom: 8,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    buttonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    
+    buttonIcon: {
+      marginRight: 12,
+    },
+    
+    buttonText: {
+      flex: 1,
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      fontWeight: "600",
+      color: "#111827",
+    },
+
+    // Info Cards
+    infoCard: {
+      backgroundColor: "#FFFFFF",
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 8,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    infoIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "#F0FDF4",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    
+    infoIconText: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 24 : 20,
+    },
+    
+    infoContent: {
+      flex: 1,
+    },
+    
+    infoTitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      fontWeight: "600",
+      color: "#111827",
+      marginBottom: 2,
+    },
+    
+    infoSubtitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
+      color: "#6B7280",
+    },
+
+    // Mechanics
+    mechanicsBox: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 8,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    mechanicsTitle: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      fontWeight: "700",
+      color: "#111827",
+      marginBottom: 8,
+    },
+    mechanicsItem: {
+      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
+      color: "#6B7280",
+      marginBottom: 4,
+    },
+
+    // View Card button
+    viewCardBtn: {
+      marginTop: 8,
+      backgroundColor: "#10B981",
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    viewCardText: {
+      color: "#FFFFFF",
+      fontSize: ResponsiveUtils.isTablet(width) ? 18 : 16,
+      fontWeight: "700",
+    },
+
+    // Reviews
+    emptyState: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      padding: 32,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: "#111827",
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    
+    emptyStateText: {
+      fontSize: 14,
+      color: "#6B7280",
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    
+    reviewsList: {
+      gap: 12,
+    },
+    
+    reviewCard: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    reviewHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    
+    reviewProduct: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#111827",
+      flex: 1,
+      marginRight: 8,
+    },
+    
+    reviewDate: {
+      fontSize: 12,
+      color: "#9CA3AF",
+    },
+    
+    starsContainer: {
+      flexDirection: "row",
+      marginBottom: 8,
+    },
+    
+    star: {
+      fontSize: 16,
+      marginRight: 2,
+    },
+    
+    reviewComment: {
+      fontSize: 14,
+      color: "#4B5563",
+      lineHeight: 20,
+    },
+    
+    viewAllButton: {
+      backgroundColor: "#F3F4F6",
+      borderRadius: 8,
+      paddingVertical: 12,
+      alignItems: "center",
+      marginTop: 4,
+    },
+    
+    viewAllText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#10B981",
+    },
+
+    // Issue Card button
+    issueCardBtn: {
+      marginTop: 8,
+      backgroundColor: "#10B981",
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    issueCardText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+
+    // Modal styles
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.3)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalSheet: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 20,
+      padding: 16,
+      minHeight: 260,
+      width: "95%",
+      maxWidth: 720,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#111827",
+    },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#F3F4F6",
+    },
+    modalBody: {
+      paddingVertical: 8,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: "#6B7280",
+      textAlign: "center",
+      paddingVertical: 32,
+    },
+    emptyCardTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#111827",
+      textAlign: "center",
+      marginTop: 16,
+    },
+    emptyCardText: {
+      fontSize: 14,
+      color: "#6B7280",
+      textAlign: "center",
+      marginTop: 6,
+    },
+    cardVisual: {
+      backgroundColor: "#10B981",
+      borderRadius: 16,
+      padding: 16,
+      minHeight: 160,
+      shadowColor: "#10B981",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    cardContainer: {
+      alignItems: "center",
+    },
+    cardBrand: {
+      color: "#E6FDF4",
+      fontSize: 14,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    cardId: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "800",
+      marginTop: 6,
+      marginBottom: 12,
+    },
+    cardRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 6,
+    },
+    cardLabel: {
+      color: "#D1FAE5",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    cardValue: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    cardTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    tierBadge: {
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      backgroundColor: "rgba(255,255,255,0.12)",
+    },
+    tierBadgeText: {
+      fontSize: 12,
+      fontWeight: "800",
+    },
+
+    // Buttons
+    primaryButton: {
+      backgroundColor: "#10B981",
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      width: "100%",
+      alignItems: "center",
+      marginBottom: 12,
+      shadowColor: "#10B981",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    
+    primaryButtonText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+    
+    secondaryButton: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      width: "100%",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: "#10B981",
+    },
+    
+    secondaryButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#10B981",
+    },
+    
+    logoutButton: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#FEE2E2",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    
+    logoutButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#EF4444",
+      marginLeft: 8,
+    },
+
+    bottomSpacer: {
+      height: 32,
+    },
+
+    // Order styles
+    ordersList: {
+      gap: 12,
+    },
+
+    orderCard: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: "#F3F4F6",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+
+    orderHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+
+    orderIdContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+
+    orderIdText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#1F2937",
+    },
+
+    refundBadge: {
+      backgroundColor: "#FEF3C7",
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+
+    refundBadgeText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: "#D97706",
+    },
+
+    orderStatus: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+
+    orderStatusText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+
+    orderDetails: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+
+    orderDate: {
+      fontSize: 14,
+      color: "#6B7280",
+    },
+
+    orderItems: {
+      fontSize: 14,
+      color: "#6B7280",
+    },
+
+    orderFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+
+    orderTotal: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#1F2937",
+    },
+
+    // Order detail modal styles
+    orderDetailHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F3F4F6",
+    },
+
+    orderDetailId: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: "#1F2937",
+    },
+
+    orderDetailSection: {
+      marginBottom: 24,
+    },
+
+    orderDetailSectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#1F2937",
+      marginBottom: 12,
+    },
+
+    orderDetailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+
+    orderDetailLabel: {
+      fontSize: 14,
+      color: "#6B7280",
+    },
+
+    orderDetailValue: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: "#1F2937",
+    },
+
+    orderItemCard: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: "#F9FAFB",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+
+    orderItemInfo: {
+      flex: 1,
+    },
+
+    orderItemName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: "#1F2937",
+      marginBottom: 4,
+    },
+
+    orderItemDetails: {
+      fontSize: 12,
+      color: "#6B7280",
+    },
+
+    viewAllOrdersButton: {
+      backgroundColor: "#F0FDF4",
+      borderRadius: 12,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: "#D1FAE5",
+    },
+
+    viewAllOrdersContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      justifyContent: "space-between",
+    },
+
+    viewAllOrdersText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#10B981",
+      flex: 1,
+      marginLeft: 12,
+    },
+
+    loyaltyButton: {
+      backgroundColor: "#F5F3FF",
+      borderRadius: 12,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: "#DDD6FE",
+    },
+
+    loyaltyButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      justifyContent: "space-between",
+    },
+
+    loyaltyButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#8B5CF6",
+      flex: 1,
+      marginLeft: 12,
+    },
+
+    orderItemTotal: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#1F2937",
+    },
+
+    orderDetailAddress: {
+      fontSize: 14,
+      color: "#1F2937",
+      lineHeight: 20,
+    },
+
+    modalContent: {
+      flex: 1,
+    },
+
+    modalCloseButton: {
+      padding: 4,
+    },
+  });
 
   if (!isLoggedIn) {
     return (
@@ -544,786 +1337,3 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-
-  // Login Prompt
-  loginPrompt: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  
-  loginIcon: {
-    marginBottom: 24,
-  },
-  
-  loginTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  
-  loginSubtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-
-  // Profile Header
-  profileHeader: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  
-  avatarContainer: {
-    marginBottom: 16,
-  },
-  
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#10B981",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  
-  avatarText: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarActions: {
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  avatarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#10B981",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatarBtnText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  removeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  removeBtnText: {
-    color: "#EF4444",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  
-  userName: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  
-  userEmail: {
-    fontSize: 16,
-    color: "#6B7280",
-  },
-
-  // Sections
-  section: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  
-  reviewCount: {
-    fontSize: 16,
-    color: "#6B7280",
-    marginLeft: 8,
-  },
-
-  // Profile Buttons
-  profileButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  
-  buttonIcon: {
-    marginRight: 12,
-  },
-  
-  buttonText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-
-  // Info Cards
-  infoCard: {
-    backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F0FDF4",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  
-  infoIconText: {
-    fontSize: 20,
-  },
-  
-  infoContent: {
-    flex: 1,
-  },
-  
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 2,
-  },
-  
-  infoSubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-
-  // Mechanics
-  mechanicsBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  mechanicsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  mechanicsItem: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-
-  // View Card button
-  viewCardBtn: {
-    marginTop: 8,
-    backgroundColor: "#10B981",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  viewCardText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  // Reviews
-  emptyState: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 32,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  
-  emptyStateText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  
-  reviewsList: {
-    gap: 12,
-  },
-  
-  reviewCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  reviewHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  
-  reviewProduct: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    flex: 1,
-    marginRight: 8,
-  },
-  
-  reviewDate: {
-    fontSize: 12,
-    color: "#9CA3AF",
-  },
-  
-  starsContainer: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
-  
-  star: {
-    fontSize: 16,
-    marginRight: 2,
-  },
-  
-  reviewComment: {
-    fontSize: 14,
-    color: "#4B5563",
-    lineHeight: 20,
-  },
-  
-  viewAllButton: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#10B981",
-  },
-
-  // Issue Card button
-  issueCardBtn: {
-    marginTop: 8,
-    backgroundColor: "#10B981",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  issueCardText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  // Modal styles
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalSheet: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    minHeight: 260,
-    width: "95%",
-    maxWidth: 720,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F4F6",
-  },
-  modalBody: {
-    paddingVertical: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    paddingVertical: 32,
-  },
-  emptyCardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center",
-    marginTop: 16,
-  },
-  emptyCardText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 6,
-  },
-  cardVisual: {
-    backgroundColor: "#10B981",
-    borderRadius: 16,
-    padding: 16,
-    minHeight: 160,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  cardContainer: {
-    alignItems: "center",
-  },
-  cardBrand: {
-    color: "#E6FDF4",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  cardId: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  cardLabel: {
-    color: "#D1FAE5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  cardValue: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  tierBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  tierBadgeText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-
-  // Buttons
-  primaryButton: {
-    backgroundColor: "#10B981",
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 12,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  
-  secondaryButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    width: "100%",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#10B981",
-  },
-  
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#10B981",
-  },
-  
-  logoutButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#EF4444",
-    marginLeft: 8,
-  },
-
-  bottomSpacer: {
-    height: 32,
-  },
-
-  // Order styles
-  ordersList: {
-    gap: 12,
-  },
-
-  orderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  orderIdContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  orderIdText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-
-  refundBadge: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-
-  refundBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#D97706",
-  },
-
-  orderStatus: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-
-  orderStatusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  orderDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-
-  orderDate: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-
-  orderItems: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-
-  orderFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  orderTotal: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-
-  // Order detail modal styles
-  orderDetailHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-
-  orderDetailId: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-
-  orderDetailSection: {
-    marginBottom: 24,
-  },
-
-  orderDetailSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 12,
-  },
-
-  orderDetailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-
-  orderDetailLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-
-  orderDetailValue: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1F2937",
-  },
-
-  orderItemCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-
-  orderItemInfo: {
-    flex: 1,
-  },
-
-  orderItemName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-
-  orderItemDetails: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-
-  viewAllOrdersButton: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 12,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#D1FAE5",
-  },
-
-  viewAllOrdersContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    justifyContent: "space-between",
-  },
-
-  viewAllOrdersText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#10B981",
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  loyaltyButton: {
-    backgroundColor: "#F5F3FF",
-    borderRadius: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#DDD6FE",
-  },
-
-  loyaltyButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    justifyContent: "space-between",
-  },
-
-  loyaltyButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#8B5CF6",
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  orderItemTotal: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-
-  orderDetailAddress: {
-    fontSize: 14,
-    color: "#1F2937",
-    lineHeight: 20,
-  },
-});
