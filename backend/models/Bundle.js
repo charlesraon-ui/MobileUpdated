@@ -19,7 +19,8 @@ const bundleSchema = new mongoose.Schema({
   description: { type: String, trim: true },
   imageUrl: { type: String },
   items: [bundleItemSchema],
-  bundlePrice: { type: Number, required: true, min: 0 },
+  price: { type: Number, min: 0 }, // New simplified price field
+  bundlePrice: { type: Number, min: 0 }, // Keep for backward compatibility
   originalPrice: { type: Number, min: 0 },
   discount: { type: Number, min: 0, max: 100, default: 0 },
   stock: { type: Number, default: 0, min: 0 },
