@@ -4,13 +4,35 @@ import { uploadBufferToCloudinary } from "../utils/uploadToCloudinary.js";
 export async function searchUsers(req, res) {
   try {
     const q = String(req.query.q || "").trim();
-    if (!q) return res.json({ data: { users: [] } });
-    // Case-insensitive partial match on name or email
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const users = await User.find({ $or: [{ name: regex }, { email: regex }] })
-      .select("name email avatarUrl")
-      .limit(50)
-      .lean();
+    const currentUserId = req.user?.id || req.user?._id;
+    
+    let users;
+    
+    if (!q) {
+      // If no search query, return recent users (excluding current user)
+      const filter = currentUserId ? { _id: { $ne: currentUserId } } : {};
+      users = await User.find(filter)
+        .select("name email avatarUrl")
+        .sort({ createdAt: -1 }) // Most recent first
+        .limit(20) // Limit to 20 for initial load
+        .lean();
+    } else {
+      // Case-insensitive partial match on name or email (excluding current user)
+      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const filter = { 
+        $or: [{ name: regex }, { email: regex }]
+      };
+      
+      // Exclude current user from search results
+      if (currentUserId) {
+        filter._id = { $ne: currentUserId };
+      }
+      
+      users = await User.find(filter)
+        .select("name email avatarUrl")
+        .limit(50)
+        .lean();
+    }
     
     // Transform the response to match frontend expectations
     const transformedUsers = users.map(user => ({

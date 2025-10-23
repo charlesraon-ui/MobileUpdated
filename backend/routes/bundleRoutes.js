@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
       description: bundle.description,
       imageUrl: bundle.imageUrl,
       items: bundle.items,
-      price: bundle.price || bundle.bundlePrice, // Use price field if available, fallback to bundlePrice
+      price: bundle.bundlePrice || bundle.price, // Use bundlePrice (discounted price) as primary, fallback to price
       stock: bundle.stock,
       active: bundle.active,
       createdAt: bundle.createdAt,
@@ -51,7 +51,7 @@ router.get("/:id", async (req, res) => {
       description: bundle.description,
       imageUrl: bundle.imageUrl,
       items: bundle.items,
-      price: bundle.price || bundle.bundlePrice, // Use price field if available, fallback to bundlePrice
+      price: bundle.bundlePrice || bundle.price, // Use bundlePrice (discounted price) as primary, fallback to price
       stock: bundle.stock,
       active: bundle.active,
       createdAt: bundle.createdAt,

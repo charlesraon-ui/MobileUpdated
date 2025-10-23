@@ -19,6 +19,7 @@ import "./models/Vehicle.js";
 import authRoutes from "./routes/authRoutes.js";
 import bundleRoutes from "./routes/bundleRoutes.js";
 import adminBundleRoutes from "./routes/adminBundleRoutes.js";
+import adminLoyaltyRoutes from "./routes/adminLoyaltyRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
@@ -89,6 +90,7 @@ app.use("/api/webhooks", webhookRoutes);
 app.use("/payment", paymentRoutes); // (if you really need this alias)
 app.use("/api/bundles", bundleRoutes);
 app.use("/api/admin/bundles", adminBundleRoutes);
+app.use("/api/admin/loyalty", adminLoyaltyRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
@@ -97,7 +99,6 @@ app.use("/api/dm", directMessageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/support-chat", supportChatRoutes);
-// Customer-only app - no admin loyalty routes
 
 // Socket.IO authentication middleware
 io.use((socket, next) => {

@@ -41,17 +41,15 @@ export default function UserSearchScreen() {
     const timeout = setTimeout(async () => {
       if (!active) return;
       
-      if (debouncedQuery.length < 1) {
-        setUsers([]);
-        setError("");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError("");
-        const response = await searchUsersApi(debouncedQuery);
+        
+        // If no query, search for a common term to show some users initially
+        // This helps users see that there are users available to chat with
+        const searchQuery = debouncedQuery.length > 0 ? debouncedQuery : "";
+        
+        const response = await searchUsersApi(searchQuery || "");
         if (active) {
           const users = response.data?.users || response.data || [];
           setUsers(Array.isArray(users) ? users : []);
@@ -64,6 +62,10 @@ export default function UserSearchScreen() {
           // Handle authentication errors specifically
           if (status === 401) {
             errorMessage = "Please log in to search for users";
+          } else if (status === 403) {
+            errorMessage = "You don't have permission to search for users";
+          } else if (!navigator.onLine) {
+            errorMessage = "No internet connection. Please check your network.";
           }
           
           setError(errorMessage);
@@ -72,7 +74,7 @@ export default function UserSearchScreen() {
       } finally {
         if (active) setLoading(false);
       }
-    }, 350);
+    }, debouncedQuery.length > 0 ? 350 : 100); // Faster initial load
 
     return () => {
       active = false;
@@ -176,13 +178,30 @@ export default function UserSearchScreen() {
             )}
           </View>
         ) : query.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color={GRAY} />
-            <Text style={styles.emptyTitle}>Search for Users</Text>
-            <Text style={styles.emptySubtitle}>
-              Enter a name or email to find other users and start a conversation
-            </Text>
-          </View>
+          users.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={64} color={GRAY} />
+              <Text style={styles.emptyTitle}>No Users Available</Text>
+              <Text style={styles.emptySubtitle}>
+                There are no other users to chat with at the moment. Try again later or invite friends to join!
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.content}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Users</Text>
+                <Text style={styles.sectionSubtitle}>Start a conversation with someone</Text>
+              </View>
+              <FlatList
+                data={users}
+                keyExtractor={(item) => item._id}
+                renderItem={renderUser}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          )
         ) : users.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="search-outline" size={64} color={GRAY} />
@@ -354,5 +373,20 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 12,
+  },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#F8FAFC",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: GRAY,
   },
 });
