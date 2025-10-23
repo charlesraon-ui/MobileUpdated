@@ -197,7 +197,7 @@ export default function ProductsScreen() {
 
   const filteredProducts = useMemo(() => {
     return getFilteredAndSortedProducts();
-  }, [products, selectedCategory, searchQuery, minPrice, maxPrice, sortBy, categoryLabelOf]);
+  }, [products, selectedCategory, searchQuery, minPrice, maxPrice, sortBy]);
   
   // Responsive grid columns
   const columns = viewMode === "list" ? 1 : (ResponsiveUtils.isTablet(width) ? 3 : 2);

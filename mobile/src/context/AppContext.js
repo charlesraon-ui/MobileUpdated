@@ -683,7 +683,7 @@ export default function AppProvider({ children }) {
     } finally {
       setRewardsLoading(false);
     }
-  }, [isLoggedIn, showToast, refreshLoyalty, loadAvailableRewards, loadRedemptionHistory]);
+  }, [isLoggedIn, showToast, refreshLoyalty]);
 
   // Apply reward for checkout discount
   const applyRewardDiscount = useCallback((reward) => {

@@ -44,7 +44,7 @@ export async function searchUsers(req, res) {
       avatarUrl: user.avatarUrl
     }));
     
-    res.json({ data: { users: transformedUsers } });
+    res.json({ users: transformedUsers });
   } catch (e) {
     console.error("SEARCH_USERS_ERROR:", e);
     res.status(500).json({ success: false, message: e?.message || "Server error" });
@@ -90,7 +90,7 @@ export async function getAdminUsers(req, res) {
       role: user.role
     }));
     
-    res.json({ success: true, data: { users: transformedUsers } });
+    res.json({ success: true, users: transformedUsers });
   } catch (e) {
     console.error("GET_ADMIN_USERS_ERROR:", e);
     res.status(500).json({ success: false, message: e?.message || "Server error" });

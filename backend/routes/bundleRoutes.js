@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
       updatedAt: bundle.updatedAt
     }));
 
-    res.json(transformedBundles);
+    res.json({ data: transformedBundles });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -58,7 +58,7 @@ router.get("/:id", async (req, res) => {
       updatedAt: bundle.updatedAt
     };
 
-    res.json(transformedBundle);
+    res.json({ data: transformedBundle });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

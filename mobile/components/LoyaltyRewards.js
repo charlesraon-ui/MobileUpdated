@@ -33,7 +33,7 @@ const LoyaltyRewards = () => {
       loadAvailableRewards();
       loadRedemptionHistory();
     }
-  }, [isLoggedIn, loadAvailableRewards, loadRedemptionHistory]);
+  }, [isLoggedIn]);
 
   const onRefresh = async () => {
     setRefreshing(true);

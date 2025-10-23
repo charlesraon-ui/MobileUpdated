@@ -60,7 +60,7 @@ export default function WishlistScreen() {
     };
 
     fetchWishlist();
-  }, [user, loadWishlist]);
+  }, [user?._id]); // Only depend on user ID, not the loadWishlist function
 
   const confirmRemoveFromWishlist = (productId, productName) => {
     Alert.alert(
@@ -81,22 +81,15 @@ export default function WishlistScreen() {
   };
 
   const handleRemoveFromWishlist = async (productId, productName) => {
-
     try {
       // Find the product in the wishlist
       const product = wishlist.find(item => item._id === productId);
       if (!product) {
-  
         return;
       }
-
-
       
-      // Call toggleWishlist to remove the item
-      const result = await toggleWishlist(product);
-      
-      // Reload the wishlist to reflect changes
-      await loadWishlist();
+      // Call toggleWishlist to remove the item (it already reloads the wishlist)
+      await toggleWishlist(product);
       
     } catch (error) {
       console.error("Error removing from wishlist:", error);

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef, useMemo } from "react";
 import {
   Alert,
   Animated,
@@ -33,7 +33,6 @@ export default function HomeScreen() {
     setSelectedCategory,
     loyalty,
     socketService,
-    refreshAuthedData,
   } = useContext(AppCtx);
 
   // Local state for real-time product updates
@@ -54,8 +53,10 @@ export default function HomeScreen() {
 
   // Update local products when context products change
   useEffect(() => {
-    setRealtimeProducts(products || []);
-  }, [products]);
+    if (products && products.length >= 0) {
+      setRealtimeProducts(products);
+    }
+  }, [products?.length]);
 
   // Setup WebSocket listeners for real-time updates
   useEffect(() => {
@@ -327,7 +328,7 @@ export default function HomeScreen() {
   };
 
   // Build Best Offers: mix top bundles and cheapest products (using real-time data)
-  const bestOffers = (() => {
+  const bestOffers = useMemo(() => {
     const bundleCards = (bundles || [])
       .slice(0, 4)
       .map((b) => ({ type: 'bundle', item: b }));
@@ -336,7 +337,7 @@ export default function HomeScreen() {
       .slice(0, 6)
       .map((p) => ({ type: 'product', item: p }));
     return [...bundleCards, ...cheapest].slice(0, 8);
-  })();
+  }, [bundles, realtimeProducts]);
 
   const FeatureCard = ({ title, subtitle, onPress, icon }) => (
     <TouchableOpacity style={styles.featureCard} onPress={onPress} activeOpacity={0.8}>
@@ -1183,7 +1184,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Recommended Products */}
-          {(recommendedProducts && recommendedProducts.length > 0) || (realtimeProducts && realtimeProducts.length > 0) ? (
+          {((recommendedProducts && recommendedProducts.length > 0) || (realtimeProducts && realtimeProducts.length > 0)) && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
@@ -1208,7 +1209,7 @@ export default function HomeScreen() {
                 ))}
               </ScrollView>
             </View>
-          ) : null}
+          )}
 
           {/* Best Offers */}
           {bestOffers.length > 0 && (

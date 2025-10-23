@@ -58,7 +58,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://goagritrading-backend.onrender.com",
+      "apiUrl": "http://localhost:5000",
       "router": {},
       "eas": {
         "projectId": "15717921-af2f-4f2c-a8aa-9934cf70325b"
