@@ -5,6 +5,7 @@ import Order from "../models/Order.js";
 import Product from "../models/Products.js";
 import { processOrderInventory } from "../utils/orderHelpers.js";
 import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
+import { redeemPromoOnOrder } from "./promoController.js";
 
 /* ---------------- PayMongo E-Payment (with inventory) ---------------------- */
 export const createEPaymentOrder = async (req, res) => {
@@ -19,6 +20,7 @@ export const createEPaymentOrder = async (req, res) => {
       deliveryFee: deliveryFeeInBody = 0,
       total: totalInBody,
       channel = "multi",
+      promoCode = null,
     } = req.body || {};
 
     if (!process.env.PAYMONGO_SECRET_KEY) {
@@ -144,6 +146,11 @@ export const createEPaymentOrder = async (req, res) => {
       deliveryType,
       status: "pending_payment",
       paymentMethod: "E-Payment",
+      promoCode: promoCode ? {
+        code: promoCode.code,
+        discount: promoCode.discount || 0,
+        freeShipping: promoCode.freeShipping || false
+      } : null,
     });
 
     await Delivery.create({
@@ -251,6 +258,7 @@ export const createMyOrder = async (req, res) => {
       deliveryFee: deliveryFeeInBody = 0,
       total: totalInBody,
       paymentMethod = "COD",
+      promoCode = null,
     } = req.body || {};
 
     // Normalize items and fetch weights
@@ -322,6 +330,11 @@ export const createMyOrder = async (req, res) => {
       deliveryType,
       status: "pending",
       paymentMethod,
+      promoCode: promoCode ? {
+        code: promoCode.code,
+        discount: promoCode.discount || 0,
+        freeShipping: promoCode.freeShipping || false
+      } : null,
     });
 
     await Delivery.create({
@@ -339,6 +352,16 @@ export const createMyOrder = async (req, res) => {
       console.log(`✅ Loyalty points awarded for COD order ${order._id}`);
     } catch (e) {
       console.warn("LOYALTY_UPDATE_ON_COD_ORDER_ERROR:", e?.message || e);
+    }
+
+    // Redeem promo code if used
+    if (promoCode && promoCode.code) {
+      try {
+        await redeemPromoOnOrder(promoCode.code, order.userId, order._id);
+        console.log(`✅ Promo code ${promoCode.code} redeemed for COD order ${order._id}`);
+      } catch (e) {
+        console.warn("PROMO_REDEMPTION_ON_COD_ORDER_ERROR:", e?.message || e);
+      }
     }
 
     const populatedOrder = await Order.findById(order._id)

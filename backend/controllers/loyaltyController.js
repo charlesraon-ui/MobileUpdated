@@ -1,4 +1,4 @@
-﻿import LoyaltyReward from "../models/LoyaltyReward.js";
+import LoyaltyReward from "../models/LoyaltyReward.js";
 import Order from "../models/Order.js";
 import LoyaltyTier from "../models/LoyaltyTier.js";
 import User from "../models/User.js";
@@ -39,6 +39,7 @@ export const getLoyaltyStatus = async (req, res) => {
         cardType: loyalty.cardType,
         purchaseCount: loyalty.purchaseCount,
         totalSpent: loyalty.totalSpent,
+        points: loyalty.points || 0,
         discountPercentage: loyalty.discountPercentage,
         expiryDate: loyalty.expiryDate,
         isActive: loyalty.isActive,
@@ -157,6 +158,7 @@ export const getDigitalCard = async (req, res) => {
         cardType: loyalty.cardType,
         issuedDate: loyalty.cardIssuedDate,
         expiryDate: loyalty.expiryDate,
+        points: loyalty.points,
         discountPercentage: loyalty.discountPercentage,
         isActive: loyalty.isActive,
       },
@@ -233,6 +235,39 @@ export const redeemReward = async (req, res) => {
   } catch (err) {
     console.error("REDEEM_REWARD_ERROR:", err);
     res.status(500).json({ success: false, message: "Error redeeming reward" });
+  }
+};
+
+// Test endpoint to add points for testing
+export const addTestPoints = async (req, res) => {
+  try {
+    // Use authenticated user ID or default test user ID
+    const userId = req.user?.userId || req.user?.id || "675a7b8b123456789abcdef0";
+    const { points } = req.body;
+
+    let loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      loyalty = new LoyaltyReward({ userId });
+    }
+
+    const pointsToAdd = Number(points) || 100;
+    loyalty.points = (loyalty.points || 0) + pointsToAdd;
+    loyalty.pointsHistory.push({
+      points: pointsToAdd,
+      source: "test_points",
+      createdAt: new Date(),
+    });
+
+    await loyalty.save();
+
+    res.json({ 
+      success: true,
+      message: `Added ${pointsToAdd} test points`,
+      totalPoints: loyalty.points
+    });
+  } catch (err) {
+    console.error("ADD_TEST_POINTS_ERROR:", err);
+    res.status(500).json({ success: false, message: "Error adding test points" });
   }
 };
 

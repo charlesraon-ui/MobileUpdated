@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
+import PromoService from "../services/PromoService";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -56,6 +57,13 @@ export default function CheckoutScreen() {
   const [deliveryMethod, setDeliveryMethod] = useState("in-house");
   const [placing, setPlacing] = useState(false);
 
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [freeShipping, setFreeShipping] = useState(false);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+
   // toast
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
@@ -84,6 +92,53 @@ export default function CheckoutScreen() {
     }
   }, [isLoggedIn, loadAvailableRewards]);
 
+  // Promo code functions
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      showToast("Please enter a promo code");
+      return;
+    }
+
+    const validation = PromoService.validatePromoCode(promoCode);
+    if (!validation.valid) {
+      showToast(validation.error);
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    
+    try {
+      const result = await PromoService.applyPromoCode(promoCode, cartTotal);
+      
+      if (result.success) {
+        setAppliedPromo(result.data.promo);
+        setPromoDiscount(result.data.discount || 0);
+        setFreeShipping(result.data.freeShipping || false);
+        setPromoCode("");
+        
+        showToast(
+          result.data.freeShipping 
+            ? "Free shipping applied!" 
+            : `Discount of ₱${result.data.discount} applied!`
+        );
+      } else {
+        showToast(result.error || "Failed to apply promo code");
+      }
+    } catch (error) {
+      showToast("Error applying promo code");
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoDiscount(0);
+    setFreeShipping(false);
+    setPromoCode("");
+    showToast("Promo code removed");
+  };
+
   // Helper functions
   const getDeliveryFee = (method) => {
     if (method === "pickup") return 0;
@@ -93,8 +148,8 @@ export default function CheckoutScreen() {
   };
 
   const calculateOrderTotals = () => {
-    const deliveryFee = getDeliveryFee(deliveryMethod);
-    const subtotal = cartTotalAfterDiscount;
+    const deliveryFee = freeShipping ? 0 : getDeliveryFee(deliveryMethod);
+    const subtotal = cartTotalAfterDiscount - promoDiscount - rewardDiscount;
     const total = subtotal + deliveryFee;
 
     return { deliveryFee, subtotal, total };
@@ -154,7 +209,12 @@ export default function CheckoutScreen() {
             ? "Poblacion 1, Moncada\nTarlac, Philippines"
             : deliveryAddress.trim(),
           deliveryType: deliveryMethod,
-          channel: "multi" // Support all payment methods
+          channel: "multi", // Support all payment methods
+          promoCode: appliedPromo ? {
+            code: appliedPromo.code,
+            discount: promoDiscount,
+            freeShipping: freeShipping
+          } : null
         };
 
         console.log("📤 Sending E-Payment payload:", JSON.stringify(payload, null, 2));
@@ -209,6 +269,11 @@ export default function CheckoutScreen() {
           : deliveryAddress.trim(),
         total,
         deliveryFee,
+        promoCode: appliedPromo ? {
+          code: appliedPromo.code,
+          discount: promoDiscount,
+          freeShipping: freeShipping
+        } : null
       };
       
       console.log("🚀 ORDER DEBUG: COD payload:", codPayload);
@@ -290,16 +355,22 @@ export default function CheckoutScreen() {
               <Text style={s.summaryValue}>-₱{rewardDiscount.toFixed(2)}</Text>
             </View>
           )}
+          {promoDiscount > 0 && (
+            <View style={s.summaryRow}>
+              <Text style={s.summaryLabel}>Promo Discount ({appliedPromo?.code})</Text>
+              <Text style={s.summaryValue}>-₱{promoDiscount.toFixed(2)}</Text>
+            </View>
+          )}
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>Delivery Fee</Text>
-            <Text style={[s.summaryValue, deliveryMethod === "pickup" && s.freeText]}>
-              {deliveryMethod === "pickup" ? "FREE" : `₱${getDeliveryFee(deliveryMethod)}.00`}
+            <Text style={[s.summaryValue, (deliveryMethod === "pickup" || freeShipping) && s.freeText]}>
+              {deliveryMethod === "pickup" ? "FREE" : freeShipping ? "FREE (Promo)" : `₱${getDeliveryFee(deliveryMethod)}.00`}
             </Text>
           </View>
           <View style={s.summaryDivider} />
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Total Amount</Text>
-            <Text style={s.totalValue}>₱{(cartTotal + getDeliveryFee(deliveryMethod)).toFixed(2)}</Text>
+            <Text style={s.totalValue}>₱{finalTotal.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -474,6 +545,58 @@ export default function CheckoutScreen() {
               )}
             </View>
           )}
+
+          {/* Promo Code Section */}
+          <View style={s.sectionContainer}>
+            <View style={s.sectionHeader}>
+              <Ionicons name="pricetag-outline" size={22} color={GREEN} />
+              <Text style={s.sectionTitle}>Promo Code</Text>
+            </View>
+            
+            {appliedPromo ? (
+              <View style={s.appliedPromoCard}>
+                <View style={s.appliedPromoInfo}>
+                  <Ionicons name="checkmark-circle" size={20} color={GREEN} />
+                  <View style={s.appliedPromoText}>
+                    <Text style={s.appliedPromoName}>{appliedPromo.code}</Text>
+                    <Text style={s.appliedPromoDiscount}>
+                      {freeShipping ? "Free shipping applied!" : `-₱${promoDiscount.toFixed(2)} discount applied`}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={s.removePromoBtn}
+                  onPress={handleRemovePromo}
+                >
+                  <Ionicons name="close" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={s.promoInputContainer}>
+                <View style={s.promoInputWrapper}>
+                  <TextInput
+                    value={promoCode}
+                    onChangeText={setPromoCode}
+                    placeholder="Enter promo code"
+                    style={s.promoInput}
+                    placeholderTextColor={GRAY}
+                    autoCapitalize="characters"
+                  />
+                  <TouchableOpacity
+                    style={[s.applyPromoBtn, isApplyingPromo && s.btnDisabled]}
+                    onPress={handleApplyPromo}
+                    disabled={isApplyingPromo}
+                  >
+                    {isApplyingPromo ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={s.applyPromoBtnText}>Apply</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
 
           {/* Payment Section */}
           <View style={s.sectionContainer}>
@@ -850,5 +973,76 @@ const s = StyleSheet.create({
     backgroundColor: "#FEE2E2",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  // Promo code styles
+  appliedPromoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#DCFCE7",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  appliedPromoInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  appliedPromoText: {
+    flex: 1,
+  },
+  appliedPromoName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#065F46",
+    marginBottom: 2,
+  },
+  appliedPromoDiscount: {
+    fontSize: 14,
+    color: "#047857",
+    fontWeight: "600",
+  },
+  removePromoBtn: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
+  },
+  promoInputContainer: {
+    marginTop: 8,
+  },
+  promoInputWrapper: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  promoInput: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontWeight: "600",
+    backgroundColor: "#FFFFFF",
+    color: "#111827",
+  },
+  applyPromoBtn: {
+    backgroundColor: GREEN,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 80,
+  },
+  applyPromoBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
 });

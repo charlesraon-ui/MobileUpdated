@@ -43,6 +43,13 @@ const orderSchema = new mongoose.Schema(
 
     status: { type: String, default: "pending" },
 
+    // Promo code information
+    promoCode: {
+      code: { type: String },
+      discount: { type: Number, min: 0, default: 0 },
+      freeShipping: { type: Boolean, default: false }
+    },
+
     // PayMongo tracking
     paymongoSessionId: { type: String },
     paymongoPaymentId: { type: String },

@@ -13,14 +13,32 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # Add the rest in the Render dashboard or here (avoid committing secrets):
+      - key: PORT
+        value: 5000
+      - key: APP_URL
+        value: https://goagritrading-backend.onrender.com
+      - key: API_URL
+        value: https://goagritrading-backend.onrender.com
+      - key: EXPO_PUBLIC_API_URL
+        value: https://goagritrading-backend.onrender.com
+      - key: FRONTEND_SUCCESS_URL
+        value: goagritrading://payment-success
+      - key: FRONTEND_FAILED_URL
+        value: goagritrading://payment-failed
+      # Sensitive environment variables (set these in Render dashboard):
       # - key: MONGO_URI
       #   sync: false
       # - key: JWT_SECRET
       #   sync: false
-      # - key: CORS_ORIGIN
-      #   value: https://your-frontend.vercel.app
       # - key: PAYMONGO_PUBLIC_KEY
       #   sync: false
       # - key: PAYMONGO_SECRET_KEY
+      #   sync: false
+      # - key: CLOUDINARY_CLOUD_NAME
+      #   sync: false
+      # - key: CLOUDINARY_API_KEY
+      #   sync: false
+      # - key: CLOUDINARY_API_SECRET
+      #   sync: false
+      # - key: CLOUDINARY_ROOT_FOLDER
       #   sync: false

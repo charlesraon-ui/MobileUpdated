@@ -5,6 +5,7 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { sendPush } from "../controllers/notificationController.js";
 import { updateLoyaltyAfterPurchase } from "../controllers/loyaltyController.js";
+import { redeemPromoOnOrder } from "../controllers/promoController.js";
 
 const router = Router();
 
@@ -35,6 +36,16 @@ router.get("/success", async (req, res) => {
       await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
     } catch (e) {
       console.warn("LOYALTY_UPDATE_ON_PAYMENT_SUCCESS_ERROR:", e?.message || e);
+    }
+
+    // Redeem promo code if used
+    if (order.promoCode && order.promoCode.code) {
+      try {
+        await redeemPromoOnOrder(order.promoCode.code, order.userId, order._id);
+        console.log(`✅ Promo code ${order.promoCode.code} redeemed for order ${order._id}`);
+      } catch (e) {
+        console.warn("PROMO_REDEMPTION_ON_PAYMENT_SUCCESS_ERROR:", e?.message || e);
+      }
     }
 
     // Clear cart

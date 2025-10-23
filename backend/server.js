@@ -36,6 +36,7 @@ import directMessageRoutes from "./routes/directMessageRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import supportChatRoutes from "./routes/supportChatRoutes.js";
+import promoRoutes from "./routes/promoRoutes.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -99,6 +100,7 @@ app.use("/api/dm", directMessageRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/support-chat", supportChatRoutes);
+app.use("/api/promo", promoRoutes);
 
 // Socket.IO authentication middleware
 io.use((socket, next) => {
