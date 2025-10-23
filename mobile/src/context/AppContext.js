@@ -6,6 +6,7 @@ import { createContext, useCallback, useEffect, useMemo, useState, useRef } from
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // import { Alert } from "react-native";
 import Toast from "../../components/Toast";
+import { configureGoogleSignIn, signInWithGoogle } from "../config/googleSignIn";
 import {
   addReviewApi,
   createOrder as apiCreateOrder,
@@ -101,6 +102,14 @@ export default function AppProvider({ children }) {
   if (!initRef.current) {
     console.log("🚀 APPCONTEXT REF INIT: Starting initialization...");
     initRef.current = true;
+    
+    // Configure Google Sign-In
+    try {
+      configureGoogleSignIn();
+      console.log("🚀 APPCONTEXT REF INIT: Google Sign-In configured successfully");
+    } catch (error) {
+      console.error("🚀 APPCONTEXT REF INIT: Google Sign-In configuration failed:", error);
+    }
     
     // Initialize products immediately
     Promise.resolve().then(async () => {
@@ -1224,7 +1233,23 @@ const handlePlaceOrder = async (opts = {}) => {
     await refreshAuthedData(u);
     await refreshLoyalty();
 
+    // Connect to socket for real-time messaging
+    await socketService.connect();
+
     router.replace("/tabs/home");
+  };
+
+  const doGoogleRegister = async () => {
+    try {
+      const googleSignInResult = await signInWithGoogle();
+      const { accessToken } = googleSignInResult;
+      
+      // Use the existing Google auth endpoint which handles both login and registration
+      await doGoogleAuth({ accessToken });
+    } catch (error) {
+      console.error("Google registration failed:", error);
+      throw error;
+    }
   };
 
   const handleLogout = async () => {
@@ -1369,6 +1394,7 @@ const handlePlaceOrder = async (opts = {}) => {
     doRegister,
     doRegisterInitiate,
     doGoogleAuth,
+    doGoogleRegister,
     refreshAuthedData,
     refreshLoyalty,
 
@@ -1430,6 +1456,9 @@ const handlePlaceOrder = async (opts = {}) => {
     removeAddress,
     saveAddresses,
     setDefaultAddress,
+
+    // WebSocket methods
+    socketService,
   };
 
   console.log("🔥 APPCONTEXT: About to return JSX...");

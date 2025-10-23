@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import {
   Alert,
   Animated,
@@ -32,7 +32,13 @@ export default function HomeScreen() {
     isInWishlist,
     setSelectedCategory,
     loyalty,
+    socketService,
+    refreshAuthedData,
   } = useContext(AppCtx);
+
+  // Local state for real-time product updates
+  const [realtimeProducts, setRealtimeProducts] = useState(products || []);
+  const socketListenersRef = useRef(false);
 
   const { width } = Dimensions.get('window');
 
@@ -45,6 +51,65 @@ export default function HomeScreen() {
   // show banner once after login/register
   const [showWelcome, setShowWelcome] = useState(false);
   const fadeAnim = new Animated.Value(0);
+
+  // Update local products when context products change
+  useEffect(() => {
+    setRealtimeProducts(products || []);
+  }, [products]);
+
+  // Setup WebSocket listeners for real-time updates
+  useEffect(() => {
+    if (socketService && user && !socketListenersRef.current) {
+      console.log('🔌 Setting up WebSocket listeners for HomeScreen');
+      
+      // Listen for inventory updates
+      socketService.onInventoryUpdate((data) => {
+        console.log('📦 Inventory update received:', data);
+        const { productId, stock, price } = data;
+        
+        setRealtimeProducts(prev => 
+          prev.map(product => 
+            product._id === productId 
+              ? { 
+                  ...product, 
+                  stock: stock !== undefined ? stock : product.stock,
+                  price: price !== undefined ? price : product.price 
+                }
+              : product
+          )
+        );
+      });
+
+      // Listen for new products
+      socketService.onInventoryCreated((newProduct) => {
+        console.log('✨ New product created:', newProduct);
+        setRealtimeProducts(prev => [newProduct, ...prev]);
+      });
+
+      // Listen for deleted products
+      socketService.onInventoryDeleted((data) => {
+        console.log('🗑️ Product deleted:', data);
+        const { productId } = data;
+        
+        setRealtimeProducts(prev => 
+          prev.filter(product => product._id !== productId)
+        );
+      });
+
+      socketListenersRef.current = true;
+    }
+
+    return () => {
+      // Cleanup listeners when component unmounts
+      if (socketService && socketListenersRef.current) {
+        console.log('🧹 Cleaning up WebSocket listeners for HomeScreen');
+        socketService.off('inventory:update');
+        socketService.off('inventory:created');
+        socketService.off('inventory:deleted');
+        socketListenersRef.current = false;
+      }
+    };
+  }, [socketService, user?._id]);
 
   useEffect(() => {
     if (justLoggedInName) {
@@ -131,6 +196,26 @@ export default function HomeScreen() {
           <View style={styles.ratingChip}>
             <Text style={styles.ratingChipText}>⭐ {product?.averageRating || '4.5'}</Text>
           </View>
+
+          {/* Real-time stock indicator */}
+          {product.stock !== undefined && (
+            <View style={[
+              styles.stockBadge, 
+              product.stock === 0 && styles.outOfStockBadge,
+              product.stock > 0 && product.stock <= 5 && styles.lowStockBadge,
+              product.stock > 5 && product.stock <= 10 && styles.mediumStockBadge
+            ]}>
+              <Text style={[
+                styles.stockBadgeText,
+                product.stock === 0 && styles.outOfStockText,
+                product.stock > 0 && product.stock <= 10 && styles.lowStockText
+              ]}>
+                {product.stock === 0 ? 'Out of Stock' : 
+                 product.stock <= 5 ? `${product.stock} left` :
+                 product.stock <= 10 ? 'Low Stock' : 'In Stock'}
+              </Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.productInfo}>
@@ -141,9 +226,14 @@ export default function HomeScreen() {
             <Text style={styles.productCategory} numberOfLines={1}>
               {product.category || 'General'}
             </Text>
-            {product.stock && (
-              <Text style={[styles.stockIndicator, product.stock < 10 && styles.lowStock]}>
-                {product.stock < 10 ? 'Low Stock' : 'In Stock'}
+            {product.stock !== undefined && (
+              <Text style={[
+                styles.stockIndicator, 
+                product.stock === 0 && styles.outOfStock,
+                product.stock > 0 && product.stock <= 10 && styles.lowStock
+              ]}>
+                {product.stock === 0 ? 'Out of Stock' :
+                 product.stock <= 10 ? 'Low Stock' : 'In Stock'}
               </Text>
             )}
           </View>
@@ -236,12 +326,12 @@ export default function HomeScreen() {
     );
   };
 
-  // Build Best Offers: mix top bundles and cheapest products
+  // Build Best Offers: mix top bundles and cheapest products (using real-time data)
   const bestOffers = (() => {
     const bundleCards = (bundles || [])
       .slice(0, 4)
       .map((b) => ({ type: 'bundle', item: b }));
-    const cheapest = [...(products || [])]
+    const cheapest = [...(realtimeProducts || [])]
       .sort((a, b) => Number(a?.price || 0) - Number(b?.price || 0))
       .slice(0, 6)
       .map((p) => ({ type: 'product', item: p }));
@@ -702,6 +792,49 @@ export default function HomeScreen() {
       color: "#DC2626",
       backgroundColor: "#FEF2F2",
     },
+
+    outOfStock: {
+      color: "#7F1D1D",
+      backgroundColor: "#FEE2E2",
+    },
+
+    // Stock badge styles for overlay indicators
+    stockBadge: {
+      position: "absolute",
+      top: 8,
+      left: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: "#10B981",
+    },
+
+    stockBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "#FFFFFF",
+      textTransform: "uppercase",
+    },
+
+    outOfStockBadge: {
+      backgroundColor: "#DC2626",
+    },
+
+    outOfStockText: {
+      color: "#FFFFFF",
+    },
+
+    lowStockBadge: {
+      backgroundColor: "#F59E0B",
+    },
+
+    lowStockText: {
+      color: "#FFFFFF",
+    },
+
+    mediumStockBadge: {
+      backgroundColor: "#3B82F6",
+    },
     
     productFooter: {
       flexDirection: "row",
@@ -1050,10 +1183,12 @@ export default function HomeScreen() {
           </View>
 
           {/* Recommended Products */}
-          {recommendedProducts && recommendedProducts.length > 0 && (
+          {(recommendedProducts && recommendedProducts.length > 0) || (realtimeProducts && realtimeProducts.length > 0) ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recommended for You</Text>
+                <Text style={styles.sectionTitle}>
+                  {recommendedProducts && recommendedProducts.length > 0 ? 'Recommended for You' : 'Featured Products'}
+                </Text>
                 <TouchableOpacity onPress={() => router.push('/tabs/products')}>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
@@ -1065,12 +1200,15 @@ export default function HomeScreen() {
                 style={styles.productsScroll}
                 contentContainerStyle={styles.productsScrollContent}
               >
-                {recommendedProducts.map((product) => (
+                {(recommendedProducts && recommendedProducts.length > 0 
+                  ? recommendedProducts 
+                  : realtimeProducts.slice(0, 10)
+                ).map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}
               </ScrollView>
             </View>
-          )}
+          ) : null}
 
           {/* Best Offers */}
           {bestOffers.length > 0 && (

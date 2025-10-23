@@ -17,7 +17,7 @@ class SocketService {
       }
 
       // Use your backend URL
-      const SOCKET_URL = 'https://goagritrading-backend.onrender.com';
+      const SOCKET_URL = 'https://goat-agri-trading-backend.onrender.com';
       
       this.socket = io(SOCKET_URL, {
         auth: {
@@ -102,6 +102,47 @@ class SocketService {
     this.socket.on('support_chat_taken', (data) => {
       this.emit('support_chat_taken', data);
     });
+
+    // Inventory/Product listeners
+    this.socket.on('inventory:update', (data) => {
+      this.emit('inventory:update', data);
+    });
+
+    this.socket.on('inventory:created', (data) => {
+      this.emit('inventory:created', data);
+    });
+
+    this.socket.on('inventory:deleted', (data) => {
+      this.emit('inventory:deleted', data);
+    });
+
+    // Order listeners
+    this.socket.on('order:update', (data) => {
+      this.emit('order:update', data);
+    });
+
+    this.socket.on('order:status', (data) => {
+      this.emit('order:status', data);
+    });
+
+    // Notification listeners
+    this.socket.on('notification', (data) => {
+      this.emit('notification', data);
+    });
+
+    // Loyalty/Points listeners
+    this.socket.on('loyalty:update', (data) => {
+      this.emit('loyalty:update', data);
+    });
+
+    this.socket.on('points:earned', (data) => {
+      this.emit('points:earned', data);
+    });
+
+    // Cart listeners
+    this.socket.on('cart:update', (data) => {
+      this.emit('cart:update', data);
+    });
   }
 
   // Join rooms
@@ -159,6 +200,89 @@ class SocketService {
     if (this.socket && this.isConnected) {
       this.socket.emit('typing_support', { roomId, isTyping });
     }
+  }
+
+  // Inventory/Product methods
+  onInventoryUpdate(callback) {
+    this.on('inventory:update', callback);
+  }
+
+  onInventoryCreated(callback) {
+    this.on('inventory:created', callback);
+  }
+
+  onInventoryDeleted(callback) {
+    this.on('inventory:deleted', callback);
+  }
+
+  // Order methods
+  joinOrder(orderId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('join', { orderId });
+      console.log('📱 Joined order room:', orderId);
+    }
+  }
+
+  leaveOrder(orderId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('leave', { orderId });
+      console.log('📱 Left order room:', orderId);
+    }
+  }
+
+  sendMessage(orderId, text) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('message', { orderId, text });
+      console.log('📤 Message sent to order:', orderId);
+    } else {
+      console.warn('⚠️ Cannot send message: WebSocket not connected');
+    }
+  }
+
+  onMessage(callback) {
+    this.on('message', callback);
+  }
+
+  onOrderUpdate(callback) {
+    this.on('order:update', callback);
+  }
+
+  onOrderStatusChange(callback) {
+    this.on('order:status', callback);
+  }
+
+  // User-specific methods
+  joinUserRoom(userId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('join:user', { userId });
+      console.log('👤 Joined user room:', userId);
+    }
+  }
+
+  leaveUserRoom(userId) {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('leave:user', { userId });
+      console.log('👤 Left user room:', userId);
+    }
+  }
+
+  // Notification methods
+  onNotification(callback) {
+    this.on('notification', callback);
+  }
+
+  // Loyalty/Points methods
+  onLoyaltyUpdate(callback) {
+    this.on('loyalty:update', callback);
+  }
+
+  onPointsEarned(callback) {
+    this.on('points:earned', callback);
+  }
+
+  // Cart methods
+  onCartUpdate(callback) {
+    this.on('cart:update', callback);
   }
 
   // Event listener management

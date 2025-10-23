@@ -18,6 +18,7 @@ import {
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
+import GoogleSignInButton from "../../components/GoogleSignInButton";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -27,7 +28,7 @@ const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 :
 const bottomPad = Platform.OS === 'ios' ? 72 : 40;
 
 export default function RegisterScreen() {
-  const { doRegisterInitiate } = useContext(AppCtx);
+  const { doRegisterInitiate, doGoogleRegister } = useContext(AppCtx);
 
   // Name fields
   const [firstName, setFirstName] = useState("");
@@ -45,7 +46,18 @@ export default function RegisterScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // No Google button; registration is authenticated by email approval.
+  const handleGoogleRegister = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      await doGoogleRegister();
+    } catch (e) {
+      const apiMsg = e?.response?.data?.message || e?.message;
+      setError(apiMsg || "Google registration failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const validate = () => {
     if (!firstName.trim()) return "Please enter your first name.";
@@ -249,6 +261,22 @@ export default function RegisterScreen() {
 
       <View style={{ height: 16 }} />
 
+      <GoogleSignInButton
+        onPress={handleGoogleRegister}
+        disabled={submitting}
+        text="Register with Google"
+      />
+
+      <View style={{ height: 16 }} />
+
+      <View style={s.divider}>
+        <View style={s.dividerLine} />
+        <Text style={s.dividerText}>or</Text>
+        <View style={s.dividerLine} />
+      </View>
+
+      <View style={{ height: 16 }} />
+
       <Text style={s.small}>
         Already have an account? <Link href="/login">Login</Link>
       </Text>
@@ -314,5 +342,21 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   btnDisabled: { opacity: 0.6 },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  dividerText: {
+    color: "#6B7280",
+    fontSize: 14,
+    paddingHorizontal: 16,
+    fontWeight: "500",
+  },
   
 });
