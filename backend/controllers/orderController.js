@@ -333,6 +333,14 @@ export const createMyOrder = async (req, res) => {
 
     await Cart.deleteOne({ userId: String(me) });
 
+    // ⭐ Award loyalty points immediately for COD orders (similar to E-Payment)
+    try {
+      await updateLoyaltyAfterPurchase(order.userId, order.total, order._id);
+      console.log(`✅ Loyalty points awarded for COD order ${order._id}`);
+    } catch (e) {
+      console.warn("LOYALTY_UPDATE_ON_COD_ORDER_ERROR:", e?.message || e);
+    }
+
     const populatedOrder = await Order.findById(order._id)
       .populate("userId", "name email address loyaltyPoints loyaltyTier")
       .populate("items.productId", "name price category weightKg");

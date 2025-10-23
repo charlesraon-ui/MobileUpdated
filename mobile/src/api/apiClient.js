@@ -3,7 +3,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 
 /** ------------- Config (single source of truth) ------------- */
-const API_URL = "http://localhost:5000";
+const API_URL = Constants.expoConfig?.extra?.apiUrl || "https://goagritrading-backend.onrender.com";
 
 console.log("API_URL in app:", API_URL);
 

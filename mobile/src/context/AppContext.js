@@ -173,14 +173,13 @@ export default function AppProvider({ children }) {
       const val = raw ? JSON.parse(raw) : "";
       const addr = typeof val === "string" ? val : String(val || "");
       setDefaultAddressState(addr);
-      if (addr && !String(deliveryAddress || "").trim()) {
-        setDeliveryAddress(addr);
-      }
+      // Note: We don't set deliveryAddress here to avoid circular dependency
+      // The useEffect below will handle syncing deliveryAddress with defaultAddress
     } catch (e) {
       console.warn("loadDefaultAddress failed:", e?.message);
       setDefaultAddressState("");
     }
-  }, [defaultAddrKey, deliveryAddress]);
+  }, [defaultAddrKey]);
 
   const saveAddresses = useCallback(async (next, key = addrKey) => {
     try {
@@ -484,17 +483,15 @@ export default function AppProvider({ children }) {
     loadDefaultAddress();
   }, [defaultAddrKey, loadDefaultAddress]);
 
-  // keep deliveryAddress aligned with default when appropriate
-  useEffect(() => {
-    if (defaultAddress && (addresses || []).includes(defaultAddress)) {
-      const current = String(deliveryAddress || "").trim();
-      if (!current || !addresses.includes(current)) {
-        setDeliveryAddress(defaultAddress);
-      }
-    }
-  }, [defaultAddress, addresses]);
+  // Note: Removed automatic deliveryAddress sync to prevent infinite loops
+  // Users can manually select their delivery address from the saved addresses
 
   // fetch AI recommendations whenever user/cart changes
+  const cartProductIds = useMemo(() => 
+    (cart || []).map((i) => i?.productId).filter(Boolean).join(","), 
+    [cart]
+  );
+  
   useEffect(() => {
     (async () => {
       try {
@@ -506,7 +503,7 @@ export default function AppProvider({ children }) {
         setRecoItems([]);
       }
     })();
-  }, [userId, (cart || []).map((i) => i?.productId).join(",")]);
+  }, [userId, cartProductIds]);
 
   const refreshAuthedData = useCallback(
   async (u = user) => {

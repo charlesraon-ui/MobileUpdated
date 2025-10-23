@@ -195,7 +195,9 @@ export default function ProductsScreen() {
     return filtered;
   };
 
-  const filteredProducts = getFilteredAndSortedProducts();
+  const filteredProducts = useMemo(() => {
+    return getFilteredAndSortedProducts();
+  }, [products, selectedCategory, searchQuery, minPrice, maxPrice, sortBy, categoryLabelOf]);
   
   // Responsive grid columns
   const columns = viewMode === "list" ? 1 : (ResponsiveUtils.isTablet(width) ? 3 : 2);
@@ -224,6 +226,7 @@ export default function ProductsScreen() {
   };
 
   const applyFilters = () => {
+    // Apply all temporary filter values to the actual state
     setSelectedCategory(tempFilters.category);
     setSortBy(tempFilters.sortBy);
     setMinPrice(tempFilters.minPrice);
@@ -234,14 +237,29 @@ export default function ProductsScreen() {
   };
 
   const resetFilters = () => {
-    setTempFilters({
+    // Reset both temporary filters and actual filter states
+    const defaultFilters = {
       category: "All",
       sortBy: "popularity",
       minPrice: "",
       maxPrice: "",
       viewMode: "grid",
       search: ""
-    });
+    };
+    
+    // Update temporary filters
+    setTempFilters(defaultFilters);
+    
+    // Also immediately apply the reset to actual filter states
+    setSelectedCategory(defaultFilters.category);
+    setSortBy(defaultFilters.sortBy);
+    setMinPrice(defaultFilters.minPrice);
+    setMaxPrice(defaultFilters.maxPrice);
+    setSearchQuery(defaultFilters.search);
+    setViewMode(defaultFilters.viewMode);
+    
+    // Close the modal
+    setShowFilterModal(false);
   };
 
   const FilterButton = ({ title, selected, onPress }) => (

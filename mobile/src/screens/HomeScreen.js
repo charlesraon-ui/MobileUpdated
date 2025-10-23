@@ -285,6 +285,7 @@ export default function HomeScreen() {
     },
     // Center content and limit max width on wide screens
     pageWrap: {
+      flex: 1,
       alignSelf: "center",
       width: "100%",
       maxWidth: 1200,
@@ -470,6 +471,11 @@ export default function HomeScreen() {
       color: "#FFFFFF",
       fontSize: 14,
       fontWeight: "600",
+    },
+
+    // Main ScrollView
+    mainScrollView: {
+      flex: 1,
     },
 
     // Sections
@@ -1026,7 +1032,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.mainScrollView} showsVerticalScrollIndicator={false}>
           {/* Categories */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>

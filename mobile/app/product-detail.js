@@ -3,7 +3,7 @@ import ProductDetailScreen from "../src/screens/ProductDetailScreen";
 
 export default function ProductDetail() {
   const params = useLocalSearchParams();
-  const productId = params['product-detail'];
+  const productId = params.id;
   
   const route = { params: { id: productId } };
   
