@@ -23,15 +23,17 @@ Your backend is configured to deploy to Render at: `https://goagritrading-backen
    Set these sensitive environment variables in your Render service settings:
    
    ```
-   MONGO_URI=mongodb+srv://levymarcelo555:xtsr8gqeaq1brvBZ@cluster0.lyyf48t.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-   JWT_SECRET=jwtsecretKey@3410404
-   PAYMONGO_PUBLIC_KEY=pk_test_xF6nEM4BHEuKPAd7GrbiN9Gk
-   PAYMONGO_SECRET_KEY=sk_test_AFe1xWMyhWy9FRzvie9Sr5QP
-   CLOUDINARY_CLOUD_NAME=dx9cjcodr
-   CLOUDINARY_API_KEY=469988974799918
-   CLOUDINARY_API_SECRET=QXnavrd3zFpspQPdYeI1_ZVh95M
-   CLOUDINARY_ROOT_FOLDER=goat-app
+   MONGO_URI=your_mongodb_connection_string
+   JWT_SECRET=your_jwt_secret_key
+   PAYMONGO_PUBLIC_KEY=your_paymongo_public_key
+   PAYMONGO_SECRET_KEY=your_paymongo_secret_key
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   CLOUDINARY_ROOT_FOLDER=your_cloudinary_folder
    ```
+   
+   **Note**: Use the actual values from your backend/.env file when setting these in Render dashboard.
 
 4. **Deployment Configuration**
    - Render will automatically detect the `render.yaml` file
