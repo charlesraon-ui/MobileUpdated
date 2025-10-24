@@ -25,6 +25,8 @@ services:
         value: goagritrading://payment-success
       - key: FRONTEND_FAILED_URL
         value: goagritrading://payment-failed
+      - key: CORS_ORIGIN
+        value: http://localhost:8081,https://mobile-backend-zzy4.onrender.com,*
       # Sensitive environment variables (set these in Render dashboard):
       # - key: MONGO_URI
       #   sync: false
