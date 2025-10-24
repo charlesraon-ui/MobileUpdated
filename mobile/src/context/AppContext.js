@@ -1,6 +1,3 @@
-console.warn("🔥🔥🔥 APPCONTEXT FILE IS BEING LOADED! 🔥🔥🔥");
-console.log("🔥🔥🔥 APPCONTEXT FILE IS BEING LOADED! 🔥🔥🔥");
-
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -55,17 +52,8 @@ import socketService from "../services/socketService";
 export const AppCtx = createContext(null);
 
 export default function AppProvider({ children }) {
-  console.warn("🚀🚀🚀 AppProvider function is being called!");
-  console.log("🚀🚀🚀 AppProvider function is being called!");
-  console.warn("🔥 APPCONTEXT: AppProvider component is STARTING initialization...");
-  console.log("🔥 APPCONTEXT: AppProvider component is STARTING initialization...");
-  console.log("🔥 APPCONTEXT: Component render count:", Math.random());
-  console.log("🔥 APPCONTEXT: About to define router and initRef...");
-  
   const router = useRouter();
-  console.log("🔥 APPCONTEXT: Router defined successfully");
   const initRef = useRef(false);
-  console.log("🔥 APPCONTEXT: initRef defined successfully");
 
   // data state - MOVED BEFORE INITIALIZATION
   const [products, setProducts] = useState([]);

@@ -5,8 +5,6 @@ import Constants from "expo-constants";
 /** ------------- Config (single source of truth) ------------- */
 const API_URL = Constants.expoConfig?.extra?.apiUrl || "https://mobile-backend-zzy4.onrender.com";
 
-console.log("API_URL in app:", API_URL);
-
 /** ------------- Axios instance ------------- */
 export const api = axios.create({
   baseURL: API_URL,
@@ -30,14 +28,9 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (r) => {
-    console.log("AXIOS SUCCESS:", r?.config?.url, "status:", r?.status);
     return r;
   },
   (err) => {
-    console.error("AXIOS ERR:", err?.message, "url:", err?.config?.url);
-    console.error("AXIOS ERR status:", err?.response?.status);
-    console.error("AXIOS ERR data:", err?.response?.data);
-    console.error("AXIOS ERR code:", err?.code);
     return Promise.reject(err);
   }
 );

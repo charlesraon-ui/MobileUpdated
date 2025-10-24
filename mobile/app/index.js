@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
-  console.warn("DEBUG: Index component is rendering!");
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    console.warn("DEBUG: Index useEffect is running!");
     (async () => {
       try {
         const token = await AsyncStorage.getItem("pos-token");
