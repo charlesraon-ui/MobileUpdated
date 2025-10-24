@@ -153,7 +153,7 @@ export default function AppProvider({ children }) {
     return `${DEFAULT_ADDR_KEY_PREFIX}${uid}`;
   }, [user]);
 
-  const loadAddresses = useCallback(async (key = addrKey) => {
+  const loadAddresses = useCallback(async (key) => {
     try {
       const json = await AsyncStorage.getItem(key);
       const arr = json ? JSON.parse(json) : [];
@@ -162,9 +162,9 @@ export default function AppProvider({ children }) {
       console.warn("loadAddresses failed:", e?.message);
       setAddresses([]);
     }
-  }, [addrKey]);
+  }, []);
 
-  const loadDefaultAddress = useCallback(async (key = defaultAddrKey) => {
+  const loadDefaultAddress = useCallback(async (key) => {
     try {
       const raw = await AsyncStorage.getItem(key);
       const val = raw ? JSON.parse(raw) : "";
@@ -176,7 +176,7 @@ export default function AppProvider({ children }) {
       console.warn("loadDefaultAddress failed:", e?.message);
       setDefaultAddressState("");
     }
-  }, [defaultAddrKey]);
+  }, []);
 
   const saveAddresses = useCallback(async (next, key = addrKey) => {
     try {
@@ -472,13 +472,13 @@ export default function AppProvider({ children }) {
 
   // reload addresses when user changes (e.g., after login/logout)
   useEffect(() => {
-    loadAddresses();
-  }, [addrKey, loadAddresses]);
+    loadAddresses(addrKey);
+  }, [addrKey]);
 
   // reload default address when user changes
   useEffect(() => {
-    loadDefaultAddress();
-  }, [defaultAddrKey, loadDefaultAddress]);
+    loadDefaultAddress(defaultAddrKey);
+  }, [defaultAddrKey]);
 
   // Note: Removed automatic deliveryAddress sync to prevent infinite loops
   // Users can manually select their delivery address from the saved addresses

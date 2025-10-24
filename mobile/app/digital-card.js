@@ -175,12 +175,7 @@ export default function DigitalCardScreen() {
             </Text>
           </View>
 
-          {/* Card Number */}
-          <View style={styles.cardNumber}>
-            <Text style={[styles.cardNumberText, { color: theme.accentColor }]}>
-              **** **** **** {user?.id?.slice(-4) || '0000'}
-            </Text>
-          </View>
+
         </LinearGradient>
       </View>
     );

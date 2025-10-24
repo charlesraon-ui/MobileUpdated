@@ -167,6 +167,9 @@ export default function CheckoutScreen() {
 
   const disabled = !isLoggedIn || cartTotalAfterDiscount <= 0 || !!addrError || placing;
 
+  // Calculate final total for display
+  const { deliveryFee, subtotal, total: finalTotal } = calculateOrderTotals();
+
   // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
     console.log("🚀 ORDER DEBUG: onPlace function called");
