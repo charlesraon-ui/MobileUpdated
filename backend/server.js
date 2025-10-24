@@ -63,13 +63,27 @@ const allowList = (process.env.CORS_ORIGIN || "")
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // mobile app / curl
-    if (allowList.length === 0 || allowList.includes("*") || allowList.includes(origin)) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // If no specific origins configured, allow all (development mode)
+    if (allowList.length === 0) return callback(null, true);
+    
+    // Allow wildcard or specific origins
+    if (allowList.includes("*") || allowList.includes(origin)) {
       return callback(null, true);
     }
+    
+    // Allow localhost origins for development
+    if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+      return callback(null, true);
+    }
+    
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 app.use(cors(corsOptions));
 

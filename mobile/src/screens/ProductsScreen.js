@@ -143,12 +143,18 @@ export default function ProductsScreen() {
   // Filter and sort products
   const getFilteredAndSortedProducts = () => {
     let filtered = products || [];
+    console.log('🔍 PRODUCTS DEBUG: Initial products count:', filtered.length);
+    console.log('🔍 PRODUCTS DEBUG: selectedCategory:', selectedCategory);
+    console.log('🔍 PRODUCTS DEBUG: searchQuery:', searchQuery);
 
     if (selectedCategory !== "All") {
+      console.log('🔍 PRODUCTS DEBUG: Filtering by category:', selectedCategory);
       filtered = filtered.filter(product => {
         const label = typeof categoryLabelOf === 'function' ? categoryLabelOf(product) : (product?.category?.name || product?.category?.categoryName || product?.category || '');
+        console.log('🔍 PRODUCTS DEBUG: Product:', product.name, 'Category label:', label);
         return label === selectedCategory;
       });
+      console.log('🔍 PRODUCTS DEBUG: After category filter:', filtered.length);
     }
 
     if (searchQuery) {
@@ -192,6 +198,8 @@ export default function ProductsScreen() {
         break;
     }
 
+    console.log('🔍 PRODUCTS DEBUG: Final filtered products count:', filtered.length);
+    console.log('🔍 PRODUCTS DEBUG: Final filtered products:', filtered.map(p => p.name));
     return filtered;
   };
 
