@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 class PromoService {
   constructor() {
     // Use localhost for development, update for production
-    this.baseURL = 'https://goagritrading-backend.onrender.com/api/promo';
+    this.baseURL = 'https://mobile-backend-zzy4.onrender.com/api/promo';
   }
 
   async getAuthToken() {

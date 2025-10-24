@@ -40,7 +40,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "goagritrading-backend.onrender.com",
+              "host": "mobile-backend-zzy4.onrender.com",
               "pathPrefix": "/api/payment"
             },
             {
@@ -86,7 +86,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://goagritrading-backend.onrender.com",
+      "apiUrl": "https://mobile-backend-zzy4.onrender.com",
       "googleWebClientId": "1006606136969-kka7f7k99ecsnvd0v71j40tqjol6uqct.apps.googleusercontent.com"
     },
     "eas": {

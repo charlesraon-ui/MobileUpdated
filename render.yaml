@@ -16,11 +16,11 @@ services:
       - key: PORT
         value: 5000
       - key: APP_URL
-        value: https://goagritrading-backend.onrender.com
+        value: https://mobile-backend-zzy4.onrender.com
       - key: API_URL
-        value: https://goagritrading-backend.onrender.com
+        value: https://mobile-backend-zzy4.onrender.com
       - key: EXPO_PUBLIC_API_URL
-        value: https://goagritrading-backend.onrender.com
+        value: https://mobile-backend-zzy4.onrender.com
       - key: FRONTEND_SUCCESS_URL
         value: goagritrading://payment-success
       - key: FRONTEND_FAILED_URL

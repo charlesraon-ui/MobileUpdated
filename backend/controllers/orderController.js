@@ -169,7 +169,7 @@ export const createEPaymentOrder = async (req, res) => {
       quantity: item.quantity,
     }));
 
-    const backendUrl = process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com';
+    const backendUrl = process.env.BACKEND_URL || 'https://mobile-backend-zzy4.onrender.com';
 
     const paymongoResponse = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
