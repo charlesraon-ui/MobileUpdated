@@ -10,14 +10,14 @@ class SocketService {
 
   async connect() {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('pos-token');
       if (!token) {
         console.log('No token found, cannot connect to socket');
         return;
       }
 
       // Use your backend URL
-      const SOCKET_URL = 'https://goat-agri-trading-backend.onrender.com';
+      const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
       
       this.socket = io(SOCKET_URL, {
         auth: {

@@ -1268,7 +1268,7 @@ export default function HomeScreen() {
                 title="Customer Support"
                 subtitle="Get help when you need it"
                 icon="💬"
-                onPress={() => Alert.alert("Support", "Contact us at support@example.com")}
+                onPress={() => router.push('/support-chat')}
               />
             </View>
           </View>

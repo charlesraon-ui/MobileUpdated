@@ -55,7 +55,7 @@ export default function CartScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const qty = Number(item.quantity || 0);
     const price = Number(item.price || 0);
-    const img = item.imageUrl || "https://via.placeholder.com/120x120.png?text=Item";
+    const img = item.imageUrl || require("../../assets/images/placeholder-small.svg");
 
     return (
       <View style={s.modernItemCard}>

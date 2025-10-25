@@ -86,7 +86,7 @@ const BundlesScreen = () => {
           
           <View style={styles.bundleItems}>
             <Text style={styles.itemsCount}>
-              {bundle.items?.length || 0} items included
+              {bundle.items?.length || bundle.products?.length || 0} items included
             </Text>
           </View>
           

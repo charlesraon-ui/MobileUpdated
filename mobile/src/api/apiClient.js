@@ -303,15 +303,41 @@ export const addToWishlistApi = (productId) => api.post(`/api/wishlist/add`, { p
 export const removeFromWishlistApi = (productId) => api.delete(`/api/wishlist/remove`, { data: { productId } });
 export const toggleWishlistApi = (productId) => api.post(`/api/wishlist/toggle`, { productId });
 
-/** ------------- Support Chat ------------- */
-export const createSupportChatApi = () => api.post(`/api/support-chat/create`);
-export const getSupportMessagesApi = (roomId) => api.get(`/api/support-chat/${roomId}/messages`);
-export const sendSupportMessageApi = (roomId, message) => api.post(`/api/support-chat/${roomId}/message`, { message });
-export const closeSupportChatApi = (roomId) => api.post(`/api/support-chat/${roomId}/close`);
+/** ------------- Support Chat (Custom Backend) ------------- */
+// Create separate axios instance for support chat
+const supportChatApi = axios.create({
+  baseURL: API_URL, // Use the same API_URL as the main API
+  timeout: 30000,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Add auth interceptor for support chat API
+supportChatApi.interceptors.request.use(async (config) => {
+  try {
+    if (!config.headers?.Authorization) {
+      const t = await AsyncStorage.getItem("pos-token");
+      if (t) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${t}`;
+      }
+    }
+  } catch {}
+  return config;
+});
+
+supportChatApi.interceptors.response.use(
+  (r) => r,
+  (err) => Promise.reject(err)
+);
+
+export const createSupportChatApi = () => supportChatApi.post(`/api/support-chat/create`);
+export const getSupportMessagesApi = (roomId) => supportChatApi.get(`/api/support-chat/${roomId}/messages`);
+export const sendSupportMessageApi = (roomId, message) => supportChatApi.post(`/api/support-chat/${roomId}/message`, { message });
+export const closeSupportChatApi = (roomId) => supportChatApi.post(`/api/support-chat/${roomId}/close`);
 
 // Admin functions
-export const getPendingSupportChatsApi = () => api.get(`/api/support-chat/pending`);
-export const acceptSupportChatApi = (roomId) => api.post(`/api/support-chat/${roomId}/accept`);
+export const getPendingSupportChatsApi = () => supportChatApi.get(`/api/support-chat/pending`);
+export const acceptSupportChatApi = (roomId) => supportChatApi.post(`/api/support-chat/${roomId}/accept`);
 
 /** ------------- Exports ------------- */
 export { API_URL }; // if other modules need the absolute string

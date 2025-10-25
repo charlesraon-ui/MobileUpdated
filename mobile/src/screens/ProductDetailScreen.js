@@ -323,9 +323,9 @@ export default function ProductDetailScreen() {
   );
 
   const img = useMemo(() => {
-    if (!productDetail) return "https://via.placeholder.com/400x300.png?text=No+Image";
+    if (!productDetail) return require("../../assets/images/placeholder.svg");
     const imageSource = productDetail?.imageUrl || productDetail?.images?.[0];
-    if (!imageSource) return "https://via.placeholder.com/400x300.png?text=No+Image";
+    if (!imageSource) return require("../../assets/images/placeholder.svg");
     if (String(imageSource).startsWith("http")) return imageSource;
     return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
   }, [productDetail, toAbsoluteUrl]);
@@ -489,7 +489,7 @@ export default function ProductDetailScreen() {
   const RecoRow = useCallback(({ item }) => {
     if (!item) return null;
     
-    const imgSrc = item.imageUrl || "https://via.placeholder.com/120x120.png?text=Item";
+    const imgSrc = item.imageUrl || require("../../assets/images/placeholder-small.svg");
     const averageRating = item.averageRating || 0;
     const reviewCount = item.reviewCount || 0;
     

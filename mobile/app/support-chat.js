@@ -59,7 +59,7 @@ export default function SupportChatScreen() {
       }
       cleanupSocketListeners();
     };
-  }, [user]);
+  }, [user?.id]); // Only depend on user ID to prevent unnecessary re-renders
 
   const initializeChat = async () => {
     try {

@@ -17,7 +17,7 @@ import { AppCtx } from "../context/AppContext";
 import { platformShadow } from "../utils/shadow";
 import { Colors, Radii } from "../../constants/theme";
 
-const PLACEHOLDER = "https://via.placeholder.com/400x300.png?text=No+Image";
+const PLACEHOLDER = require("../../assets/images/placeholder.svg");
 const C = Colors.light;
 
 function formatPrice(n) {

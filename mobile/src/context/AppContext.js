@@ -1,53 +1,50 @@
-import { useRouter } from "expo-router";
-import { createContext, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // import { Alert } from "react-native";
 import Toast from "../../components/Toast";
-import { configureGoogleSignIn, signInWithGoogle } from "../config/googleSignIn";
 import {
   addReviewApi,
-  createOrder as apiCreateOrder,
-  createMyOrder,
   getCart as apiGetCart,
   getOrders as apiGetOrders,
   login as apiLogin,
   register as apiRegister,
-  initiateRegister,
   clearAuth,
   createEPaymentOrder,
+  createMyOrder,
+  getAvailableRewards,
   getBundleApi,
   getBundles,
   getCategories,
   getDeliveryForOrder,
+  getDigitalCard,
   getDriverContact,
+  getLoyaltyStatus,
   getMyReviewsApi,
   getProductApi,
   getProducts,
   getRecommendations,
+  getRedemptionHistory,
   getToken,
+  getWishlistApi,
+  googleAuth,
+  initiateRegister,
+  issueLoyaltyCard,
   listMyDeliveries,
   setUser as persistUser,
   getUser as readUser,
+  redeemReward,
   setCartApi,
   setToken,
   toAbsoluteUrl,
-  googleAuth,
-  getWishlistApi,
-  addToWishlistApi,
-  removeFromWishlistApi,
-  toggleWishlistApi,
-  getLoyaltyStatus,
-  issueLoyaltyCard,
-  getDigitalCard,
-  getAvailableRewards,
-  redeemReward,
-  getRedemptionHistory,
+  toggleWishlistApi
 } from "../api/apiClient";
+import { configureGoogleSignIn, signInWithGoogle } from "../config/googleSignIn";
 import { imageCache } from "../utils/imageCache";
 // import { registerPushToken } from "../api/apiClient";
 // import { registerForPushNotificationsAsync } from "../utils/notifications";
-import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 import socketService from "../services/socketService";
+import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 
 export const AppCtx = createContext(null);
 
@@ -828,7 +825,9 @@ export default function AppProvider({ children }) {
       const res = await getBundles();
       console.log("🔍 fetchBundles: Raw response:", res);
       console.log("🔍 fetchBundles: Response data:", res?.data);
-      const bundlesArray = Array.isArray(res?.data) ? res.data : [];
+      // Handle both local API format (direct array) and remote API format ({data: array})
+      const bundlesArray = Array.isArray(res?.data?.data) ? res.data.data : 
+                          Array.isArray(res?.data) ? res.data : [];
       console.log("🔍 fetchBundles: Bundles array:", bundlesArray);
       console.log("🔍 fetchBundles: Bundles array length:", bundlesArray.length);
       setBundles(bundlesArray);
@@ -843,7 +842,9 @@ export default function AppProvider({ children }) {
   const fetchBundleDetail = async (id) => {
     try {
       const res = await getBundleApi(id);
-      setBundleDetail(res.data);
+      // Handle both local API format (direct object) and remote API format ({data: object})
+      const bundleData = res.data?.data || res.data;
+      setBundleDetail(bundleData);
     } catch (e) {
       console.warn("fetchBundleDetail failed:", e.message);
       setBundleDetail(null);

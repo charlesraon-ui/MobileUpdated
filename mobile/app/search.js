@@ -31,7 +31,7 @@ export default function SearchScreen() {
   }, [debouncedQ]);
 
   const renderItem = ({ item }) => {
-    const img = item.imageUrl || item.images?.[0] || "https://via.placeholder.com/120x120.png?text=Item";
+    const img = item.imageUrl || item.images?.[0] || require("../assets/images/placeholder-small.svg");
     return (
       <TouchableOpacity style={s.card} onPress={() => { Keyboard.dismiss(); router.push(`/product/${item._id}`); }} activeOpacity={0.8}>
         <Image source={{ uri: img }} style={s.img} />
