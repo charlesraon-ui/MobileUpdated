@@ -10,7 +10,11 @@ import {
   getAllCustomerLoyalty,
   getCustomerLoyalty,
   updateCustomerLoyalty,
-  getLoyaltyHistory
+  getLoyaltyHistory,
+  getLoyaltyStats,
+  initializeTiers,
+  checkTiers,
+  bulkUpdateLoyalty
 } from "../controllers/adminLoyaltyController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { isAdmin } from "../middleware/adminMiddleware.js";
@@ -38,5 +42,15 @@ router.put("/customers/:userId", updateCustomerLoyalty);
 
 // Loyalty History
 router.get("/history/:userId", getLoyaltyHistory);
+
+// Loyalty Statistics
+router.get("/stats", getLoyaltyStats);
+
+// Tier Management
+router.post("/initialize-tiers", initializeTiers);
+router.get("/check-tiers", checkTiers);
+
+// Bulk Operations
+router.post("/bulk-update", bulkUpdateLoyalty);
 
 export default router;

@@ -16,13 +16,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./*"
       ],
       "@api/*": [
         "src/api/*"
       ],
       "@components/*": [
-        "src/components/*"
+        "components/*"
       ],
       "@screens/*": [
         "src/screens/*"
@@ -31,7 +31,7 @@
         "src/context/*"
       ],
       "@hooks/*": [
-        "src/hooks/*"
+        "hooks/*"
       ],
       "@assets/*": [
         "assets/*"

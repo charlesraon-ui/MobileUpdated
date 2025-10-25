@@ -1,6 +1,6 @@
 // controllers/wishlistController.js
-import User from "../models/User.js";
 import Product from "../models/Products.js";
+import User from "../models/User.js";
 
 // GET /api/wishlist - Get user's wishlist
 export const getWishlist = async (req, res) => {

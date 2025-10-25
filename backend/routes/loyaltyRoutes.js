@@ -7,7 +7,9 @@ import {
   getDigitalCard,
   getAvailableRewards,
   getRedemptionHistory,
-  addTestPoints
+  addTestPoints,
+  getLoyaltyStats,
+  addLoyaltyPoints
 } from "../controllers/loyaltyController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -25,6 +27,10 @@ router.get("/digital-card", authMiddleware, getDigitalCard);
 router.get("/rewards", authMiddleware, getAvailableRewards);
 router.post("/redeem", authMiddleware, redeemReward);
 router.get("/redemptions", authMiddleware, getRedemptionHistory);
+
+// Admin endpoints
+router.get("/stats", authMiddleware, getLoyaltyStats);
+router.post("/add-points", authMiddleware, addLoyaltyPoints);
 
 // Test endpoint (no auth required for testing)
 router.post("/add-test-points", addTestPoints);

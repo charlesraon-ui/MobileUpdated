@@ -1,7 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 import ChatRoom from '../models/ChatRoom.js';
 import SupportMessage from '../models/SupportMessage.js';
 import User from '../models/User.js';
-import { v4 as uuidv4 } from 'uuid';
 
 // Create or get existing support chat room for user
 export const createSupportChat = async (req, res) => {
@@ -12,7 +12,7 @@ export const createSupportChat = async (req, res) => {
     let chatRoom = await ChatRoom.findOne({
       userId,
       status: { $in: ['waiting', 'active'] }
-    }).populate('adminId', 'firstName lastName email role');
+    }).populate('adminId', 'name email role');
 
     if (!chatRoom) {
       // Create new chat room
@@ -68,8 +68,8 @@ export const acceptSupportChat = async (req, res) => {
         lastActivity: new Date()
       },
       { new: true }
-    ).populate('userId', 'firstName lastName email')
-     .populate('adminId', 'firstName lastName email role');
+    ).populate('userId', 'name email')
+     .populate('adminId', 'name email role');
 
     if (!chatRoom) {
       return res.status(404).json({ success: false, message: 'Chat room not found or already assigned' });
@@ -81,7 +81,7 @@ export const acceptSupportChat = async (req, res) => {
       roomId: chatRoom.roomId,
       admin: {
         id: chatRoom.adminId._id,
-        name: `${chatRoom.adminId.firstName} ${chatRoom.adminId.lastName}`,
+        name: chatRoom.adminId.name,
         role: chatRoom.adminId.role
       }
     });
@@ -124,7 +124,7 @@ export const getChatMessages = async (req, res) => {
     }
 
     const messages = await SupportMessage.find({ roomId })
-      .populate('senderId', 'firstName lastName role')
+      .populate('senderId', 'name role')
       .sort({ timestamp: 1 })
       .limit(100);
 
@@ -136,7 +136,7 @@ export const getChatMessages = async (req, res) => {
         senderType: msg.senderType,
         sender: {
           id: msg.senderId._id,
-          name: `${msg.senderId.firstName} ${msg.senderId.lastName}`,
+          name: msg.senderId.name,
           role: msg.senderId.role
         },
         timestamp: msg.timestamp
@@ -180,7 +180,12 @@ export const sendSupportMessage = async (req, res) => {
       message
     });
     await supportMessage.save();
-    await supportMessage.populate('senderId', 'firstName lastName role');
+    await supportMessage.populate('senderId', 'name role');
+
+    // Debug logging
+    console.log('Populated sender data:', JSON.stringify(supportMessage.senderId, null, 2));
+    console.log('Sender name direct access:', supportMessage.senderId.name);
+    console.log('Sender object keys:', Object.keys(supportMessage.senderId.toObject ? supportMessage.senderId.toObject() : supportMessage.senderId));
 
     // Update chat room last activity
     await ChatRoom.findOneAndUpdate(
@@ -196,7 +201,7 @@ export const sendSupportMessage = async (req, res) => {
       senderType: supportMessage.senderType,
       sender: {
         id: supportMessage.senderId._id,
-        name: `${supportMessage.senderId.firstName} ${supportMessage.senderId.lastName}`,
+        name: supportMessage.senderId.name,
         role: supportMessage.senderId.role
       },
       timestamp: supportMessage.timestamp
@@ -226,7 +231,7 @@ export const getPendingSupportChats = async (req, res) => {
     }
 
     const pendingChats = await ChatRoom.find({ status: 'waiting' })
-      .populate('userId', 'firstName lastName email')
+      .populate('userId', 'name email')
       .sort({ createdAt: 1 });
 
     res.json({
@@ -235,7 +240,7 @@ export const getPendingSupportChats = async (req, res) => {
         roomId: chat.roomId,
         user: {
           id: chat.userId._id,
-          name: `${chat.userId.firstName} ${chat.userId.lastName}`,
+          name: chat.userId.name,
           email: chat.userId.email
         },
         createdAt: chat.createdAt

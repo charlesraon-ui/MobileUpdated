@@ -3,6 +3,7 @@ import Order from "../models/Order.js";
 import LoyaltyTier from "../models/LoyaltyTier.js";
 import User from "../models/User.js";
 import { rewards } from "../config/loyaltyConfig.js";
+import loyaltyService from "../services/loyaltyService.js";
 
 export const getLoyaltyStatus = async (req, res) => {
   try {
@@ -109,7 +110,8 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
     loyalty.purchaseCount += 1;
     loyalty.totalSpent += validAmount;
 
-    const pointsEarned = Math.floor(validAmount / 100);
+    // Use loyalty service to calculate points
+    const pointsEarned = loyaltyService.calculatePoints({ total: validAmount });
     loyalty.points += pointsEarned;
 
     loyalty.pointsHistory.push({
@@ -131,13 +133,17 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
 
 const updateLoyaltyTier = async (loyalty) => {
   try {
-    const tiers = await LoyaltyTier.find({ isActive: true }).sort({ pointThreshold: 1 });
-    if (!tiers || tiers.length === 0) return;
-    let userTier = "";
-    for (const tier of tiers) {
-      if (loyalty.points >= tier.pointThreshold) userTier = tier.name; else break;
+    // Use loyalty service to determine tier
+    const newTier = loyaltyService.getTier(loyalty.points);
+    if (newTier && newTier !== loyalty.tier) {
+      loyalty.tier = newTier;
+      
+      // Update user model as well
+      await User.findByIdAndUpdate(loyalty.userId, {
+        loyaltyTier: newTier,
+        loyaltyPoints: loyalty.points
+      });
     }
-    if (userTier && userTier !== loyalty.tier) loyalty.tier = userTier;
   } catch (error) {
     console.error("UPDATE_LOYALTY_TIER_ERROR:", error);
   }
@@ -196,23 +202,30 @@ export const redeemReward = async (req, res) => {
       return res.status(404).json({ success: false, message: "Loyalty record not found" });
     }
 
-    const reward = rewards.find((r) => r.name === rewardName);
-    if (!reward) {
-      return res.status(400).json({ success: false, message: "Invalid reward" });
-    }
-
-    const currentPoints = Number(loyalty.points) || 0;
-    if (currentPoints < reward.cost) {
+    // Use loyalty service to check if reward can be redeemed
+    const redemptionCheck = loyaltyService.canRedeemReward(loyalty.points, rewardName);
+    if (!redemptionCheck.canRedeem) {
       return res.status(400).json({ 
         success: false, 
-        message: "Not enough points",
-        required: reward.cost,
-        available: currentPoints
+        message: redemptionCheck.error || "Cannot redeem reward",
+        pointsNeeded: redemptionCheck.pointsNeeded
+      });
+    }
+
+    const reward = redemptionCheck.reward;
+    
+    // Validate points transaction
+    const validation = loyaltyService.validatePointsTransaction(loyalty.points, reward.cost);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: validation.error,
+        shortfall: validation.shortfall
       });
     }
 
     // Deduct points and add to history
-    loyalty.points = currentPoints - reward.cost;
+    loyalty.points = validation.remainingPoints;
     loyalty.pointsHistory.push({
       points: -reward.cost,
       source: "reward_redeemed",
@@ -282,19 +295,64 @@ export const getAvailableRewards = async (req, res) => {
     const loyalty = await LoyaltyReward.findOne({ userId });
     const currentPoints = loyalty?.points || 0;
 
-    const availableRewards = rewards.map(reward => ({
-      ...reward,
-      canRedeem: currentPoints >= reward.cost,
-      pointsNeeded: Math.max(0, reward.cost - currentPoints)
-    }));
+    // Use loyalty service to get available rewards
+    const availableRewards = loyaltyService.getAvailableRewards(currentPoints);
 
     res.json({
       success: true,
       rewards: availableRewards,
-      currentPoints
+      currentPoints,
+      tier: loyalty?.tier || loyaltyService.getTier(currentPoints),
+      tierBenefits: loyaltyService.getTierBenefits(loyalty?.tier || loyaltyService.getTier(currentPoints))
     });
   } catch (error) {
     console.error("GET_AVAILABLE_REWARDS_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get loyalty statistics (admin function)
+export const getLoyaltyStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const loyaltyUsers = await LoyaltyReward.countDocuments();
+    const activeCards = await LoyaltyReward.countDocuments({ cardIssued: true, isActive: true });
+    
+    const tierStats = await LoyaltyReward.aggregate([
+      { $group: { _id: "$tier", count: { $sum: 1 } } }
+    ]);
+    
+    const totalPointsIssued = await LoyaltyReward.aggregate([
+      { $group: { _id: null, total: { $sum: "$points" } } }
+    ]);
+    
+    const recentRedemptions = await LoyaltyReward.aggregate([
+      { $unwind: "$pointsHistory" },
+      { $match: { "pointsHistory.source": "reward_redeemed" } },
+      { $sort: { "pointsHistory.createdAt": -1 } },
+      { $limit: 10 },
+      { $project: {
+        userId: 1,
+        rewardName: "$pointsHistory.rewardName",
+        points: "$pointsHistory.points",
+        redeemedAt: "$pointsHistory.createdAt"
+      }}
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        loyaltyUsers,
+        activeCards,
+        participationRate: totalUsers > 0 ? ((loyaltyUsers / totalUsers) * 100).toFixed(2) : 0,
+        tierDistribution: tierStats,
+        totalPointsIssued: totalPointsIssued[0]?.total || 0,
+        recentRedemptions
+      }
+    });
+  } catch (error) {
+    console.error("GET_LOYALTY_STATS_ERROR:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -328,6 +386,55 @@ export const getRedemptionHistory = async (req, res) => {
     });
   } catch (error) {
     console.error("GET_REDEMPTION_HISTORY_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Add loyalty points (admin function)
+export const addLoyaltyPoints = async (req, res) => {
+  try {
+    const { userId, points, reason } = req.body;
+    
+    if (!userId || !points) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "userId and points are required" 
+      });
+    }
+
+    const pointsToAdd = Number(points);
+    if (!Number.isFinite(pointsToAdd) || pointsToAdd <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Points must be a positive number" 
+      });
+    }
+
+    let loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      loyalty = new LoyaltyReward({ userId });
+    }
+
+    loyalty.points = (loyalty.points || 0) + pointsToAdd;
+    loyalty.pointsHistory.push({
+      points: pointsToAdd,
+      source: "admin_adjustment",
+      reason: reason || "Manual adjustment by admin",
+      createdAt: new Date(),
+    });
+
+    // Update tier based on new points
+    await updateLoyaltyTier(loyalty);
+    await loyalty.save();
+
+    res.json({
+      success: true,
+      message: `Added ${pointsToAdd} points to user`,
+      newTotal: loyalty.points,
+      tier: loyalty.tier
+    });
+  } catch (error) {
+    console.error("ADD_LOYALTY_POINTS_ERROR:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
