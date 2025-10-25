@@ -6,7 +6,7 @@ import { AppCtx } from "../context/AppContext";
 
 export default function PaymentScreen({ route, navigation }) {
   const { amount, orderId } = route.params;
-  const { user } = useContext(AppCtx);
+  const { user, refreshLoyalty } = useContext(AppCtx);
   const [checkoutUrl, setCheckoutUrl] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,12 +56,18 @@ export default function PaymentScreen({ route, navigation }) {
     }
   };
 
-  const handleWebViewNavigationStateChange = (navState) => {
+  const handleWebViewNavigationStateChange = async (navState) => {
     const { url } = navState;
     
     // Check for success/failure redirect
     if (url.includes("goagritrading://payment/success")) {
       setCheckoutUrl(null);
+      // Refresh loyalty points after successful payment
+      try {
+        await refreshLoyalty();
+      } catch (error) {
+        console.warn("Failed to refresh loyalty after payment:", error);
+      }
       Alert.alert("Success", "Payment completed!", [
         { text: "OK", onPress: () => navigation.navigate("Orders") },
       ]);

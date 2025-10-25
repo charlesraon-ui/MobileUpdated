@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Dimensions,
   Modal,
@@ -17,7 +18,7 @@ import { ResponsiveUtils } from "../../constants/theme";
 // Avatar upload removed
 
 export default function ProfileScreen() {
-  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser, orders } = useContext(AppCtx);
+  const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser, orders, refreshLoyalty } = useContext(AppCtx);
   const { width, height } = Dimensions.get('window');
   const [cardVisible, setCardVisible] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
@@ -99,6 +100,15 @@ export default function ProfileScreen() {
       }
     })();
   }, [isLoggedIn]);
+
+  // Refresh loyalty data when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn && refreshLoyalty) {
+        refreshLoyalty();
+      }
+    }, [isLoggedIn, refreshLoyalty])
+  );
 
   // pickAvatar removed
 

@@ -22,6 +22,7 @@ const LoyaltyRewards = () => {
     loadAvailableRewards,
     loadRedemptionHistory,
     handleRedeemReward,
+    refreshLoyalty,
     isLoggedIn,
   } = useContext(AppCtx);
 
@@ -38,6 +39,7 @@ const LoyaltyRewards = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
+      refreshLoyalty(),
       loadAvailableRewards(),
       loadRedemptionHistory(),
     ]);

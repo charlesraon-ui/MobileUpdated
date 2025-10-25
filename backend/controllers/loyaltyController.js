@@ -135,15 +135,19 @@ const updateLoyaltyTier = async (loyalty) => {
   try {
     // Use loyalty service to determine tier
     const newTier = loyaltyService.getTier(loyalty.points);
+image.png    
+    // Always update the user's loyalty points, and tier if it changed
+    const updateData = {
+      loyaltyPoints: loyalty.points
+    };
+    
     if (newTier && newTier !== loyalty.tier) {
       loyalty.tier = newTier;
-      
-      // Update user model as well
-      await User.findByIdAndUpdate(loyalty.userId, {
-        loyaltyTier: newTier,
-        loyaltyPoints: loyalty.points
-      });
+      updateData.loyaltyTier = newTier;
     }
+    
+    // Update user model with current points and tier
+    await User.findByIdAndUpdate(loyalty.userId, updateData);
   } catch (error) {
     console.error("UPDATE_LOYALTY_TIER_ERROR:", error);
   }

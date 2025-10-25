@@ -1055,6 +1055,7 @@ const handlePlaceOrder = async (opts = {}) => {
       clearRewardDiscount(); // Clear applied reward discount
 
       refreshAuthedData?.(user);
+      await refreshLoyalty(); // Refresh loyalty points after order completion
       console.log("🔥 ORDER PLACEMENT DEBUG: COD order completed successfully");
       return { success: true, order };
     }
