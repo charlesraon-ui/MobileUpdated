@@ -167,18 +167,7 @@ class SocketService {
   setupMessageListeners() {
     if (!this.socket) return;
 
-    // Direct message listeners
-    this.socket.on('new_dm_message', (data) => {
-      this.emit('new_dm_message', data);
-    });
 
-    this.socket.on('new_dm_notification', (data) => {
-      this.emit('new_dm_notification', data);
-    });
-
-    this.socket.on('user_typing_dm', (data) => {
-      this.emit('user_typing_dm', data);
-    });
 
     // Group message listeners
     this.socket.on('new_group_message', (data) => {
@@ -261,17 +250,6 @@ class SocketService {
   }
 
   // Join rooms
-  joinDMRoom(otherUserId) {
-    if (this.socket && this.isConnected) {
-      this.socket.emit('join_dm_room', otherUserId);
-    }
-  }
-
-  leaveDMRoom(otherUserId) {
-    if (this.socket && this.isConnected) {
-      this.socket.emit('leave_dm_room', otherUserId);
-    }
-  }
 
   joinGroupRoom(groupId) {
     if (this.socket && this.isConnected) {
@@ -286,11 +264,6 @@ class SocketService {
   }
 
   // Typing indicators
-  sendTypingDM(otherUserId, isTyping) {
-    if (this.socket && this.isConnected) {
-      this.socket.emit('typing_dm', { otherUserId, isTyping });
-    }
-  }
 
   sendTypingGroup(groupId, isTyping) {
     if (this.socket && this.isConnected) {

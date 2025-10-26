@@ -15,7 +15,6 @@ import {
 import { AppCtx } from "../context/AppContext";
 import { getDigitalCard, getLoyaltyStatus, issueLoyaltyCard, getMyRefundTicketsApi } from "../api/apiClient";
 import { ResponsiveUtils } from "../../constants/theme";
-// Avatar upload removed
 
 export default function ProfileScreen() {
   const { user, isLoggedIn, handleLogout, myReviews, fetchMyReviews, toAbsoluteUrl, setUserState, persistUser, orders } = useContext(AppCtx);
@@ -28,7 +27,6 @@ export default function ProfileScreen() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [refundMap, setRefundMap] = useState({});
-  // Avatar upload removed
 
 
 
@@ -100,10 +98,6 @@ export default function ProfileScreen() {
       }
     })();
   }, [isLoggedIn]);
-
-  // pickAvatar removed
-
-  // removeAvatar removed
 
   const ProfileButton = ({ title, onPress, icon, style = {} }) => (
     <TouchableOpacity 
@@ -260,47 +254,7 @@ export default function ProfileScreen() {
       height: 80,
       borderRadius: 40,
     },
-    avatarActions: {
-      marginTop: 12,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    avatarBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: "#10B981",
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 10,
-      shadowColor: "#10B981",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    avatarBtnText: {
-      color: "#FFFFFF",
-      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
-      fontWeight: "700",
-    },
-    removeBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: "#FFFFFF",
-      borderWidth: 1,
-      borderColor: "#FEE2E2",
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 10,
-    },
-    removeBtnText: {
-      color: "#EF4444",
-      fontSize: ResponsiveUtils.isTablet(width) ? 16 : 14,
-      fontWeight: "700",
-    },
+
     
     userName: {
       fontSize: ResponsiveUtils.isTablet(width) ? 26 : 22,

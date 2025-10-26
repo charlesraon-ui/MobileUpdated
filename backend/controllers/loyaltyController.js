@@ -72,6 +72,11 @@ export const issueLoyaltyCard = async (req, res) => {
     if (!issued) {
       return res.status(400).json({ success: false, message: "Failed to issue loyalty card" });
     }
+    
+    // Set the discount percentage based on current tier
+    const discountPercentage = loyaltyService.getTierDiscountPercentage(loyalty.tier);
+    loyalty.discountAmount = discountPercentage;
+    
     await loyalty.save();
 
     res.json({
@@ -81,6 +86,7 @@ export const issueLoyaltyCard = async (req, res) => {
         cardId: loyalty.cardId,
         cardType: loyalty.cardType,
         discountAmount: loyalty.discountAmount || 0,
+        discountPercentage: loyalty.discountAmount || 0, // discountAmount now stores percentage
         expiryDate: loyalty.expiryDate,
       },
     });
@@ -135,7 +141,7 @@ const updateLoyaltyTier = async (loyalty) => {
   try {
     // Use loyalty service to determine tier
     const newTier = loyaltyService.getTier(loyalty.points);
-image.png    
+    
     // Always update the user's loyalty points, and tier if it changed
     const updateData = {
       loyaltyPoints: loyalty.points
@@ -145,6 +151,10 @@ image.png
       loyalty.tier = newTier;
       updateData.loyaltyTier = newTier;
     }
+    
+    // Update discount amount to be the percentage for the current tier
+    const discountPercentage = loyaltyService.getTierDiscountPercentage(loyalty.tier || newTier);
+    loyalty.discountAmount = discountPercentage;
     
     // Update user model with current points and tier
     await User.findByIdAndUpdate(loyalty.userId, updateData);
@@ -170,6 +180,7 @@ export const getDigitalCard = async (req, res) => {
         expiryDate: loyalty.expiryDate,
         points: loyalty.points,
         discountAmount: loyalty.discountAmount || 0,
+        discountPercentage: loyalty.discountAmount || 0, // discountAmount now stores percentage
         isActive: loyalty.isActive,
       },
     });

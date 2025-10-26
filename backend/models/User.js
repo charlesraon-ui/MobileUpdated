@@ -30,6 +30,18 @@ const userSchema = new mongoose.Schema({
       date: { type: Date, default: Date.now },
     },
   ],
+
+  // Notification fields
+  fcmToken: { type: String }, // Firebase Cloud Messaging token for push notifications
+  notifications: [
+    {
+      title: { type: String, required: true },
+      body: { type: String, required: true },
+      data: { type: mongoose.Schema.Types.Mixed, default: {} },
+      read: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
 });
 
 const User = mongoose.model("User", userSchema)

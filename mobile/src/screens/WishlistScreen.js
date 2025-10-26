@@ -202,21 +202,12 @@ export default function WishlistScreen() {
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.viewButton]}
+                style={[styles.actionButton, styles.viewButton, styles.fullWidthButton]}
                 onPress={() => router.push(`/product-detail?id=${item._id}`)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="eye-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>View</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.actionButton, styles.removeActionButton]}
-                onPress={() => confirmRemoveFromWishlist(item._id, item.name)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Remove</Text>
+                <Text style={styles.actionButtonText}>View Details</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -585,5 +576,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  fullWidthButton: {
+    flex: 1,
   },
 });

@@ -144,16 +144,7 @@ function TabsInner() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: "Messages",
-          tabBarLabel: "Messages",
-          tabBarIcon: ({ color, size }) => (
-            <TabBarIcon name="chatbubbles-outline" color={color} size={size + 2} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="profile"
         options={{

@@ -9,13 +9,13 @@ export const loyaltyConfig = {
   bonusThreshold: 100,          // Bonus points threshold
   bonusMultiplier: 1.5,         // 1.5x points for orders over threshold
   
-  // Tier thresholds (points required) - discount is now fixed amount
+  // Tier thresholds (points required) - discount is percentage-based
   tiers: {
     "Sprout": { min: 0, max: 99, discount: 0 },
-    "Seedling": { min: 100, max: 299, discount: 100 },
-    "Cultivator": { min: 300, max: 599, discount: 200 },
-    "Bloom": { min: 600, max: 999, discount: 300 },
-    "Harvester": { min: 1000, max: Infinity, discount: 500 }
+    "Seedling": { min: 100, max: 299, discount: 5 },
+    "Cultivator": { min: 300, max: 599, discount: 10 },
+    "Bloom": { min: 600, max: 999, discount: 15 },
+    "Harvester": { min: 1000, max: Infinity, discount: 20 }
   },
   
   // Reward costs - using imported rewards from config
@@ -211,20 +211,40 @@ export const getAvailableRewards = (userPoints) => {
 };
 
 /**
- * Calculate discount amount based on user tier
- * @param {number} orderAmount - Order total amount (not used anymore since we use fixed amounts)
+ * Get discount percentage based on user tier
  * @param {string} userTier - User's current tier
- * @returns {number} - Fixed discount amount
+ * @returns {number} - Discount percentage (0-100)
  */
-export const calculateTierDiscount = (orderAmount, userTier) => {
+export const getTierDiscountPercentage = (userTier) => {
   try {
     const tier = loyaltyConfig.tiers[userTier];
     if (!tier || !tier.discount) {
       return 0;
     }
     
-    // Return fixed discount amount instead of percentage calculation
+    // Return discount percentage
     return tier.discount;
+  } catch (error) {
+    console.error('Error getting tier discount percentage:', error);
+    return 0;
+  }
+};
+
+/**
+ * Calculate discount amount based on user tier and order amount
+ * @param {number} orderAmount - Order total amount
+ * @param {string} userTier - User's current tier
+ * @returns {number} - Calculated discount amount
+ */
+export const calculateTierDiscount = (orderAmount, userTier) => {
+  try {
+    const discountPercentage = getTierDiscountPercentage(userTier);
+    if (!discountPercentage || !orderAmount) {
+      return 0;
+    }
+    
+    // Calculate discount amount based on percentage
+    return (orderAmount * discountPercentage) / 100;
   } catch (error) {
     console.error('Error calculating tier discount:', error);
     return 0;
@@ -270,6 +290,7 @@ export default {
   getTierBenefitsList,
   canRedeemReward,
   getAvailableRewards,
+  getTierDiscountPercentage,
   calculateTierDiscount,
   validatePointsTransaction,
   loyaltyConfig

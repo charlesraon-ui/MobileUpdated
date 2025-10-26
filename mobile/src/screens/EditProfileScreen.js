@@ -15,9 +15,8 @@ import {
   Image,
   Dimensions
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { AppCtx } from "../context/AppContext";
-import { uploadProfileImageFromUri, updateProfileApi } from "../api/apiClient";
+import { updateProfileApi } from "../api/apiClient";
 
 export default function EditProfileScreen() {
   const { width, height } = Dimensions.get('window');
@@ -26,14 +25,42 @@ export default function EditProfileScreen() {
   const isTablet = width >= 768;
   const isLargeScreen = width >= 1024;
   const { user, setUserState, persistUser, toAbsoluteUrl } = useContext(AppCtx);
-  const [name, setName] = useState(user?.name || "");
+  
+  // Parse existing name into separate fields
+  const parseExistingName = (fullName) => {
+    if (!fullName) return { firstName: "", middleInitial: "", lastName: "" };
+    
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length === 1) {
+      return { firstName: nameParts[0], middleInitial: "", lastName: "" };
+    } else if (nameParts.length === 2) {
+      return { firstName: nameParts[0], middleInitial: "", lastName: nameParts[1] };
+    } else {
+      // Assume first part is first name, last part is last name, middle parts are middle initial
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      const middleParts = nameParts.slice(1, -1);
+      const middleInitial = middleParts.length > 0 ? middleParts[0].charAt(0).toUpperCase() : "";
+      return { firstName, middleInitial, lastName };
+    }
+  };
+
+  const parsedName = parseExistingName(user?.name);
+  const [firstName, setFirstName] = useState(parsedName.firstName);
+  const [middleInitial, setMiddleInitial] = useState(parsedName.middleInitial);
+  const [lastName, setLastName] = useState(parsedName.lastName);
   const [email, setEmail] = useState(user?.email || "");
   const [loading, setLoading] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const save = async () => {
-    if (!name.trim()) {
-      Alert.alert("Error", "Name is required");
+    // Validate required fields
+    if (!firstName.trim()) {
+      Alert.alert("Error", "First name is required");
+      return;
+    }
+
+    if (!lastName.trim()) {
+      Alert.alert("Error", "Last name is required");
       return;
     }
 
@@ -49,12 +76,19 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Combine name fields
+    const fullName = [
+      firstName.trim(),
+      middleInitial.trim(),
+      lastName.trim()
+    ].filter(part => part.length > 0).join(" ");
+
     setLoading(true);
 
     try {
       // Call the new profile update API endpoint
       const response = await updateProfileApi({
-        name: name.trim(),
+        name: fullName,
         email: email.trim()
       });
 
@@ -94,65 +128,6 @@ export default function EditProfileScreen() {
 
   const hasChanges = name !== (user?.name || "") || email !== (user?.email || "");
 
-  const pickAvatar = async () => {
-    try {
-      setAvatarUploading(true);
-      // Request permission only on native; web does not require
-      if (Platform.OS !== "web") {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Permission required", "Please allow photo library access");
-          setAvatarUploading(false);
-          return;
-        }
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (result?.canceled) {
-        setAvatarUploading(false);
-        return;
-      }
-
-      const asset = (result?.assets || [])[0];
-      if (!asset?.uri) {
-        setAvatarUploading(false);
-        return;
-      }
-
-      const resp = await uploadProfileImageFromUri(asset);
-      const url = resp?.url || resp?.user?.avatarUrl;
-      if (!url) throw new Error("Upload failed");
-
-      const updatedUser = { ...user, avatarUrl: url };
-      setUserState?.(updatedUser);
-      await persistUser?.(updatedUser);
-      Alert.alert("Success", "Profile photo updated");
-    } catch (e) {
-      console.warn("avatar upload error:", e?.message || e);
-      Alert.alert("Error", "Failed to upload photo. Please try again.");
-    } finally {
-      setAvatarUploading(false);
-    }
-  };
-
-  const removeAvatar = async () => {
-    try {
-      const updatedUser = { ...user };
-      delete updatedUser.avatarUrl;
-      setUserState?.(updatedUser);
-      await persistUser?.(updatedUser);
-      Alert.alert("Removed", "Profile photo removed");
-    } catch (e) {
-      Alert.alert("Error", "Unable to remove photo");
-    }
-  };
-
   return (
     <View style={s.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10B981" />
@@ -181,59 +156,54 @@ export default function EditProfileScreen() {
         >
           {/* Main Content Container for responsive layout */}
           <View style={[s.mainContent, isTablet && s.mainContentTablet]}>
-            {/* Profile Avatar Section */}
-            <View style={[s.avatarSection, isTablet && s.avatarSectionTablet]}>
-              <View style={s.avatarContainer}>
-                <View style={[s.avatar, isTablet && s.avatarTablet]}>
-                  {user?.avatarUrl ? (
-                    <Image
-                      source={{ uri: (toAbsoluteUrl?.(user.avatarUrl) || user.avatarUrl) }}
-                      style={[s.avatarImage, isTablet && s.avatarImageTablet]}
-                    />
-                  ) : (
-                    <Text style={[s.avatarText, isTablet && s.avatarTextTablet]}>
-                      {(name || user?.name || "U").charAt(0).toUpperCase()}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <Text style={[s.avatarLabel, isTablet && s.avatarLabelTablet]}>Profile Picture</Text>
-              <View style={[s.avatarActions, isTablet && s.avatarActionsTablet]}>
-                <TouchableOpacity
-                  style={[s.avatarBtn, isTablet && s.avatarBtnTablet]}
-                  onPress={pickAvatar}
-                  disabled={avatarUploading}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="cloud-upload" size={isTablet ? 20 : 18} color="#FFFFFF" />
-                  <Text style={[s.avatarBtnText, isTablet && s.avatarBtnTextTablet]}>
-                    {avatarUploading ? "Uploading…" : "Upload Photo"}
-                  </Text>
-                </TouchableOpacity>
-                {user?.avatarUrl ? (
-                  <TouchableOpacity 
-                    style={[s.removeBtn, isTablet && s.removeBtnTablet]} 
-                    onPress={removeAvatar} 
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="trash-outline" size={isTablet ? 20 : 18} color="#EF4444" />
-                    <Text style={[s.removeBtnText, isTablet && s.removeBtnTextTablet]}>Remove</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
+
 
             {/* Form Section */}
             <View style={[s.formSection, isTablet && s.formSectionTablet]}>
+              <Text style={[s.sectionLabel, isTablet && s.sectionLabelTablet]}>Name</Text>
+              
               <View style={s.inputGroup}>
-                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>Full Name</Text>
+                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>First Name</Text>
                 <View style={[s.inputContainer, isTablet && s.inputContainerTablet]}>
                   <Ionicons name="person-outline" size={isTablet ? 24 : 20} color="#6B7280" style={s.inputIcon} />
                   <TextInput
-                    value={name}
-                    onChangeText={setName}
+                    value={firstName}
+                    onChangeText={setFirstName}
                     style={[s.input, isTablet && s.inputTablet]}
-                    placeholder="Enter your full name"
+                    placeholder="Juan"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              <View style={s.inputGroup}>
+                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>Middle Initial (optional)</Text>
+                <View style={[s.inputContainer, isTablet && s.inputContainerTablet]}>
+                  <Ionicons name="person-outline" size={isTablet ? 24 : 20} color="#6B7280" style={s.inputIcon} />
+                  <TextInput
+                    value={middleInitial}
+                    onChangeText={(v) => setMiddleInitial(v.slice(0, 1))}
+                    style={[s.input, isTablet && s.inputTablet]}
+                    placeholder="M"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    maxLength={1}
+                  />
+                </View>
+              </View>
+
+              <View style={s.inputGroup}>
+                <Text style={[s.inputLabel, isTablet && s.inputLabelTablet]}>Last Name</Text>
+                <View style={[s.inputContainer, isTablet && s.inputContainerTablet]}>
+                  <Ionicons name="person-outline" size={isTablet ? 24 : 20} color="#6B7280" style={s.inputIcon} />
+                  <TextInput
+                    value={lastName}
+                    onChangeText={setLastName}
+                    style={[s.input, isTablet && s.inputTablet]}
+                    placeholder="Dela Cruz"
                     placeholderTextColor="#9CA3AF"
                     autoCapitalize="words"
                     autoCorrect={false}
@@ -380,157 +350,7 @@ const s = StyleSheet.create({
     width: '100%',
   },
 
-  // Avatar Section
-  avatarSection: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
 
-  avatarSectionTablet: {
-    paddingVertical: 48,
-    paddingHorizontal: 40,
-    marginBottom: 32,
-    borderRadius: 16,
-  },
-
-  avatarContainer: {
-    marginBottom: 16,
-  },
-
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#10B981",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-
-  avatarTablet: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-
-  avatarText: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  avatarTextTablet: {
-    fontSize: 48,
-  },
-
-  avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-
-  avatarImageTablet: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-
-  avatarActions: {
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  avatarActionsTablet: {
-    marginTop: 16,
-    gap: 16,
-  },
-
-  avatarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#10B981",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  avatarBtnTablet: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 10,
-  },
-
-  avatarBtnText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  avatarBtnTextTablet: {
-    fontSize: 16,
-  },
-
-  removeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-
-  removeBtnTablet: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 10,
-  },
-
-  removeBtnText: {
-    color: "#EF4444",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  removeBtnTextTablet: {
-    fontSize: 16,
-  },
-
-  avatarLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 4,
-  },
-
-  avatarLabelTablet: {
-    fontSize: 20,
-  },
 
   // Form Section
   formSection: {
@@ -559,6 +379,20 @@ const s = StyleSheet.create({
   inputLabelTablet: {
     fontSize: 18,
     marginBottom: 6,
+  },
+
+  sectionLabel: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 16,
+    marginTop: 8,
+  },
+
+  sectionLabelTablet: {
+    fontSize: 20,
+    marginBottom: 20,
+    marginTop: 12,
   },
 
   inputContainer: {

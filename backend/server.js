@@ -32,11 +32,14 @@ import webhookRoutes from "./routes/webhookRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import refundTicketRoutes from "./routes/refundTickets.js";
 import messageRoutes from "./routes/messageRoutes.js";
-import directMessageRoutes from "./routes/directMessageRoutes.js";
+
 import userRoutes from "./routes/userRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import supportChatRoutes from "./routes/supportChatRoutes.js";
 import promoRoutes from "./routes/promoRoutes.js";
+import deliveryMessageRoutes from "./routes/deliveryMessageRoutes.js";
+import priceAlertRoutes from "./routes/priceAlertRoutes.js";
+import priceMonitoringService from "./services/priceMonitoringService.js";
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -116,11 +119,13 @@ app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refund-tickets", refundTicketRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/dm", directMessageRoutes);
+
 app.use("/api/users", userRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/support-chat", supportChatRoutes);
 app.use("/api/promo", promoRoutes);
+app.use("/api/delivery-messages", deliveryMessageRoutes);
+app.use("/api/price-alerts", priceAlertRoutes);
 
 // Socket.IO authentication middleware
 io.use((socket, next) => {
@@ -161,28 +166,7 @@ io.on('connection', async (socket) => {
     console.error('Error checking user role:', error);
   }
   
-  // Join direct message room
-  socket.on('join_dm_room', (otherUserId) => {
-    const roomId = [socket.userId, otherUserId].sort().join('_');
-    socket.join(`dm_${roomId}`);
-    console.log(`User ${socket.userId} joined DM room: dm_${roomId}`);
-  });
-  
-  // Leave direct message room
-  socket.on('leave_dm_room', (otherUserId) => {
-    const roomId = [socket.userId, otherUserId].sort().join('_');
-    socket.leave(`dm_${roomId}`);
-    console.log(`User ${socket.userId} left DM room: dm_${roomId}`);
-  });
-  
-  // Handle typing indicators for DMs
-  socket.on('typing_dm', ({ otherUserId, isTyping }) => {
-    const roomId = [socket.userId, otherUserId].sort().join('_');
-    socket.to(`dm_${roomId}`).emit('user_typing_dm', {
-      userId: socket.userId,
-      isTyping
-    });
-  });
+
   
   // Support chat functionality
   socket.on('join_support_room', (roomId) => {
@@ -202,6 +186,37 @@ io.on('connection', async (socket) => {
       isTyping,
       isAdmin: socket.isAdmin || false
     });
+  });
+  
+  // Delivery message functionality
+  socket.on('join_delivery_room', (orderId) => {
+    socket.join(`delivery_${orderId}`);
+    console.log(`User ${socket.userId} joined delivery room: delivery_${orderId}`);
+  });
+  
+  socket.on('leave_delivery_room', (orderId) => {
+    socket.leave(`delivery_${orderId}`);
+    console.log(`User ${socket.userId} left delivery room: delivery_${orderId}`);
+  });
+  
+  // Handle typing indicators for delivery messages
+  socket.on('typing_delivery', ({ orderId, isTyping }) => {
+    socket.to(`delivery_${orderId}`).emit('user_typing_delivery', {
+      userId: socket.userId,
+      isTyping,
+      isAdmin: socket.isAdmin || false
+    });
+  });
+  
+  // Handle new delivery message broadcast
+  socket.on('new_delivery_message', (messageData) => {
+    // Broadcast to all users in the delivery room for this order
+    socket.to(`delivery_${messageData.orderId}`).emit('delivery_message_received', messageData);
+    
+    // Also notify admin room if message is from customer
+    if (!socket.isAdmin && messageData.senderType === 'customer') {
+      socket.to('admin_room').emit('new_customer_delivery_message', messageData);
+    }
   });
   
   socket.on('disconnect', () => {
@@ -230,6 +245,16 @@ const start = async () => {
     console.log(`✅ API listening on ${PORT}`);
     console.log(`✅ Socket.IO server ready`);
     if (!dbConnected) console.warn("⚠️ API running, but DB is not connected.");
+    
+    // Start price monitoring service if DB is connected
+    if (dbConnected) {
+      try {
+        priceMonitoringService.start();
+        console.log(`✅ Price monitoring service started`);
+      } catch (error) {
+        console.error(`❌ Failed to start price monitoring service:`, error);
+      }
+    }
   });
 };
 start();

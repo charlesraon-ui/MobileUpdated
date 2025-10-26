@@ -1,6 +1,7 @@
 // controllers/wishlistController.js
 import Product from "../models/Products.js";
 import User from "../models/User.js";
+import PriceAlert from "../models/PriceAlert.js";
 
 // GET /api/wishlist - Get user's wishlist
 export const getWishlist = async (req, res) => {
@@ -74,6 +75,32 @@ export const addToWishlist = async (req, res) => {
     if (!user.wishlist.includes(productId)) {
       user.wishlist.push(productId);
       await user.save();
+
+      // Create price alert for this product
+      try {
+        const existingAlert = await PriceAlert.findOne({ userId, productId });
+        if (!existingAlert) {
+          const priceAlert = new PriceAlert({
+            userId,
+            productId,
+            originalPrice: product.price,
+            currentPrice: product.price,
+            lowestPrice: product.price,
+            originalStock: product.stock || 0,
+            currentStock: product.stock || 0,
+            wasOutOfStock: product.stock === 0,
+            priceHistory: [{
+              price: product.price,
+              date: new Date()
+            }]
+          });
+          await priceAlert.save();
+          console.log(`✅ Price alert created for product ${product.name} for user ${user.email}`);
+        }
+      } catch (alertError) {
+        console.error("Error creating price alert:", alertError);
+        // Don't fail the wishlist addition if price alert creation fails
+      }
     }
 
     res.json({ 
@@ -104,6 +131,15 @@ export const removeFromWishlist = async (req, res) => {
     // Remove from wishlist
     user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
     await user.save();
+
+    // Remove price alert
+    try {
+      await PriceAlert.deleteOne({ userId, productId });
+      console.log(`✅ Price alert removed for product ${productId} for user ${user.email}`);
+    } catch (alertError) {
+      console.error("Error removing price alert:", alertError);
+      // Don't fail the wishlist removal if price alert removal fails
+    }
 
     res.json({ 
       message: "Product removed from wishlist",
@@ -170,6 +206,39 @@ export const toggleWishlist = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(userId, { wishlist: newWishlist }, { new: true });
     console.log("🔥 WISHLIST TOGGLE: User updated successfully");
     console.log("🔥 WISHLIST TOGGLE: Updated user wishlist:", updatedUser.wishlist);
+
+    // Handle price alerts
+    try {
+      if (isInWishlist) {
+        // Remove price alert when removing from wishlist
+        await PriceAlert.deleteOne({ userId, productId });
+        console.log("🔥 WISHLIST TOGGLE: Price alert removed");
+      } else {
+        // Create price alert when adding to wishlist
+        const existingAlert = await PriceAlert.findOne({ userId, productId });
+        if (!existingAlert) {
+          const priceAlert = new PriceAlert({
+            userId,
+            productId,
+            originalPrice: product.price,
+            currentPrice: product.price,
+            lowestPrice: product.price,
+            originalStock: product.stock || 0,
+            currentStock: product.stock || 0,
+            wasOutOfStock: product.stock === 0,
+            priceHistory: [{
+              price: product.price,
+              date: new Date()
+            }]
+          });
+          await priceAlert.save();
+          console.log("🔥 WISHLIST TOGGLE: Price alert created");
+        }
+      }
+    } catch (alertError) {
+      console.error("🔥 WISHLIST TOGGLE: Price alert error:", alertError);
+      // Don't fail the wishlist toggle if price alert handling fails
+    }
 
     const action = isInWishlist ? "removed" : "added";
     console.log("🔥 WISHLIST TOGGLE: Action:", action);
