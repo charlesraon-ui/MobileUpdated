@@ -85,7 +85,27 @@ orderSchema.pre("save", function (next) {
   
   this.subtotal = Math.round((Number(this.subtotal) || subtotal) * 100) / 100;
   this.deliveryFee = Math.round((Number(this.deliveryFee) || 0) * 100) / 100;
-  this.total = Math.round((this.subtotal + this.deliveryFee) * 100) / 100;
+  
+  // Calculate total with discounts
+  let calculatedTotal = this.subtotal + this.deliveryFee;
+  
+  // Apply promo code discount
+  if (this.promoCode && this.promoCode.discount > 0) {
+    calculatedTotal -= Number(this.promoCode.discount || 0);
+  }
+  
+  // Apply loyalty reward discount
+  if (this.loyaltyReward && this.loyaltyReward.discount > 0) {
+    calculatedTotal -= Number(this.loyaltyReward.discount || 0);
+  }
+  
+  // Apply free shipping discount
+  if ((this.promoCode && this.promoCode.freeShipping) || (this.loyaltyReward && this.loyaltyReward.freeShipping)) {
+    calculatedTotal -= this.deliveryFee;
+  }
+  
+  // Only update total if it wasn't explicitly set or if it's being recalculated
+  this.total = Math.round(Math.max(0, calculatedTotal) * 100) / 100; // Ensure total is never negative
   this.totalWeightKg = Math.round(totalWeight * 100) / 100; // round to 2 decimal places
   
   next();
