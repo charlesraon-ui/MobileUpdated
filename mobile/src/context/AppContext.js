@@ -13,6 +13,7 @@ import {
   createEPaymentOrder,
   createMyOrder,
   getAvailableRewards,
+  getUsableRewards,
   getBundleApi,
   getBundles,
   getCategories,
@@ -208,6 +209,7 @@ export default function AppProvider({ children }) {
   
   // Reward state
   const [availableRewards, setAvailableRewards] = useState([]);
+  const [usableRewards, setUsableRewards] = useState([]);
   const [redemptionHistory, setRedemptionHistory] = useState([]);
   const [rewardsLoading, setRewardsLoading] = useState(false);
   
@@ -629,6 +631,21 @@ export default function AppProvider({ children }) {
     }
   }, [isLoggedIn]);
 
+  // Load usable rewards (redeemed but not yet used)
+  const loadUsableRewards = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      // Ensure token is set before making API call
+      await getToken();
+      const response = await getUsableRewards();
+      setUsableRewards(response.data?.rewards || []);
+    } catch (error) {
+      console.error('Failed to load usable rewards:', error);
+      setUsableRewards([]);
+    }
+  }, [isLoggedIn]);
+
   // Redeem a reward
   const handleRedeemReward = useCallback(async (rewardName) => {
     if (!isLoggedIn) {
@@ -655,6 +672,7 @@ export default function AppProvider({ children }) {
         await refreshLoyalty();
         await loadAvailableRewards();
         await loadRedemptionHistory();
+        await loadUsableRewards();
         
         return true;
       } else {
@@ -682,15 +700,14 @@ export default function AppProvider({ children }) {
     
     setAppliedReward(reward);
     
-    // Handle percentage-based discounts from loyalty rewards
+    // Handle fixed peso amount discounts from loyalty rewards
     if (reward.type === 'discount' && reward.value) {
-      // Calculate percentage discount based on current cart total
-      const percentageDiscount = (cartTotal * reward.value) / 100;
-      setRewardDiscount(percentageDiscount);
+      // Use reward.value as a fixed peso amount
+      setRewardDiscount(Number(reward.value));
       
       showToast({
         type: "success",
-        message: `Applied ${reward.description} - ${reward.value}% discount!`
+        message: `Applied ${reward.description} - ₱${reward.value} discount!`
       });
     } else if (reward.discountAmount) {
       // Handle fixed amount discounts
@@ -1447,9 +1464,11 @@ const handlePlaceOrder = async (opts = {}) => {
 
     // rewards
     availableRewards,
+    usableRewards,
     redemptionHistory,
     rewardsLoading,
     loadAvailableRewards,
+    loadUsableRewards,
     loadRedemptionHistory,
     handleRedeemReward,
     

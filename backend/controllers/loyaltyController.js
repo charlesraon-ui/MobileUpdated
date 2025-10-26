@@ -53,6 +53,47 @@ export const getLoyaltyStatus = async (req, res) => {
   }
 };
 
+// Get usable rewards (redeemed but not yet used)
+export const getUsableRewards = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      return res.status(404).json({ success: false, message: "Loyalty record not found" });
+    }
+
+    // Get redeemed rewards from points history
+    const redeemedRewards = loyalty.pointsHistory
+      .filter(entry => entry.source === "reward_redeemed")
+      .map(entry => {
+        const rewardConfig = rewards.find(r => r.name === entry.rewardName);
+        return {
+          name: entry.rewardName,
+          description: rewardConfig?.description || "Unknown reward",
+          type: rewardConfig?.type || "discount",
+          value: rewardConfig?.value || 0,
+          discountAmount: rewardConfig?.discountAmount,
+          redeemedAt: entry.createdAt,
+          used: entry.used || false, // Track if reward has been used
+          id: entry._id
+        };
+      })
+      .filter(reward => !reward.used); // Only return unused rewards
+
+    res.json({
+      success: true,
+      rewards: redeemedRewards
+    });
+  } catch (error) {
+    console.error("GET_USABLE_REWARDS_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const issueLoyaltyCard = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id;
@@ -446,5 +487,45 @@ export const addLoyaltyPoints = async (req, res) => {
   } catch (error) {
     console.error("ADD_LOYALTY_POINTS_ERROR:", error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Mark loyalty rewards as used when order is completed
+export const markRewardsAsUsed = async (userId, rewardIds) => {
+  try {
+    if (!userId || !rewardIds || rewardIds.length === 0) {
+      return { success: false, message: "User ID and reward IDs are required" };
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      return { success: false, message: "Loyalty record not found" };
+    }
+
+    let markedCount = 0;
+    
+    // Mark specified rewards as used in points history
+    loyalty.pointsHistory.forEach(entry => {
+      if (entry.source === "reward_redeemed" && 
+          rewardIds.includes(entry._id.toString()) && 
+          !entry.used) {
+        entry.used = true;
+        markedCount++;
+      }
+    });
+
+    if (markedCount > 0) {
+      await loyalty.save();
+      console.log(`✅ Marked ${markedCount} rewards as used for user ${userId}`);
+    }
+
+    return { 
+      success: true, 
+      message: `Marked ${markedCount} rewards as used`,
+      markedCount 
+    };
+  } catch (error) {
+    console.error("MARK_REWARDS_AS_USED_ERROR:", error);
+    return { success: false, message: error.message };
   }
 };

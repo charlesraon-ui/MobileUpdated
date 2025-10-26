@@ -222,6 +222,9 @@ export const issueLoyaltyCard = () =>
 export const getAvailableRewards = () =>
   withFallbackGet(`/api/loyalty/rewards`, `/api/app/loyalty/rewards`);
 
+export const getUsableRewards = () =>
+  withFallbackGet(`/api/loyalty/usable-rewards`, `/api/app/loyalty/usable-rewards`);
+
 export const redeemReward = (rewardName) =>
   withFallbackPost(`/api/loyalty/redeem`, { rewardName }, `/api/app/loyalty/redeem`);
 

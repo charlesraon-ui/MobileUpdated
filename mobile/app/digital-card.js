@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AppCtx } from '../src/context/AppContext';
 import { safeGoBackToProfile } from '../src/utils/navigationUtils';
@@ -32,6 +32,7 @@ export default function DigitalCardScreen() {
     getLoyaltyStatus,
   } = useContext(AppCtx);
 
+  const params = useLocalSearchParams();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function DigitalCardScreen() {
     try {
       await Promise.all([
         loadAvailableRewards(),
+        loadUsableRewards(),
         loadRedemptionHistory(),
         getLoyaltyStatus(),
       ]);
@@ -56,6 +58,15 @@ export default function DigitalCardScreen() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  };
+
+  const handleBackNavigation = () => {
+    const returnTo = params?.returnTo;
+    if (returnTo === 'checkout') {
+      router.push('/checkout');
+    } else {
+      safeGoBackToProfile();
+    }
   };
 
   const handleRedeem = async (reward) => {
@@ -302,7 +313,7 @@ export default function DigitalCardScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => safeGoBackToProfile()}>
+          <TouchableOpacity onPress={handleBackNavigation}>
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Loyalty Rewards</Text>
@@ -319,7 +330,7 @@ export default function DigitalCardScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => safeGoBackToProfile()}>
+        <TouchableOpacity onPress={handleBackNavigation}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Loyalty Rewards</Text>

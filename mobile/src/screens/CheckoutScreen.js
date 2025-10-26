@@ -19,6 +19,7 @@ import {
 import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 import PromoService from "../services/PromoService";
+import VoucherDropdown from "../components/VoucherDropdown";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -525,116 +526,24 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {/* Rewards Section */}
-          {isLoggedIn && availableRewards.length > 0 && (
-            <View style={s.sectionContainer}>
-              <View style={s.sectionHeader}>
-                <Ionicons name="gift-outline" size={22} color={GREEN} />
-                <Text style={s.sectionTitle}>Apply Rewards</Text>
-              </View>
-              
-              {appliedReward ? (
-                <View style={s.appliedRewardCard}>
-                  <View style={s.appliedRewardInfo}>
-                    <Ionicons name="checkmark-circle" size={20} color={GREEN} />
-                    <View style={s.appliedRewardText}>
-                      <Text style={s.appliedRewardName}>{appliedReward.name}</Text>
-                      <Text style={s.appliedRewardDiscount}>
-                        {appliedReward.type === 'shipping' 
-                          ? 'Free shipping applied'
-                          : appliedReward.type === 'discount' && appliedReward.value
-                            ? `${appliedReward.value}% discount (-₱${rewardDiscount.toFixed(2)})`
-                            : `-₱${rewardDiscount.toFixed(2)} discount applied`
-                        }
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity 
-                    style={s.removeRewardBtn}
-                    onPress={removeRewardDiscount}
-                  >
-                    <Ionicons name="close" size={18} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={s.rewardsGrid}>
-                  {availableRewards.map((reward, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={s.rewardCard}
-                      onPress={() => applyRewardDiscount(reward)}
-                    >
-                      <View style={s.rewardIcon}>
-                        <Ionicons name="gift" size={20} color={GREEN} />
-                      </View>
-                      <Text style={s.rewardName}>{reward.name}</Text>
-                      <Text style={s.rewardDiscount}>
-                        {reward.type === 'discount' && reward.value 
-                          ? `${reward.value}% off`
-                          : reward.discountAmount 
-                            ? `₱${reward.discountAmount} off`
-                            : reward.type === 'shipping'
-                              ? 'Free shipping'
-                              : 'Reward'
-                        }
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Promo Code Section */}
+          {/* Vouchers Section */}
           <View style={s.sectionContainer}>
-            <View style={s.sectionHeader}>
-              <Ionicons name="pricetag-outline" size={22} color={GREEN} />
-              <Text style={s.sectionTitle}>Promo Code</Text>
-            </View>
-            
-            {appliedPromo ? (
-              <View style={s.appliedPromoCard}>
-                <View style={s.appliedPromoInfo}>
-                  <Ionicons name="checkmark-circle" size={20} color={GREEN} />
-                  <View style={s.appliedPromoText}>
-                    <Text style={s.appliedPromoName}>{appliedPromo.code}</Text>
-                    <Text style={s.appliedPromoDiscount}>
-                      {freeShipping ? "Free shipping applied!" : `-₱${promoDiscount.toFixed(2)} discount applied`}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity 
-                  style={s.removePromoBtn}
-                  onPress={handleRemovePromo}
-                >
-                  <Ionicons name="close" size={18} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={s.promoInputContainer}>
-                <View style={s.promoInputWrapper}>
-                  <TextInput
-                    value={promoCode}
-                    onChangeText={setPromoCode}
-                    placeholder="Enter promo code"
-                    style={s.promoInput}
-                    placeholderTextColor={GRAY}
-                    autoCapitalize="characters"
-                  />
-                  <TouchableOpacity
-                    style={[s.applyPromoBtn, isApplyingPromo && s.btnDisabled]}
-                    onPress={handleApplyPromo}
-                    disabled={isApplyingPromo}
-                  >
-                    {isApplyingPromo ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={s.applyPromoBtnText}>Apply</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            <VoucherDropdown
+              cartTotal={cartTotal}
+              onPromoApplied={(promo, discount, freeShip) => {
+                setAppliedPromo(promo);
+                setPromoDiscount(discount);
+                setFreeShipping(freeShip);
+              }}
+              onPromoRemoved={() => {
+                setAppliedPromo(null);
+                setPromoDiscount(0);
+                setFreeShipping(false);
+              }}
+              appliedPromo={appliedPromo}
+              promoDiscount={promoDiscount}
+              freeShipping={freeShipping}
+            />
           </View>
 
           {/* Payment Section */}

@@ -6,6 +6,7 @@ import {
   issueLoyaltyCard, 
   getDigitalCard,
   getAvailableRewards,
+  getUsableRewards,
   getRedemptionHistory,
   addTestPoints,
   getLoyaltyStats,
@@ -25,6 +26,7 @@ router.get("/digital-card", authMiddleware, getDigitalCard);
 
 // Reward redemption endpoints
 router.get("/rewards", authMiddleware, getAvailableRewards);
+router.get("/usable-rewards", authMiddleware, getUsableRewards);
 router.post("/redeem", authMiddleware, redeemReward);
 router.get("/redemptions", authMiddleware, getRedemptionHistory);
 
@@ -34,5 +36,10 @@ router.post("/add-points", authMiddleware, addLoyaltyPoints);
 
 // Test endpoint (no auth required for testing)
 router.post("/add-test-points", addTestPoints);
+
+// Simple test route to verify loyalty routes are working
+router.get("/test", (req, res) => {
+  res.json({ message: "Loyalty routes are working!", timestamp: new Date().toISOString() });
+});
 
 export default router;

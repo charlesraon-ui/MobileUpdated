@@ -5,7 +5,7 @@ import Order from "../models/Order.js";
 import Product from "../models/Products.js";
 import User from "../models/User.js";
 import { processOrderInventory } from "../utils/orderHelpers.js";
-import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
+import { updateLoyaltyAfterPurchase, markRewardsAsUsed } from "./loyaltyController.js";
 import { redeemPromoOnOrder } from "./promoController.js";
 
 /* ---------------- PayMongo E-Payment (with inventory) ---------------------- */
@@ -450,6 +450,16 @@ export const updateOrderStatus = async (req, res) => {
     // ⭐ Award loyalty points on completion
     if (status === "completed") {
       await updateLoyaltyAfterPurchase(order.userId._id, order.total, order._id);
+      
+      // ⭐ Mark loyalty rewards as used if order had rewards applied
+      if (order.loyaltyReward && order.loyaltyReward.rewardId) {
+        try {
+          const result = await markRewardsAsUsed(order.userId._id, [order.loyaltyReward.rewardId]);
+          console.log(`✅ Loyalty reward marking result:`, result);
+        } catch (error) {
+          console.warn("MARK_REWARDS_AS_USED_ERROR:", error.message);
+        }
+      }
     }
     
     res.status(200).json({

@@ -38,6 +38,8 @@ const loyaltyRewardSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Order"
       },
+      rewardName: String, // For reward redemptions
+      used: { type: Boolean, default: false }, // Track if reward has been used
       createdAt: {
         type: Date,
         default: Date.now
