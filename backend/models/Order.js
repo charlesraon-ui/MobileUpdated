@@ -20,6 +20,11 @@ const orderSchema = new mongoose.Schema(
       required: true 
     },
 
+    // Customer information (stored directly for reliability)
+    customerName: { type: String, default: "" },
+    customerEmail: { type: String, default: "" },
+    customerPhone: { type: String, default: "" },
+
     items: { type: [orderItemSchema], default: [] },
 
     // keep totals in PESOS; compute in a pre-save if not provided

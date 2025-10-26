@@ -28,8 +28,9 @@ export const createTier = async (req, res) => {
       discountAmount,
       benefits: Array.isArray(benefits) ? benefits : [],
       displayOrder
-    });
+    };
     
+    const tier = new LoyaltyTier(tierData);
     await tier.save();
     res.status(201).json({ success: true, tier });
   } catch (error) {

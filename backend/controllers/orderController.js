@@ -3,6 +3,7 @@ import Cart from "../models/Cart.js";
 import Delivery from "../models/Delivery.js";
 import Order from "../models/Order.js";
 import Product from "../models/Products.js";
+import User from "../models/User.js";
 import { processOrderInventory } from "../utils/orderHelpers.js";
 import { updateLoyaltyAfterPurchase } from "./loyaltyController.js";
 import { redeemPromoOnOrder } from "./promoController.js";
@@ -135,9 +136,15 @@ export const createEPaymentOrder = async (req, res) => {
       });
     }
 
+    // Fetch user information for customer fields
+    const user = await User.findById(me).select('name email address').lean();
+    
     // Create order (inventory will decrease on payment success)
     const order = await Order.create({
       userId: String(me),
+      customerName: user?.name || "",
+      customerEmail: user?.email || "",
+      customerPhone: user?.address || "", // Using address field as phone for now
       items,
       subtotal,
       deliveryFee,
@@ -328,9 +335,15 @@ export const createMyOrder = async (req, res) => {
     // ⭐ DECREASE INVENTORY
     await processOrderInventory(items);
 
+    // Fetch user information for customer fields
+    const user = await User.findById(me).select('name email address').lean();
+
     // Create order
     const order = await Order.create({
       userId: String(me),
+      customerName: user?.name || "",
+      customerEmail: user?.email || "",
+      customerPhone: user?.address || "", // Using address field as phone for now
       items,
       subtotal,
       deliveryFee,
@@ -527,8 +540,14 @@ export const createOrder = async (req, res) => {
     // ⭐ DECREASE INVENTORY
     await processOrderInventory(items);
 
+    // Fetch user information for customer fields
+    const user = await User.findById(userId).select('name email address').lean();
+
     const order = await Order.create({
       userId: String(userId),
+      customerName: user?.name || "",
+      customerEmail: user?.email || "",
+      customerPhone: user?.address || "", // Using address field as phone for now
       items,
       subtotal,
       deliveryFee,
