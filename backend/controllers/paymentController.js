@@ -9,7 +9,6 @@ const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY;
 const PAYMONGO_API = "https://api.paymongo.com/v1";
 const API_URL = process.env.API_URL || "http://localhost:5000";
 
-// Helper: Create auth header for PayMongo
 const getPayMongoAuth = () => {
   const auth = Buffer.from(PAYMONGO_SECRET + ":").toString("base64");
   return {
@@ -19,10 +18,6 @@ const getPayMongoAuth = () => {
   };
 };
 
-/**
- * Create payment source (GCash/PayMaya)
- * POST /api/payment/source
- */
 export const createSource = async (req, res) => {
   try {
     const { amount, type, userId, orderId } = req.body;
@@ -72,7 +67,6 @@ export const createSource = async (req, res) => {
     console.log("✅ PayMongo source created:", source.id);
     console.log("🔗 Checkout URL:", source.attributes.redirect.checkout_url);
 
-    // Update order with payment source ID
     await Order.findByIdAndUpdate(orderId, {
       paymentSourceId: source.id,
       paymentStatus: "pending",

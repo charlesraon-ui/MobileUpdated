@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { getAdminUsersApi } from "../src/api/apiClient";
 import Avatar from "../src/components/Avatar";
+import { safeGoBackToHome } from "../src/utils/navigationUtils";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
@@ -80,7 +81,7 @@ export default function AdminChatScreen() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => router.back()}
+          onPress={() => safeGoBackToHome()}
         >
           <Ionicons name="arrow-back" size={24} color={GREEN} />
         </TouchableOpacity>

@@ -1,52 +1,167 @@
-import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { io } from 'socket.io-client';
 
 class SocketService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
     this.listeners = new Map();
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.connectionTimeout = null;
+    this.isConnecting = false;
   }
 
   async connect() {
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      console.log('Connection already in progress...');
+      return;
+    }
+
     try {
+      this.isConnecting = true;
       const token = await AsyncStorage.getItem('pos-token');
       if (!token) {
         console.log('No token found, cannot connect to socket');
+        this.isConnecting = false;
         return;
       }
 
-      // Use your backend URL
-      const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
+      // Use local backend URL for development
+      const SOCKET_URL =  'http://localhost:5000';
+      console.log('🔌 Attempting to connect to socket:', SOCKET_URL);
       
+      // Disconnect existing socket if any
+      if (this.socket) {
+        this.socket.disconnect();
+        this.socket = null;
+      }
+
       this.socket = io(SOCKET_URL, {
         auth: {
           token: token
         },
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        timeout: 20000, // 20 second connection timeout
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: this.reconnectDelay,
+        reconnectionDelayMax: 5000,
+        maxReconnectionAttempts: this.maxReconnectAttempts,
+        randomizationFactor: 0.5,
+        forceNew: true
       });
+
+      // Set up connection timeout
+      this.connectionTimeout = setTimeout(() => {
+        if (!this.isConnected) {
+          console.error('❌ Socket connection timeout after 20 seconds');
+          this.handleConnectionError(new Error('Connection timeout'));
+        }
+      }, 20000);
 
       this.socket.on('connect', () => {
-        console.log('Socket connected');
+        console.log('✅ Socket connected successfully');
         this.isConnected = true;
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+        
+        // Clear connection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
       });
 
-      this.socket.on('disconnect', () => {
-        console.log('Socket disconnected');
+      this.socket.on('disconnect', (reason) => {
+        console.log('🔌 Socket disconnected:', reason);
         this.isConnected = false;
+        this.isConnecting = false;
+        
+        // Clear connection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+        
+        // Auto-reconnect for certain disconnect reasons
+        if (reason === 'io server disconnect') {
+          // Server initiated disconnect, try to reconnect
+          this.scheduleReconnect();
+        }
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+        console.error('❌ Socket connection error:', error.message);
+        this.handleConnectionError(error);
+      });
+
+      this.socket.on('reconnect', (attemptNumber) => {
+        console.log(`🔄 Socket reconnected after ${attemptNumber} attempts`);
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+      });
+
+      this.socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
+      });
+
+      this.socket.on('reconnect_error', (error) => {
+        console.error('❌ Socket reconnection error:', error.message);
+      });
+
+      this.socket.on('reconnect_failed', () => {
+        console.error('❌ Socket reconnection failed after maximum attempts');
         this.isConnected = false;
+        this.isConnecting = false;
       });
 
       // Set up message listeners
       this.setupMessageListeners();
 
     } catch (error) {
-      console.error('Error connecting to socket:', error);
+      console.error('❌ Error connecting to socket:', error);
+      this.isConnecting = false;
+      this.handleConnectionError(error);
     }
+  }
+
+  handleConnectionError(error) {
+    this.isConnected = false;
+    this.isConnecting = false;
+    
+    // Clear connection timeout
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
+    // Schedule reconnect if we haven't exceeded max attempts
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.scheduleReconnect();
+    } else {
+      console.error('❌ Max reconnection attempts reached. Please check your connection.');
+    }
+  }
+
+  scheduleReconnect() {
+    if (this.isConnecting || this.isConnected) {
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000); // Max 30 seconds
+    
+    console.log(`🔄 Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
+    
+    setTimeout(() => {
+      if (!this.isConnected && !this.isConnecting) {
+        console.log(`🔄 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+        this.connect();
+      }
+    }, delay);
   }
 
   setupMessageListeners() {
@@ -316,16 +431,54 @@ class SocketService {
   }
 
   disconnect() {
+    console.log('🔌 Manually disconnecting socket...');
+    
+    // Clear any pending connection timeout
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
+    // Reset connection state
+    this.isConnected = false;
+    this.isConnecting = false;
+    this.reconnectAttempts = 0;
+    
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      this.isConnected = false;
-      this.listeners.clear();
     }
+    
+    // Clear all listeners
+    this.listeners.clear();
+  }
+
+  // Manual retry method for user-initiated reconnection
+  async retryConnection() {
+    console.log('🔄 Manual retry connection requested...');
+    
+    // Reset reconnection attempts for manual retry
+    this.reconnectAttempts = 0;
+    
+    // Disconnect first if connected
+    if (this.socket) {
+      this.disconnect();
+    }
+    
+    // Wait a moment before reconnecting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Attempt to connect
+    await this.connect();
   }
 
   getConnectionStatus() {
-    return this.isConnected;
+    return {
+      isConnected: this.isConnected,
+      isConnecting: this.isConnecting,
+      reconnectAttempts: this.reconnectAttempts,
+      maxReconnectAttempts: this.maxReconnectAttempts
+    };
   }
 }
 

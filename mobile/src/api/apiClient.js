@@ -204,8 +204,17 @@ export const registerPushToken = (pushToken) =>
 export const getDigitalCard = () =>
   withFallbackGet(`/api/loyalty/digital-card`, `/api/app/loyalty/digital-card`);
 
-export const getLoyaltyStatus = () =>
-  withFallbackGet(`/api/loyalty/status`, `/api/app/loyalty/status`);
+export const getLoyaltyStatus = async () => {
+  console.log('getLoyaltyStatus called');
+  try {
+    const result = await withFallbackGet(`/api/loyalty/status`, `/api/app/loyalty/status`);
+    console.log('getLoyaltyStatus success:', result);
+    return result;
+  } catch (error) {
+    console.error('getLoyaltyStatus error:', error);
+    throw error;
+  }
+};
 
 export const issueLoyaltyCard = () =>
   withFallbackPost(`/api/loyalty/issue-card`, {}, `/api/app/loyalty/issue-card`);

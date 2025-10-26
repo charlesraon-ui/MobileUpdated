@@ -242,11 +242,6 @@ export const redeemReward = async (req, res) => {
     res.json({ 
       success: true,
       message: `Reward redeemed: ${reward.description}`,
-      reward: {
-        name: rewardName,
-        description: reward.description,
-        cost: reward.cost
-      },
       remainingPoints: loyalty.points
     });
   } catch (err) {

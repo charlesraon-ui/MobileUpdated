@@ -14,6 +14,7 @@ import {
 import { searchUsersApi } from "../src/api/apiClient";
 import Avatar from "../src/components/Avatar";
 import { AppCtx } from "../src/context/AppContext";
+import { safeGoBackToHome } from "../src/utils/navigationUtils";
 
 const GREEN = "#10B981";
 const BORDER = "#E5E7EB";
@@ -116,7 +117,7 @@ export default function UserSearchScreen() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => router.back()}
+          onPress={() => safeGoBackToHome()}
         >
           <Ionicons name="arrow-back" size={24} color={GREEN} />
         </TouchableOpacity>

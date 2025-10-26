@@ -45,7 +45,13 @@ const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  // Add proper timeout and connection settings
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 const PORT = Number(process.env.PORT) || 5000; // Render sets PORT
 

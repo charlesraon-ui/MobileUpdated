@@ -564,6 +564,8 @@ export default function AppProvider({ children }) {
   // Auto-activate loyalty upon login/register and refresh loyalty state
   const refreshLoyalty = useCallback(async () => {
     try {
+      // Ensure token is set before making API call
+      await getToken();
       const { data } = await getLoyaltyStatus();
       const current = data?.loyalty || null;
       let next = current;
@@ -602,6 +604,8 @@ export default function AppProvider({ children }) {
     
     try {
       setRewardsLoading(true);
+      // Ensure token is set before making API call
+      await getToken();
       const response = await getAvailableRewards();
       setAvailableRewards(response.data?.rewards || []);
     } catch (error) {
@@ -617,6 +621,8 @@ export default function AppProvider({ children }) {
     if (!isLoggedIn) return;
     
     try {
+      // Ensure token is set before making API call
+      await getToken();
       const response = await getRedemptionHistory();
       setRedemptionHistory(response.data?.redemptions || []);
     } catch (error) {
@@ -637,6 +643,8 @@ export default function AppProvider({ children }) {
 
     try {
       setRewardsLoading(true);
+      // Ensure token is set before making API call
+      await getToken();
       const response = await redeemReward(rewardName);
       
       if (response.data?.success) {

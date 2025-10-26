@@ -1,27 +1,29 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useContext, useEffect, useRef, useState } from 'react';
 import {
-  createSupportChatApi,
-  getSupportMessagesApi,
-  sendSupportMessageApi,
-  closeSupportChatApi
+    ActivityIndicator,
+    Alert,
+    AppState,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+    closeSupportChatApi,
+    createSupportChatApi,
+    getSupportMessagesApi,
+    sendSupportMessageApi
 } from '../src/api/apiClient';
-import socketService from '../src/services/socketService';
 import { AppCtx } from '../src/context/AppContext';
+import socketService from '../src/services/socketService';
+import { safeGoBackToProfile } from '../src/utils/navigationUtils';
 
 export default function SupportChatScreen() {
   const router = useRouter();
@@ -34,6 +36,8 @@ export default function SupportChatScreen() {
   const [adminJoined, setAdminJoined] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -51,7 +55,6 @@ export default function SupportChatScreen() {
     }
 
     initializeChat();
-    setupSocketListeners();
 
     return () => {
       if (chatRoom?.roomId) {
@@ -61,9 +64,89 @@ export default function SupportChatScreen() {
     };
   }, [user?.id]); // Only depend on user ID to prevent unnecessary re-renders
 
+  // Handle app state changes (when user switches tabs)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      console.log('App state changed to:', nextAppState);
+      
+      if (nextAppState === 'active' && chatRoom?.roomId) {
+        // App became active, ensure socket connection and rejoin room
+        console.log('App became active, checking socket connection...');
+        
+        const connectionStatus = socketService.getConnectionStatus();
+        if (!connectionStatus.isConnected) {
+          console.log('Socket disconnected, reconnecting...');
+          retryConnection();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => subscription?.remove();
+  }, [chatRoom?.roomId]);
+
+  const retryConnection = async () => {
+    try {
+      setRetrying(true);
+      setConnectionError(false);
+      
+      console.log('🔄 Retrying connection...');
+      
+      // Use the socket service retry method
+      await socketService.retryConnection();
+      
+      // Wait for connection to establish
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const connectionStatus = socketService.getConnectionStatus();
+      if (connectionStatus.isConnected) {
+        console.log('✅ Connection retry successful');
+        
+        // If we have a chat room, rejoin it
+        if (chatRoom?.roomId) {
+          setupSocketListeners();
+          socketService.joinSupportRoom(chatRoom.roomId);
+        } else {
+          // Reinitialize chat if no room exists
+          await initializeChat();
+        }
+        
+        setConnectionError(false);
+      } else {
+        console.error('❌ Connection retry failed');
+        setConnectionError(true);
+      }
+    } catch (error) {
+      console.error('Error during connection retry:', error);
+      setConnectionError(true);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const initializeChat = async () => {
     try {
       setLoading(true);
+      setConnectionError(false);
+      
+      // Ensure socket is connected before proceeding
+      const connectionStatus = socketService.getConnectionStatus();
+      if (!connectionStatus.isConnected) {
+        console.log('Socket not connected, attempting to connect...');
+        await socketService.connect();
+        
+        // Wait a bit for connection to establish
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check connection status again
+        const newStatus = socketService.getConnectionStatus();
+        if (!newStatus.isConnected) {
+          console.error('Failed to establish socket connection');
+          setConnectionError(true);
+          return;
+        }
+      }
       
       // Create or get existing support chat
       const response = await createSupportChatApi();
@@ -72,11 +155,17 @@ export default function SupportChatScreen() {
         setChatRoom(room);
         setAdminJoined(room.status === 'active' && room.admin);
         
+        // Setup socket listeners BEFORE joining room
+        setupSocketListeners();
+        
         // Join socket room
         socketService.joinSupportRoom(room.roomId);
         
         // Load existing messages
         await loadMessages(room.roomId);
+        
+        // Clear any previous connection errors
+        setConnectionError(false);
       }
     } catch (error) {
       console.error('Error initializing chat:', error);
@@ -90,6 +179,10 @@ export default function SupportChatScreen() {
             { text: 'OK', onPress: () => router.replace('/login') }
           ]
         );
+      } else if (error.message?.includes('timeout') || error.code === 'NETWORK_ERROR') {
+        // Connection timeout or network error
+        console.error('Connection timeout detected');
+        setConnectionError(true);
       } else {
         Alert.alert('Error', 'Failed to start support chat. Please try again.');
       }
@@ -127,13 +220,37 @@ export default function SupportChatScreen() {
   const handleAdminJoined = (data) => {
     if (data.roomId === chatRoom?.roomId) {
       setAdminJoined(true);
-      Alert.alert('Support Agent Joined', `${data.admin.name} has joined the chat`);
+      const adminName = data.admin?.name || data.admin?.firstName || 'Support Agent';
+      Alert.alert('Support Agent Joined', `${adminName} has joined the chat`);
     }
   };
 
   const handleNewMessage = (messageData) => {
-    setMessages(prev => [...prev, messageData]);
-    setTimeout(() => scrollToBottom(), 100);
+    console.log('📨 Received new support message:', messageData);
+    
+    // Ensure we have valid message data
+    if (!messageData || !messageData.id) {
+      console.warn('Invalid message data received:', messageData);
+      return;
+    }
+    
+    // Add the new message to the list
+    setMessages(prev => {
+      // Check if message already exists to prevent duplicates
+      const messageExists = prev.some(msg => msg.id === messageData.id);
+      if (messageExists) {
+        console.log('Message already exists, skipping duplicate');
+        return prev;
+      }
+      
+      console.log('Adding new message to chat');
+      const newMessages = [...prev, messageData];
+      
+      // Scroll to bottom after state update
+      setTimeout(() => scrollToBottom(), 100);
+      
+      return newMessages;
+    });
   };
 
   const handleTyping = (data) => {
@@ -147,36 +264,52 @@ export default function SupportChatScreen() {
 
   const handleChatClosed = () => {
     Alert.alert('Chat Closed', 'The support chat has been closed', [
-      { text: 'OK', onPress: () => router.back() }
+      { text: 'OK', onPress: () => safeGoBackToProfile() }
     ]);
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || sending || !chatRoom) return;
+    if (!newMessage.trim() || !chatRoom?.roomId || sending) return;
 
     const messageText = newMessage.trim();
     setNewMessage('');
     setSending(true);
 
     try {
-      await sendSupportMessageApi(chatRoom.roomId, messageText);
-      // Message will be added via socket listener
-    } catch (error) {
-      console.error('Error sending message:', error);
+      console.log('📤 Sending message:', messageText);
       
-      // Check for authentication error
-      if (error.response?.status === 401) {
-        Alert.alert(
-          'Authentication Error',
-          'Your session has expired. Please log in again.',
-          [
-            { text: 'OK', onPress: () => router.replace('/login') }
-          ]
-        );
+      const response = await sendSupportMessageApi(chatRoom.roomId, messageText);
+      
+      if (response.data.success) {
+        console.log('✅ Message sent successfully:', response.data.message);
+        
+        // Add the message to local state immediately
+        const newMsg = response.data.message;
+        setMessages(prev => {
+          // Check if message already exists to prevent duplicates
+          const messageExists = prev.some(msg => msg.id === newMsg.id);
+          if (!messageExists) {
+            return [...prev, newMsg];
+          }
+          return prev;
+        });
+        
+        // Scroll to bottom
+        setTimeout(() => scrollToBottom(), 100);
       } else {
-        Alert.alert('Error', 'Failed to send message. Please try again.');
-        setNewMessage(messageText); // Restore message on error
+        throw new Error(response.data.message || 'Failed to send message');
       }
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      
+      // Restore the message text so user can try again
+      setNewMessage(messageText);
+      
+      Alert.alert(
+        'Error',
+        'Failed to send message. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setSending(false);
     }
@@ -217,7 +350,7 @@ export default function SupportChatScreen() {
           onPress: async () => {
             try {
               await closeSupportChatApi(chatRoom.roomId);
-              router.back();
+              safeGoBackToProfile();
             } catch (error) {
               console.error('Error closing chat:', error);
               Alert.alert('Error', 'Failed to close chat');
@@ -237,12 +370,30 @@ export default function SupportChatScreen() {
   const renderMessage = ({ item }) => {
     const isUser = item.senderType === 'user';
     
+    // Get sender name with proper fallbacks
+    const getSenderName = () => {
+      if (isUser) {
+        return user?.name || user?.firstName || 'You';
+      } else {
+        // For admin messages
+        if (item.sender?.name) {
+          return item.sender.name;
+        } else if (item.sender?.role === 'superadmin') {
+          return 'Senior Support';
+        } else if (item.sender?.role === 'admin') {
+          return 'Customer Support';
+        } else {
+          return 'Support Agent';
+        }
+      }
+    };
+    
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.adminMessage]}>
         <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.adminBubble]}>
           {!isUser && (
             <Text style={styles.senderName}>
-              {item.sender.role === 'superadmin' ? 'Senior Support' : 'Customer Support'}
+              {getSenderName()}
             </Text>
           )}
           <Text style={[styles.messageText, isUser ? styles.userText : styles.adminText]}>
@@ -267,11 +418,57 @@ export default function SupportChatScreen() {
     );
   }
 
+  if (connectionError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => safeGoBackToProfile()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>Customer Support</Text>
+            <Text style={styles.headerSubtitle}>Connection Error</Text>
+          </View>
+        </View>
+        
+        <View style={styles.errorContainer}>
+          <Ionicons name="wifi-off" size={64} color="#ff6b6b" />
+          <Text style={styles.errorTitle}>Connection Timeout</Text>
+          <Text style={styles.errorMessage}>
+            Unable to connect to the support chat server. Please check your internet connection and try again.
+          </Text>
+          
+          <TouchableOpacity
+            style={[styles.retryButton, retrying && styles.retryButtonDisabled]}
+            onPress={retryConnection}
+            disabled={retrying}
+          >
+            {retrying ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="refresh" size={20} color="#fff" />
+            )}
+            <Text style={styles.retryButtonText}>
+              {retrying ? 'Retrying...' : 'Retry Connection'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.backToSupportButton}
+            onPress={() => safeGoBackToProfile()}
+          >
+            <Text style={styles.backToSupportButtonText}>Back to Support Options</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => safeGoBackToProfile()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
@@ -474,5 +671,58 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#ccc',
+  },
+  
+  // Error UI styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#f5f5f5',
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  retryButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backToSupportButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  backToSupportButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { searchUsersApi } from '../src/api/apiClient';
 import { useContext } from 'react';
 import { AppCtx } from '../src/context/AppContext';
+import { safeGoBackToHome } from '../src/utils/navigationUtils';
 
 const GREEN = '#4CAF50';
 const LIGHT_GREEN = '#E8F5E8';
@@ -155,7 +156,7 @@ export default function CreateGroupScreen() {
             {
               text: 'OK',
               onPress: () => {
-                router.back();
+                safeGoBackToHome();
                 // Navigate to the new group chat
                 router.push(`/group-chat?groupId=${data.groupChat._id}`);
               }
@@ -214,7 +215,7 @@ export default function CreateGroupScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => safeGoBackToHome()}>
             <Ionicons name="arrow-back" size={24} color={GREEN} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Group</Text>

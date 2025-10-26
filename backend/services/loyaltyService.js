@@ -1,5 +1,6 @@
 // services/loyaltyService.js
 // Loyalty service layer for calculating points and determining tiers
+import { rewards } from '../config/loyaltyConfig.js';
 
 // Loyalty configuration
 export const loyaltyConfig = {
@@ -17,14 +18,8 @@ export const loyaltyConfig = {
     "Harvester": { min: 1000, max: Infinity, discount: 20 }
   },
   
-  // Reward costs
-  rewards: [
-    { name: "5% Discount", cost: 100, type: "discount", value: 5 },
-    { name: "10% Discount", cost: 200, type: "discount", value: 10 },
-    { name: "15% Discount", cost: 300, type: "discount", value: 15 },
-    { name: "Free Shipping", cost: 150, type: "shipping", value: 0 },
-    { name: "Double Points", cost: 75, type: "bonus", value: 2 }
-  ]
+  // Reward costs - using imported rewards from config
+  rewards: rewards
 };
 
 /**
