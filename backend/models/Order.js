@@ -50,6 +50,16 @@ const orderSchema = new mongoose.Schema(
       freeShipping: { type: Boolean, default: false }
     },
 
+    // Loyalty reward information
+    loyaltyReward: {
+      rewardId: { type: String },
+      name: { type: String },
+      type: { type: String }, // 'discount', 'shipping', etc.
+      value: { type: Number, min: 0, default: 0 }, // percentage or fixed amount
+      discount: { type: Number, min: 0, default: 0 }, // calculated discount amount
+      freeShipping: { type: Boolean, default: false }
+    },
+
     // PayMongo tracking
     paymongoSessionId: { type: String },
     paymongoPaymentId: { type: String },

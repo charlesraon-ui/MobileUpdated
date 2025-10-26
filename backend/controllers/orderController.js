@@ -21,6 +21,7 @@ export const createEPaymentOrder = async (req, res) => {
       total: totalInBody,
       channel = "multi",
       promoCode = null,
+      loyaltyReward = null,
     } = req.body || {};
 
     if (!process.env.PAYMONGO_SECRET_KEY) {
@@ -151,6 +152,14 @@ export const createEPaymentOrder = async (req, res) => {
         discount: promoCode.discount || 0,
         freeShipping: promoCode.freeShipping || false
       } : null,
+      loyaltyReward: loyaltyReward ? {
+        rewardId: loyaltyReward.rewardId,
+        name: loyaltyReward.name,
+        type: loyaltyReward.type,
+        value: loyaltyReward.value,
+        discount: loyaltyReward.discount || 0,
+        freeShipping: loyaltyReward.freeShipping || false
+      } : null,
     });
 
     await Delivery.create({
@@ -259,6 +268,7 @@ export const createMyOrder = async (req, res) => {
       total: totalInBody,
       paymentMethod = "COD",
       promoCode = null,
+      loyaltyReward = null,
     } = req.body || {};
 
     // Normalize items and fetch weights
@@ -334,6 +344,14 @@ export const createMyOrder = async (req, res) => {
         code: promoCode.code,
         discount: promoCode.discount || 0,
         freeShipping: promoCode.freeShipping || false
+      } : null,
+      loyaltyReward: loyaltyReward ? {
+        rewardId: loyaltyReward.rewardId,
+        name: loyaltyReward.name,
+        type: loyaltyReward.type,
+        value: loyaltyReward.value,
+        discount: loyaltyReward.discount || 0,
+        freeShipping: loyaltyReward.freeShipping || false
       } : null,
     });
 
