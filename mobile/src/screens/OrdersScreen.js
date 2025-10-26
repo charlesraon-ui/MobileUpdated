@@ -218,13 +218,35 @@ function OrderDetailsModal({ order, visible, onClose }) {
                   <View style={s.summaryRow}>
                     <Text style={s.summaryLabel}>Subtotal:</Text>
                     <Text style={s.summaryValue}>
-                      ₱{order.items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0).toFixed(2)}
+                      ₱{(order.subtotal || order.items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0)).toFixed(2)}
                     </Text>
                   </View>
+                  {order.promoCode && order.promoCode.discount > 0 && (
+                    <View style={s.summaryRow}>
+                      <Text style={[s.summaryLabel, { color: GREEN_DARK }]}>Promo Code ({order.promoCode.code}):</Text>
+                      <Text style={[s.summaryValue, { color: GREEN_DARK }]}>-₱{Number(order.promoCode.discount || 0).toFixed(2)}</Text>
+                    </View>
+                  )}
+                  {order.loyaltyReward && order.loyaltyReward.discount > 0 && (
+                    <View style={s.summaryRow}>
+                      <Text style={[s.summaryLabel, { color: GREEN_DARK }]}>Loyalty Reward ({order.loyaltyReward.name}):</Text>
+                      <Text style={[s.summaryValue, { color: GREEN_DARK }]}>-₱{Number(order.loyaltyReward.discount || 0).toFixed(2)}</Text>
+                    </View>
+                  )}
                   <View style={s.summaryRow}>
                     <Text style={s.summaryLabel}>Delivery Fee:</Text>
-                    <Text style={s.summaryValue}>₱0.00</Text>
+                    <Text style={s.summaryValue}>
+                      {(order.promoCode && order.promoCode.freeShipping) || (order.loyaltyReward && order.loyaltyReward.freeShipping) 
+                        ? <Text style={{ textDecorationLine: 'line-through', color: GRAY }}>₱{Number(order.deliveryFee || 0).toFixed(2)}</Text>
+                        : `₱${Number(order.deliveryFee || 0).toFixed(2)}`}
+                    </Text>
                   </View>
+                  {((order.promoCode && order.promoCode.freeShipping) || (order.loyaltyReward && order.loyaltyReward.freeShipping)) && (
+                    <View style={s.summaryRow}>
+                      <Text style={[s.summaryLabel, { color: GREEN_DARK }]}>Free Shipping:</Text>
+                      <Text style={[s.summaryValue, { color: GREEN_DARK }]}>-₱{Number(order.deliveryFee || 0).toFixed(2)}</Text>
+                    </View>
+                  )}
                   <View style={[s.summaryRow, s.summaryTotal]}>
                     <Text style={s.summaryTotalLabel}>Total:</Text>
                     <Text style={s.summaryTotalValue}>₱{Number(order.total || 0).toFixed(2)}</Text>

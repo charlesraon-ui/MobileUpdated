@@ -96,25 +96,7 @@ export default function AppProvider({ children }) {
       console.error("🚀 APPCONTEXT REF INIT: Google Sign-In configuration failed:", error);
     }
     
-    // Initialize products immediately
-    Promise.resolve().then(async () => {
-      try {
-        console.log("🚀 APPCONTEXT REF INIT: About to call getProducts()...");
-        const prod = await getProducts();
-        console.log("🚀 APPCONTEXT REF INIT: getProducts() SUCCESS:", prod);
-        console.log("🚀 APPCONTEXT REF INIT: Products data:", prod?.data);
-        console.log("🚀 APPCONTEXT REF INIT: Products length:", prod?.data?.length);
-        
-        const productsArray = Array.isArray(prod?.data) ? prod.data : [];
-        console.log("🚀 APPCONTEXT REF INIT: Setting products array:", productsArray);
-        console.log("🚀 APPCONTEXT REF INIT: Products array length:", productsArray.length);
-        setProducts(productsArray);
-      } catch (error) {
-        console.error("🚀 APPCONTEXT REF INIT: getProducts() failed:", error);
-        console.error("🚀 APPCONTEXT REF INIT: Error details:", error.message, error.stack);
-        setProducts([]);
-      }
-     });
+    // Note: Product loading moved to useEffect to prevent duplicate calls
    }
 
   // UX flags
@@ -232,6 +214,22 @@ export default function AppProvider({ children }) {
   // Reward redemption state
   const [appliedReward, setAppliedReward] = useState(null);
   const [rewardDiscount, setRewardDiscount] = useState(0);
+  const [rewardFreeShipping, setRewardFreeShipping] = useState(false);
+
+  // Cart calculations (must be defined before functions that use them)
+  const loyaltyDiscountPct = Number(loyalty?.discountPercentage || 0);
+  
+  const cartTotal = useMemo(
+    () => cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0),
+    [cart]
+  );
+
+  const cartTotalAfterDiscount = useMemo(() => {
+    const pct = loyaltyDiscountPct > 0 ? loyaltyDiscountPct : 0;
+    const afterLoyaltyDiscount = cartTotal * (1 - pct / 100);
+    const afterRewardDiscount = Math.max(0, afterLoyaltyDiscount - rewardDiscount);
+    return Math.max(0, afterRewardDiscount);
+  }, [cartTotal, loyaltyDiscountPct, rewardDiscount]);
 
   // wishlist persistence (backend API)
   const loadWishlist = useCallback(async () => {
@@ -680,21 +678,53 @@ export default function AppProvider({ children }) {
 
   // Apply reward for checkout discount
   const applyRewardDiscount = useCallback((reward) => {
-    if (!reward || !reward.discountAmount) return;
+    if (!reward) return;
     
     setAppliedReward(reward);
-    setRewardDiscount(Number(reward.discountAmount));
     
-    showToast({
-      type: "success",
-      message: `Applied ${reward.name} - ₱${reward.discountAmount} discount!`
-    });
-  }, [showToast]);
+    // Handle percentage-based discounts from loyalty rewards
+    if (reward.type === 'discount' && reward.value) {
+      // Calculate percentage discount based on current cart total
+      const percentageDiscount = (cartTotal * reward.value) / 100;
+      setRewardDiscount(percentageDiscount);
+      
+      showToast({
+        type: "success",
+        message: `Applied ${reward.description} - ${reward.value}% discount!`
+      });
+    } else if (reward.discountAmount) {
+      // Handle fixed amount discounts
+      setRewardDiscount(Number(reward.discountAmount));
+      
+      showToast({
+        type: "success",
+        message: `Applied ${reward.name} - ₱${reward.discountAmount} discount!`
+      });
+    } else if (reward.type === 'shipping') {
+       // Handle free shipping rewards
+       setRewardDiscount(0);
+       setRewardFreeShipping(true);
+       
+       showToast({
+         type: "success",
+         message: `Applied ${reward.description}!`
+       });
+     } else {
+       // Handle other reward types (bonus points, etc.)
+       setRewardDiscount(0);
+       
+       showToast({
+         type: "success",
+         message: `Applied ${reward.description}!`
+       });
+     }
+  }, [showToast, cartTotal]);
 
   // Remove applied reward
   const removeRewardDiscount = useCallback(() => {
     setAppliedReward(null);
     setRewardDiscount(0);
+    setRewardFreeShipping(false);
     
     showToast({
       type: "info",
@@ -706,6 +736,7 @@ export default function AppProvider({ children }) {
   const clearRewardDiscount = useCallback(() => {
     setAppliedReward(null);
     setRewardDiscount(0);
+    setRewardFreeShipping(false);
   }, []);
 
   // ensureAuthedguard with alert
@@ -1302,19 +1333,6 @@ const handlePlaceOrder = async (opts = {}) => {
     return result;
   }, [products, lastAddedCategory, categoryMap]);
 
-  const cartTotal = useMemo(
-    () => cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0),
-    [cart]
-  );
-
-  const loyaltyDiscountPct = Number(loyalty?.discountPercentage || 0);
-  const cartTotalAfterDiscount = useMemo(() => {
-    const pct = loyaltyDiscountPct > 0 ? loyaltyDiscountPct : 0;
-    const afterLoyaltyDiscount = cartTotal * (1 - pct / 100);
-    const afterRewardDiscount = Math.max(0, afterLoyaltyDiscount - rewardDiscount);
-    return Math.max(0, afterRewardDiscount);
-  }, [cartTotal, loyaltyDiscountPct, rewardDiscount]);
-
   // Product details + reviews
   const fetchProductDetail = async (id) => {
     try {
@@ -1424,6 +1442,8 @@ const handlePlaceOrder = async (opts = {}) => {
 
     // loyalty
     loyalty,
+    getLoyaltyStatus,
+    issueLoyaltyCard,
 
     // rewards
     availableRewards,
@@ -1436,6 +1456,7 @@ const handlePlaceOrder = async (opts = {}) => {
     // reward redemption
     appliedReward,
     rewardDiscount,
+    rewardFreeShipping,
     applyRewardDiscount,
     removeRewardDiscount,
     clearRewardDiscount,

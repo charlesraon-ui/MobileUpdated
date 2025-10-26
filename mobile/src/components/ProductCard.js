@@ -115,6 +115,10 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             resizeMode="cover"
             onLoadStart={() => setImageLoading(true)}
             onLoadEnd={() => setImageLoading(false)}
+            onError={(e) => {
+              console.log('ProductCard image load error:', e.nativeEvent.error);
+              setImageLoading(false);
+            }}
           />
           
           {imageLoading && (

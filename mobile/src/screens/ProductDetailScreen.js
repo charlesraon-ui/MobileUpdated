@@ -595,10 +595,6 @@ export default function ProductDetailScreen() {
 
   const p = productDetail;
   const saved = isInWishlist?.(p?._id);
-  
-  // Debug: Log product data to understand the structure
-  console.log('Product Detail Data:', p);
-  console.log('Product Stock:', p?.stock);
 
   return (
     <View style={s.container}>

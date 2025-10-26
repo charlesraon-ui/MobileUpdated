@@ -49,6 +49,7 @@ export default function CheckoutScreen() {
     availableRewards,
     appliedReward,
     rewardDiscount,
+    rewardFreeShipping,
     applyRewardDiscount,
     removeRewardDiscount,
     loadAvailableRewards,
@@ -148,7 +149,7 @@ export default function CheckoutScreen() {
   };
 
   const calculateOrderTotals = () => {
-    const deliveryFee = freeShipping ? 0 : getDeliveryFee(deliveryMethod);
+    const deliveryFee = (freeShipping || rewardFreeShipping) ? 0 : getDeliveryFee(deliveryMethod);
     const subtotal = cartTotalAfterDiscount - promoDiscount - rewardDiscount;
     const total = subtotal + deliveryFee;
 
@@ -217,6 +218,14 @@ export default function CheckoutScreen() {
             code: appliedPromo.code,
             discount: promoDiscount,
             freeShipping: freeShipping
+          } : null,
+          loyaltyReward: appliedReward ? {
+            rewardId: appliedReward._id || appliedReward.id,
+            name: appliedReward.name,
+            type: appliedReward.type,
+            value: appliedReward.value,
+            discount: rewardDiscount,
+            freeShipping: rewardFreeShipping
           } : null
         };
 
@@ -276,6 +285,14 @@ export default function CheckoutScreen() {
           code: appliedPromo.code,
           discount: promoDiscount,
           freeShipping: freeShipping
+        } : null,
+        loyaltyReward: appliedReward ? {
+          rewardId: appliedReward._id || appliedReward.id,
+          name: appliedReward.name,
+          type: appliedReward.type,
+          value: appliedReward.value,
+          discount: rewardDiscount,
+          freeShipping: rewardFreeShipping
         } : null
       };
       
@@ -366,8 +383,11 @@ export default function CheckoutScreen() {
           )}
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>Delivery Fee</Text>
-            <Text style={[s.summaryValue, (deliveryMethod === "pickup" || freeShipping) && s.freeText]}>
-              {deliveryMethod === "pickup" ? "FREE" : freeShipping ? "FREE (Promo)" : `₱${getDeliveryFee(deliveryMethod)}.00`}
+            <Text style={[s.summaryValue, (deliveryMethod === "pickup" || freeShipping || rewardFreeShipping) && s.freeText]}>
+              {deliveryMethod === "pickup" ? "FREE" : 
+               freeShipping ? "FREE (Promo)" : 
+               rewardFreeShipping ? "FREE (Reward)" : 
+               `₱${getDeliveryFee(deliveryMethod)}.00`}
             </Text>
           </View>
           <View style={s.summaryDivider} />
@@ -519,7 +539,14 @@ export default function CheckoutScreen() {
                     <Ionicons name="checkmark-circle" size={20} color={GREEN} />
                     <View style={s.appliedRewardText}>
                       <Text style={s.appliedRewardName}>{appliedReward.name}</Text>
-                      <Text style={s.appliedRewardDiscount}>-₱{rewardDiscount.toFixed(2)} discount applied</Text>
+                      <Text style={s.appliedRewardDiscount}>
+                        {appliedReward.type === 'shipping' 
+                          ? 'Free shipping applied'
+                          : appliedReward.type === 'discount' && appliedReward.value
+                            ? `${appliedReward.value}% discount (-₱${rewardDiscount.toFixed(2)})`
+                            : `-₱${rewardDiscount.toFixed(2)} discount applied`
+                        }
+                      </Text>
                     </View>
                   </View>
                   <TouchableOpacity 
@@ -541,7 +568,16 @@ export default function CheckoutScreen() {
                         <Ionicons name="gift" size={20} color={GREEN} />
                       </View>
                       <Text style={s.rewardName}>{reward.name}</Text>
-                      <Text style={s.rewardDiscount}>₱{reward.discountAmount} off</Text>
+                      <Text style={s.rewardDiscount}>
+                        {reward.type === 'discount' && reward.value 
+                          ? `${reward.value}% off`
+                          : reward.discountAmount 
+                            ? `₱${reward.discountAmount} off`
+                            : reward.type === 'shipping'
+                              ? 'Free shipping'
+                              : 'Reward'
+                        }
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>

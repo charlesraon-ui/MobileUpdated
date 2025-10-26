@@ -58,7 +58,7 @@ export default function DigitalCardScreen() {
     setRefreshing(false);
   };
 
-  const handleRedeem = (reward) => {
+  const handleRedeem = async (reward) => {
     Alert.alert(
       'Redeem Reward',
       `Are you sure you want to redeem "${reward.description}" for ${reward.cost} points?`,
@@ -66,7 +66,35 @@ export default function DigitalCardScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Redeem',
-          onPress: () => handleRedeemReward(reward.name),
+          onPress: async () => {
+            const success = await handleRedeemReward(reward.name);
+            if (success) {
+              // Show success message and guide to product selection
+              Alert.alert(
+                'Reward Redeemed!',
+                `Your ${reward.description} has been redeemed successfully! Let's find products to apply your discount.`,
+                [
+                  {
+                    text: 'Shop Now',
+                    onPress: () => {
+                      // Apply the reward discount and navigate to products
+                       applyRewardDiscount({
+                         name: reward.name,
+                         description: reward.description,
+                         type: reward.type,
+                         value: reward.value
+                       });
+                      router.push('/product');
+                    }
+                  },
+                  {
+                    text: 'Later',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            }
+          },
         },
       ]
     );
