@@ -12,9 +12,10 @@ const loyaltyTierSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    discountPercentage: {
+    discountAmount: {
       type: Number,
       required: true,
+      min: 0,
     },
     benefits: {
       type: [String],

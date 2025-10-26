@@ -41,7 +41,7 @@ export const getLoyaltyStatus = async (req, res) => {
         purchaseCount: loyalty.purchaseCount,
         totalSpent: loyalty.totalSpent,
         points: loyalty.points || 0,
-        discountPercentage: loyalty.discountPercentage,
+        discountAmount: loyalty.discountAmount || 0,
         expiryDate: loyalty.expiryDate,
         isActive: loyalty.isActive,
         criteria: { purchaseCount: criteria.PURCHASE_COUNT, totalSpent: criteria.TOTAL_SPENT },
@@ -80,7 +80,7 @@ export const issueLoyaltyCard = async (req, res) => {
       card: {
         cardId: loyalty.cardId,
         cardType: loyalty.cardType,
-        discountPercentage: loyalty.discountPercentage,
+        discountAmount: loyalty.discountAmount || 0,
         expiryDate: loyalty.expiryDate,
       },
     });
@@ -169,7 +169,7 @@ export const getDigitalCard = async (req, res) => {
         issuedDate: loyalty.cardIssuedDate,
         expiryDate: loyalty.expiryDate,
         points: loyalty.points,
-        discountPercentage: loyalty.discountPercentage,
+        discountAmount: loyalty.discountAmount || 0,
         isActive: loyalty.isActive,
       },
     });

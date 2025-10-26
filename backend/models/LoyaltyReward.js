@@ -68,11 +68,10 @@ const loyaltyRewardSchema = new mongoose.Schema(
     },
     
     // Benefits
-    discountPercentage: { 
+    discountAmount: { 
       type: Number, 
-      default: 5,
-      min: 0,
-      max: 100
+      default: 0,
+      min: 0
     },
     
     // Expiration

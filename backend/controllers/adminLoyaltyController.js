@@ -20,12 +20,12 @@ export const getAllTiers = async (req, res) => {
 
 export const createTier = async (req, res) => {
   try {
-    const { name, pointThreshold, discountPercentage, benefits, displayOrder } = req.body;
+    const { name, pointThreshold, discountAmount, benefits, displayOrder } = req.body;
     
-    const tier = new LoyaltyTier({
+    const tierData = {
       name,
       pointThreshold,
-      discountPercentage,
+      discountAmount,
       benefits: Array.isArray(benefits) ? benefits : [],
       displayOrder
     });

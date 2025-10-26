@@ -20,10 +20,10 @@ const initializeLoyaltyTiers = async () => {
       {
         name: 'Sprout',
         pointThreshold: 0,
-        discountPercentage: 0,
+        discountAmount: 0,
         benefits: [
           'Earn 1 point per $1 spent',
-          'Access to basic rewards'
+          'Access to loyalty program'
         ],
         isActive: true,
         displayOrder: 1
@@ -31,10 +31,10 @@ const initializeLoyaltyTiers = async () => {
       {
         name: 'Seedling',
         pointThreshold: 100,
-        discountPercentage: 5,
+        discountAmount: 100,
         benefits: [
           'Earn 1 point per $1 spent',
-          '5% discount on all purchases',
+          '₱100 discount on all purchases',
           'Priority customer support',
           'Early access to sales'
         ],
@@ -44,10 +44,10 @@ const initializeLoyaltyTiers = async () => {
       {
         name: 'Cultivator',
         pointThreshold: 300,
-        discountPercentage: 10,
+        discountAmount: 200,
         benefits: [
           'Earn 1 point per $1 spent',
-          '10% discount on all purchases',
+          '₱200 discount on all purchases',
           'Priority customer support',
           'Early access to sales',
           'Free shipping on orders over $50'
@@ -58,10 +58,10 @@ const initializeLoyaltyTiers = async () => {
       {
         name: 'Bloom',
         pointThreshold: 600,
-        discountPercentage: 15,
+        discountAmount: 300,
         benefits: [
           'Earn 1 point per $1 spent',
-          '15% discount on all purchases',
+          '₱300 discount on all purchases',
           'Priority customer support',
           'Early access to sales',
           'Free shipping on all orders',
@@ -73,10 +73,10 @@ const initializeLoyaltyTiers = async () => {
       {
         name: 'Harvester',
         pointThreshold: 1000,
-        discountPercentage: 20,
+        discountAmount: 500,
         benefits: [
           'Earn 1 point per $1 spent',
-          '20% discount on all purchases',
+          '₱500 discount on all purchases',
           'Dedicated account manager',
           'Early access to sales',
           'Free shipping on all orders',
@@ -110,7 +110,7 @@ const initializeLoyaltyTiers = async () => {
     const allTiers = await LoyaltyTier.find().sort({ displayOrder: 1 });
     console.log('\n📊 Current loyalty tiers:');
     allTiers.forEach(tier => {
-      console.log(`  ${tier.name}: ${tier.pointThreshold}+ points, ${tier.discountPercentage}% discount`);
+      console.log(`  ${tier.name}: ${tier.pointThreshold}+ points, ₱${tier.discountAmount} discount`);
     });
 
     return { success: true, message: 'Loyalty tiers initialized successfully' };
@@ -156,9 +156,9 @@ const checkTierConsistency = async () => {
         inconsistencies.push(`Tier ${tier.name}: threshold mismatch (DB: ${tier.pointThreshold}, Config: ${configTier.min})`);
       }
       
-      if (tier.discountPercentage !== configTier.discount) {
-        inconsistencies.push(`Tier ${tier.name}: discount mismatch (DB: ${tier.discountPercentage}%, Config: ${configTier.discount}%)`);
-      }
+      if (tier.discountAmount !== configTier.discount) {
+          inconsistencies.push(`Tier ${tier.name}: discount mismatch (DB: ₱${tier.discountAmount}, Config: ₱${configTier.discount})`);
+        }
     }
     
     if (inconsistencies.length === 0) {

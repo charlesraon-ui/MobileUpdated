@@ -1,28 +1,36 @@
 //﻿// backend/config/loyaltyConfig.js
 export const rewards = [
   { 
-    name: "discount-5", 
+    name: "discount-100", 
     cost: 50, 
-    description: "5% discount voucher",
+    description: "₱100 discount voucher",
     type: "discount",
-    value: 5,
+    value: 100,
     icon: "💰"
   },
   { 
-    name: "discount-10", 
+    name: "discount-200", 
     cost: 100, 
-    description: "10% discount voucher",
+    description: "₱200 discount voucher",
     type: "discount", 
-    value: 10,
+    value: 200,
     icon: "💎"
   },
   { 
-    name: "discount-15", 
+    name: "discount-300", 
     cost: 200, 
-    description: "15% discount voucher",
+    description: "₱300 discount voucher",
     type: "discount",
-    value: 15,
+    value: 300,
     icon: "🎁"
+  },
+  { 
+    name: "discount-500", 
+    cost: 300, 
+    description: "₱500 discount voucher",
+    type: "discount",
+    value: 500,
+    icon: "🎉"
   },
   { 
     name: "free-shipping", 

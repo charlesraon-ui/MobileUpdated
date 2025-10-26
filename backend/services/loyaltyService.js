@@ -9,13 +9,13 @@ export const loyaltyConfig = {
   bonusThreshold: 100,          // Bonus points threshold
   bonusMultiplier: 1.5,         // 1.5x points for orders over threshold
   
-  // Tier thresholds (points required)
+  // Tier thresholds (points required) - discount is now fixed amount
   tiers: {
     "Sprout": { min: 0, max: 99, discount: 0 },
-    "Seedling": { min: 100, max: 299, discount: 5 },
-    "Cultivator": { min: 300, max: 599, discount: 10 },
-    "Bloom": { min: 600, max: 999, discount: 15 },
-    "Harvester": { min: 1000, max: Infinity, discount: 20 }
+    "Seedling": { min: 100, max: 299, discount: 100 },
+    "Cultivator": { min: 300, max: 599, discount: 200 },
+    "Bloom": { min: 600, max: 999, discount: 300 },
+    "Harvester": { min: 1000, max: Infinity, discount: 500 }
   },
   
   // Reward costs - using imported rewards from config
@@ -131,20 +131,20 @@ export const getTierBenefitsList = (tierName) => {
     ],
     'Seedling': [
       'Earn 1 point per $1 spent',
-      '5% discount on all purchases',
+      '₱100 discount on all purchases',
       'Priority customer support',
       'Early access to sales'
     ],
     'Cultivator': [
       'Earn 1 point per $1 spent',
-      '10% discount on all purchases',
+      '₱200 discount on all purchases',
       'Priority customer support',
       'Early access to sales',
       'Free shipping on orders over $50'
     ],
     'Bloom': [
       'Earn 1 point per $1 spent',
-      '15% discount on all purchases',
+      '₱300 discount on all purchases',
       'Priority customer support',
       'Early access to sales',
       'Free shipping on all orders',
@@ -152,7 +152,7 @@ export const getTierBenefitsList = (tierName) => {
     ],
     'Harvester': [
       'Earn 1 point per $1 spent',
-      '20% discount on all purchases',
+      '₱500 discount on all purchases',
       'Dedicated account manager',
       'Early access to sales',
       'Free shipping on all orders',
@@ -212,9 +212,9 @@ export const getAvailableRewards = (userPoints) => {
 
 /**
  * Calculate discount amount based on user tier
- * @param {number} orderAmount - Order total amount
+ * @param {number} orderAmount - Order total amount (not used anymore since we use fixed amounts)
  * @param {string} userTier - User's current tier
- * @returns {number} - Discount amount
+ * @returns {number} - Fixed discount amount
  */
 export const calculateTierDiscount = (orderAmount, userTier) => {
   try {
@@ -223,7 +223,8 @@ export const calculateTierDiscount = (orderAmount, userTier) => {
       return 0;
     }
     
-    return Math.floor(orderAmount * (tier.discount / 100));
+    // Return fixed discount amount instead of percentage calculation
+    return tier.discount;
   } catch (error) {
     console.error('Error calculating tier discount:', error);
     return 0;
