@@ -31,26 +31,30 @@ export default function VoucherDropdown({
 }) {
   const {
     usableRewards,
+    availableRewards,
     appliedReward,
     rewardDiscount,
     rewardFreeShipping,
     applyRewardDiscount,
     removeRewardDiscount,
+    handleRedeemReward,
+    loadAvailableRewards,
     isLoggedIn,
+    showToast,
   } = useContext(AppCtx);
 
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [showAvailableRewards, setShowAvailableRewards] = useState(false);
+  const [redeemingRewardId, setRedeemingRewardId] = useState(null);
 
   // Calculate total applied discounts
   const totalDiscount = (promoDiscount || 0) + (rewardDiscount || 0);
   const hasAppliedVouchers = appliedPromo || appliedReward;
   const hasFreeShipping = freeShipping || rewardFreeShipping;
 
-  const showToast = (message) => {
-    Alert.alert("Voucher", message);
-  };
+
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) {
@@ -105,10 +109,28 @@ export default function VoucherDropdown({
     showToast("Reward removed");
   };
 
-  const handleViewAllVouchers = () => {
-    setDropdownVisible(false);
-    // Navigate to profile with a flag to return to checkout
-    router.push('/digital-card?returnTo=checkout');
+  const handleViewAllVouchers = async () => {
+    if (!showAvailableRewards) {
+      // Load available rewards when showing them for the first time
+      await loadAvailableRewards();
+    }
+    setShowAvailableRewards(!showAvailableRewards);
+  };
+
+  const handleRedeemRewardFromModal = async (reward) => {
+    try {
+      setRedeemingRewardId(reward._id);
+      const success = await handleRedeemReward(reward.name);
+      if (success) {
+        showToast(`${reward.name} redeemed successfully!`);
+        // Refresh available and usable rewards
+        await loadAvailableRewards();
+      }
+    } catch (error) {
+      showToast("Failed to redeem reward. Please try again.");
+    } finally {
+      setRedeemingRewardId(null);
+    }
   };
 
   const renderVoucherButton = () => (
@@ -207,39 +229,97 @@ export default function VoucherDropdown({
             {isLoggedIn && usableRewards.length > 0 && (
               <View style={styles.voucherSection}>
                 <Text style={styles.sectionTitle}>Loyalty Rewards</Text>
+                <Text style={styles.sectionSubtitle}>Select a discount to apply to your order</Text>
                 <View style={styles.rewardsGrid}>
-                  {usableRewards.map((reward, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.rewardCard,
-                        appliedReward?.name === reward.name && styles.rewardCardSelected
-                      ]}
-                      onPress={() => handleApplyReward(reward)}
-                      disabled={appliedReward?.name === reward.name}
-                    >
-                      <View style={styles.rewardIcon}>
-                        <Ionicons name="gift" size={20} color={GREEN} />
-                      </View>
-                      <Text style={styles.rewardName}>{reward.name}</Text>
-                      <Text style={styles.rewardDiscount}>
-                        {reward.type === 'discount' && reward.value 
-                          ? `₱${reward.value} off`
-                          : reward.discountAmount 
-                            ? `₱${reward.discountAmount} off`
-                            : reward.type === 'shipping'
-                              ? 'Free shipping'
-                              : 'Reward'
-                        }
-                      </Text>
-                      {appliedReward?.name === reward.name && (
-                        <View style={styles.selectedBadge}>
-                          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  {usableRewards.map((reward, index) => {
+                    const isSelected = appliedReward?.name === reward.name;
+                    const discountAmount = reward.type === 'discount' && reward.value 
+                      ? reward.value
+                      : reward.discountAmount || 0;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.rewardCardNew,
+                          isSelected && styles.rewardCardSelected
+                        ]}
+                        onPress={() => handleApplyReward(reward)}
+                        disabled={isSelected}
+                      >
+                        <View style={styles.rewardCardHeader}>
+                          <View style={styles.rewardIconContainer}>
+                            <Text style={styles.rewardIcon}>{reward.icon || "🎁"}</Text>
+                          </View>
+                          {isSelected && (
+                            <View style={styles.selectedBadge}>
+                              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                            </View>
+                          )}
                         </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                        
+                        <View style={styles.rewardCardContent}>
+                          <Text style={styles.rewardName}>{reward.name}</Text>
+                          <Text style={styles.rewardDescription}>
+                            {reward.type === 'discount' && discountAmount > 0
+                              ? `₱${discountAmount} discount voucher`
+                              : reward.type === 'shipping'
+                                ? 'Free shipping'
+                                : reward.description
+                            }
+                          </Text>
+                          
+                          {reward.type === 'discount' && discountAmount > 0 && (
+                            <View style={styles.discountAmountContainer}>
+                              <Text style={styles.discountAmount}>₱{discountAmount}</Text>
+                              <Text style={styles.discountLabel}>OFF</Text>
+                            </View>
+                          )}
+                          
+                          {reward.type === 'shipping' && (
+                            <View style={styles.freeShippingContainer}>
+                              <Text style={styles.freeShippingText}>FREE</Text>
+                              <Text style={styles.shippingLabel}>SHIPPING</Text>
+                            </View>
+                          )}
+                          
+                          {discountAmount === 0 && reward.type !== 'shipping' && (
+                            <View style={styles.bonusContainer}>
+                              <Text style={styles.bonusText}>BONUS</Text>
+                              <Text style={styles.bonusLabel}>POINTS</Text>
+                            </View>
+                          )}
+                        </View>
+                        
+                        {!isSelected && (
+                          <TouchableOpacity 
+                            style={styles.selectButton}
+                            onPress={() => handleApplyReward(reward)}
+                          >
+                            <Text style={styles.selectButtonText}>Select</Text>
+                          </TouchableOpacity>
+                        )}
+                        
+                        {isSelected && (
+                          <TouchableOpacity 
+                            style={styles.removeButton}
+                            onPress={handleRemoveReward}
+                          >
+                            <Text style={styles.removeButtonText}>Remove</Text>
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
+                
+                {usableRewards.length === 0 && (
+                  <View style={styles.noRewardsContainer}>
+                    <Ionicons name="gift-outline" size={48} color={GRAY} />
+                    <Text style={styles.noRewardsText}>No rewards available</Text>
+                    <Text style={styles.noRewardsSubtext}>Redeem rewards from your digital card to use them here</Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -269,15 +349,102 @@ export default function VoucherDropdown({
               </View>
             </View>
 
-            {/* View All Vouchers */}
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={handleViewAllVouchers}
-            >
-              <Ionicons name="card-outline" size={20} color={GREEN} />
-              <Text style={styles.viewAllButtonText}>View All Vouchers</Text>
-              <Ionicons name="chevron-forward" size={16} color={GRAY} />
-            </TouchableOpacity>
+            {/* Available Rewards Section */}
+            {showAvailableRewards && isLoggedIn && (
+              <View style={styles.voucherSection}>
+                <Text style={styles.sectionTitle}>Available Rewards to Redeem</Text>
+                <Text style={styles.sectionSubtitle}>Redeem rewards to use them in checkout</Text>
+                
+                {availableRewards && availableRewards.length > 0 ? (
+                  <View style={styles.rewardsGrid}>
+                    {availableRewards.map((reward, index) => {
+                      const isRedeeming = redeemingRewardId === reward._id;
+                      
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[styles.rewardCardNew, styles.availableRewardCard]}
+                          onPress={() => !isRedeeming && handleRedeemRewardFromModal(reward)}
+                          disabled={isRedeeming}
+                        >
+                          <View style={styles.rewardCardHeader}>
+                            <View style={styles.rewardIconContainer}>
+                              <Ionicons name={reward.icon || "gift"} size={24} color={GREEN} />
+                            </View>
+                          </View>
+                          
+                          <View style={styles.rewardCardContent}>
+                            <Text style={styles.rewardName}>{reward.name}</Text>
+                            <Text style={styles.rewardDescription}>{reward.description}</Text>
+                            
+                            {reward.type === 'discount' && (
+                              <View style={styles.discountAmountContainer}>
+                                <Text style={styles.discountAmount}>₱{reward.value}</Text>
+                                <Text style={styles.discountLabel}>OFF</Text>
+                              </View>
+                            )}
+                            
+                            {reward.type === 'shipping' && (
+                              <View style={styles.freeShippingContainer}>
+                                <Text style={styles.freeShippingText}>FREE</Text>
+                                <Text style={styles.shippingLabel}>SHIPPING</Text>
+                              </View>
+                            )}
+                            
+                            {reward.type === 'bonus' && (
+                              <View style={styles.bonusContainer}>
+                                <Text style={styles.bonusText}>+{reward.value}</Text>
+                                <Text style={styles.bonusLabel}>POINTS</Text>
+                              </View>
+                            )}
+                            
+                            <View style={styles.costContainer}>
+                              <Text style={styles.costText}>Cost: {reward.cost} points</Text>
+                            </View>
+                            
+                            <TouchableOpacity 
+                              style={[styles.redeemButton, isRedeeming && styles.btnDisabled]}
+                              onPress={() => !isRedeeming && handleRedeemRewardFromModal(reward)}
+                              disabled={isRedeeming}
+                            >
+                              {isRedeeming ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                              ) : (
+                                <Text style={styles.redeemButtonText}>Redeem</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.noRewardsContainer}>
+                    <Ionicons name="gift-outline" size={48} color={GRAY} />
+                    <Text style={styles.noRewardsText}>No rewards available to redeem</Text>
+                    <Text style={styles.noRewardsSubtext}>Earn more points to unlock rewards</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Toggle Available Rewards */}
+            {isLoggedIn && (
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={handleViewAllVouchers}
+              >
+                <Ionicons name="card-outline" size={20} color={GREEN} />
+                <Text style={styles.viewAllButtonText}>
+                  {showAvailableRewards ? 'Hide Available Rewards' : 'View Available Rewards'}
+                </Text>
+                <Ionicons 
+                  name={showAvailableRewards ? "chevron-up" : "chevron-down"} 
+                  size={16} 
+                  color={GRAY} 
+                />
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -542,5 +709,221 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: GREEN,
+  },
+
+  // New styles for enhanced reward cards
+  sectionSubtitle: {
+    fontSize: 14,
+    color: GRAY,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  
+  rewardCardNew: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    width: "48%",
+    borderWidth: 2,
+    borderColor: BORDER,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    position: "relative",
+  },
+  
+  rewardCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  
+  rewardIconContainer: {
+    backgroundColor: GREEN_BG,
+    borderRadius: 12,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  
+  rewardIcon: {
+    fontSize: 20,
+  },
+  
+  rewardCardContent: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  
+  rewardDescription: {
+    fontSize: 12,
+    color: GRAY,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  
+  discountAmountContainer: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  
+  discountAmount: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#D97706",
+  },
+  
+  discountLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#D97706",
+    marginTop: 2,
+  },
+  
+  freeShippingContainer: {
+    backgroundColor: "#DBEAFE",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  
+  freeShippingText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2563EB",
+  },
+  
+  shippingLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#2563EB",
+    marginTop: 2,
+  },
+  
+  bonusContainer: {
+    backgroundColor: "#F3E8FF",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  
+  bonusText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#7C3AED",
+  },
+  
+  bonusLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#7C3AED",
+    marginTop: 2,
+  },
+  
+  selectButton: {
+    backgroundColor: GREEN,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    position: "absolute",
+    bottom: 12,
+    left: 20,
+    right: 20,
+  },
+  
+  selectButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  
+  removeButton: {
+    backgroundColor: "#EF4444",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    position: "absolute",
+    bottom: 12,
+    left: 20,
+    right: 20,
+  },
+  
+  removeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  
+  noRewardsContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  
+  noRewardsText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: GRAY,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  
+  noRewardsSubtext: {
+    fontSize: 14,
+    color: GRAY,
+    marginTop: 4,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  
+  availableRewardCard: {
+    borderColor: "#D1D5DB",
+    borderWidth: 1,
+    opacity: 1,
+  },
+  
+  costContainer: {
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  
+  costText: {
+    fontSize: 12,
+    color: GRAY,
+    fontWeight: "500",
+  },
+  
+  redeemButton: {
+    backgroundColor: GREEN,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  
+  redeemButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  
+  rewardName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 4,
   },
 });

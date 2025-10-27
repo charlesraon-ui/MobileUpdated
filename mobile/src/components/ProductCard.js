@@ -156,7 +156,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
               <Pressable
                 onPress={async (e) => {
                   e.stopPropagation();
-                  console.log("🔥 WISHLIST DEBUG: Button pressed for product:", product?._id);
+                  // Wishlist toggle action
                   console.log("🔥 WISHLIST DEBUG: toggleWishlist function exists:", !!toggleWishlist);
                   console.log("🔥 WISHLIST DEBUG: Current saved state:", saved);
                   

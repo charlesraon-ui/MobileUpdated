@@ -325,9 +325,13 @@ function OrderDetailsModal({ order, visible, onClose }) {
 
         {/* Action Buttons */}
         <View style={s.modalFooter}>
-          <TouchableOpacity style={s.supportButton} activeOpacity={0.8}>
-            <Text style={s.supportIcon}>📞</Text>
-            <Text style={s.supportButtonText}>Contact Support</Text>
+          <TouchableOpacity 
+            style={s.supportButton} 
+            activeOpacity={0.8}
+            onPress={() => router.push('/support-chat')}
+          >
+            <Text style={s.supportIcon}>💬</Text>
+            <Text style={s.supportButtonText}>Customer Support</Text>
           </TouchableOpacity>
         </View>
       </View>

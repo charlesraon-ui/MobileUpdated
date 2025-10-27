@@ -169,12 +169,54 @@ export async function initiateRegistration(req, res) {
     const verifyUrl = `${baseUrl}/api/auth/register/confirm?token=${encodeURIComponent(token)}`;
 
     try {
-      await sendRegistrationVerificationEmail({ to: normalizedEmail, name, verifyUrl });
+      const emailResult = await sendRegistrationVerificationEmail({ to: normalizedEmail, name, verifyUrl });
+      
+      // If email service is disabled, fall back to direct registration
+      if (emailResult && emailResult.disabled) {
+        console.log("EMAIL_DISABLED: Creating user directly without email verification");
+        
+        // Clean up pending registration since we're creating the user directly
+        await PendingRegistration.deleteMany({ email: normalizedEmail });
+        
+        // Create user directly
+        const user = await User.create({
+          name,
+          email: normalizedEmail,
+          passwordHash: hash,
+        });
+
+        const jwtToken = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {
+          expiresIn: JWT_EXPIRES,
+        });
+
+        // Send welcome email if possible (fire-and-forget)
+        try {
+          await sendWelcomeEmail({ to: user.email, name: user.name });
+        } catch (e) {
+          console.warn("WELCOME_EMAIL_SEND_FAILED:", e?.message);
+        }
+
+        return res.status(201).json({
+          message: "Account created successfully",
+          user: { id: user._id, name: user.name, email: user.email },
+          token: jwtToken,
+          emailVerificationRequired: false
+        });
+      }
+      
+      // Email was sent successfully
+      res.status(202).json({ 
+        message: "Verification email sent",
+        emailVerificationRequired: true
+      });
+      
     } catch (e) {
       console.warn("VERIFY_EMAIL_SEND_FAILED:", e?.message);
+      res.status(202).json({ 
+        message: "Registration initiated, but email could not be sent",
+        emailVerificationRequired: true
+      });
     }
-
-    res.status(202).json({ message: "Verification email sent" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

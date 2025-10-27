@@ -41,11 +41,7 @@ export default function HomeScreen() {
 
   const { width } = Dimensions.get('window');
 
-  // Debug logging
-  console.log("HomeScreen DEBUG: products:", products);
-  console.log("HomeScreen DEBUG: products length:", products?.length);
-  console.log("HomeScreen DEBUG: recommendedProducts:", recommendedProducts);
-  console.log("HomeScreen DEBUG: recommendedProducts length:", recommendedProducts?.length);
+  // Debug logs removed for production
 
   // show banner once after login/register
   const [showWelcome, setShowWelcome] = useState(false);
@@ -194,9 +190,13 @@ export default function HomeScreen() {
           </View>
 
           {/* Rating badge (bottom-right) */}
-          <View style={styles.ratingChip}>
-            <Text style={styles.ratingChipText}>⭐ {product?.averageRating || '4.5'}</Text>
-          </View>
+          {product?.reviews?.length > 0 && (
+            <View style={styles.ratingChip}>
+              <Text style={styles.ratingChipText}>
+                ⭐ {(product.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / product.reviews.length).toFixed(1)} ({product.reviews.length})
+              </Text>
+            </View>
+          )}
 
           {/* Real-time stock indicator */}
           {product.stock !== undefined && (

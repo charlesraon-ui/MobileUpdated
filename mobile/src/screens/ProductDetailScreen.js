@@ -490,8 +490,10 @@ export default function ProductDetailScreen() {
     if (!item) return null;
     
     const imgSrc = item.imageUrl || require("../../assets/images/placeholder-small.svg");
-    const averageRating = item.averageRating || 0;
-    const reviewCount = item.reviewCount || 0;
+    const averageRating = item.reviews?.length 
+      ? (item.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / item.reviews.length)
+      : (item.averageRating || 0);
+    const reviewCount = item.reviews?.length || item.reviewCount || 0;
     
     return (
       <TouchableOpacity 

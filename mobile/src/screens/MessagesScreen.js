@@ -29,7 +29,7 @@ export default function MessagesScreen() {
     }
   }, []);
 
-  useEffect(() => { loadConversations(); }, [loadConversations]);
+  useEffect(() => { loadConversations(); }, []);
 
   const openThread = (userId) => router.push({ pathname: "/chat", params: { userId } });
 

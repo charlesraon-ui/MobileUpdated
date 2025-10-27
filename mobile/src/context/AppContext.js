@@ -65,6 +65,7 @@ export default function AppProvider({ children }) {
   const [myReviews, setMyReviews] = useState([]);
   const [recoItems, setRecoItems] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [apiRecommendations, setApiRecommendations] = useState([]);
 
   // global toast state
   const [toastVisible, setToastVisible] = useState(false);
@@ -277,14 +278,13 @@ export default function AppProvider({ children }) {
 
   const toggleWishlist = useCallback(
     async (product) => {
-      console.log("🔥 WISHLIST DEBUG: toggleWishlist called with:", product);
-      const productId = typeof product === "string" ? product : product?._id;
-      console.log("🔥 WISHLIST DEBUG: productId:", productId);
+      // Toggle wishlist functionality
+    const productId = typeof product === "string" ? product : product?._id;
       console.log("🔥 WISHLIST DEBUG: isLoggedIn:", isLoggedIn);
       console.log("🔥 WISHLIST DEBUG: current wishlist:", wishlist);
       
       if (!productId) {
-        console.log("🔥 WISHLIST DEBUG: No productId, returning null");
+        // No product ID provided
         return null;
       }
       
@@ -368,11 +368,8 @@ export default function AppProvider({ children }) {
         console.log("🚀 APPCONTEXT BOOT: Starting API calls...");
         let prod, cats, bundlesResp;
         try {
-          console.log("🚀 APPCONTEXT BOOT: About to call getProducts()...");
-          prod = await getProducts();
-          console.log("🚀 APPCONTEXT BOOT: getProducts() SUCCESS:", prod);
-          console.log("🚀 APPCONTEXT BOOT: Products data:", prod?.data);
-          console.log("🚀 APPCONTEXT BOOT: Products length:", prod?.data?.length);
+          // Fetch products from API
+        const prod = await getProducts();
         } catch (error) {
           console.error("🚀 APPCONTEXT BOOT: getProducts() failed:", error);
           console.error("🚀 APPCONTEXT BOOT: Error details:", error.message, error.stack);
@@ -399,8 +396,7 @@ export default function AppProvider({ children }) {
         }
 
         const productsArray = Array.isArray(prod?.data) ? prod.data : [];
-        console.log("🚀 APPCONTEXT BOOT: Setting products array:", productsArray);
-        console.log("🚀 APPCONTEXT BOOT: Products array length:", productsArray.length);
+        // Set products array
         setProducts(productsArray);
         
         // Preload product images for better performance
@@ -498,6 +494,25 @@ export default function AppProvider({ children }) {
       }
     })();
   }, [userId, cartProductIds]);
+
+  // Fetch AI-powered user recommendations for home page
+  useEffect(() => {
+    (async () => {
+      try {
+        if (userId) {
+          const { data } = await getRecommendations({ userId, limit: 6 });
+          setApiRecommendations(Array.isArray(data?.items) ? data.items : []);
+        } else {
+          // For non-logged-in users, get general recommendations
+          const { data } = await getRecommendations({ limit: 6 });
+          setApiRecommendations(Array.isArray(data?.items) ? data.items : []);
+        }
+      } catch (e) {
+        console.warn("home recommendations fetch failed:", e?.message);
+        setApiRecommendations([]);
+      }
+    })();
+  }, [userId]);
 
   const refreshAuthedData = useCallback(
   async (u = user) => {
@@ -1253,16 +1268,45 @@ const handlePlaceOrder = async (opts = {}) => {
 
   // Email verification flow: initiate registration without immediate login
   const doRegisterInitiate = async ({ name, email, password, address }) => {
-    await initiateRegister({ name, email, password, address });
+    const response = await initiateRegister({ name, email, password, address });
+    const data = response.data || {};
+    
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);
-    // Show info and route user to login; they can login after confirming via email
-    // TODO: Replace with web-compatible alert
-    // Alert.alert(
-    //   "Check your email",
-    //   "We sent a verification link to your Gmail. Open it to confirm account creation. After confirming, return to the app to login.",
-    //   [{ text: "OK", onPress: () => router.replace("/login") }]
-    // );
+    
+    // Check if email verification is required or if user was created directly
+    if (data.emailVerificationRequired === false && data.token && data.user) {
+      // Direct registration (email service disabled) - log the user in immediately
+      await setToken(data.token);
+      await persistUser(data.user);
+      setUserState(data.user);
+      setJustRegistered(true);
+      
+      showToast({
+        type: "success",
+        message: "Account created successfully! Welcome to GoAgriTrading.",
+        actionLabel: "Continue",
+        onAction: () => router.replace("/tabs/home")
+      });
+      
+      // Auto-redirect to home after a delay
+      setTimeout(() => {
+        router.replace("/tabs/home");
+      }, 2000);
+    } else {
+      // Email verification required
+      showToast({
+        type: "success",
+        message: "Registration initiated! Check your email for a verification link to complete account creation.",
+        actionLabel: "Go to Login",
+        onAction: () => router.replace("/login")
+      });
+      
+      // Auto-redirect to login after a delay
+      setTimeout(() => {
+        router.replace("/login");
+      }, 3000);
+    }
   };
 
   const doGoogleAuth = async ({ accessToken }) => {
@@ -1350,12 +1394,18 @@ const handlePlaceOrder = async (opts = {}) => {
   }, [products, selectedCategory, searchQuery, categoryMap]);
 
   const recommendedProducts = useMemo(() => {
+    // Use API-based recommendations if available, otherwise fallback to simple logic
+    if (apiRecommendations && apiRecommendations.length > 0) {
+      return apiRecommendations.slice(0, 3);
+    }
+    
+    // Fallback to category-based logic
     const result = lastAddedCategory
       ? (products || []).filter((p) => categoryLabelOf(p) === lastAddedCategory).slice(0, 3)
       : (products || []).slice(0, 3);
     
     return result;
-  }, [products, lastAddedCategory, categoryMap]);
+  }, [apiRecommendations, products, lastAddedCategory, categoryMap]);
 
   // Product details + reviews
   const fetchProductDetail = async (id) => {
@@ -1413,6 +1463,7 @@ const handlePlaceOrder = async (opts = {}) => {
     addresses,
     defaultAddress,
     recoItems,
+    apiRecommendations,
     justMergedFromGuest, setJustMergedFromGuest,
     justLoggedInName, setJustLoggedInName,
     justRegistered, setJustRegistered,
