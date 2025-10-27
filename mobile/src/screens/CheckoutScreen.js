@@ -19,7 +19,7 @@ import {
 import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 import PromoService from "../services/PromoService";
-import LoyaltyRewardSelector from "../components/LoyaltyRewardSelector";
+import VoucherDropdown from "../components/VoucherDropdown";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -60,11 +60,9 @@ export default function CheckoutScreen() {
   const [placing, setPlacing] = useState(false);
 
   // Promo code state
-  const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [freeShipping, setFreeShipping] = useState(false);
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
   // toast
   const [toast, setToast] = useState("");
@@ -94,52 +92,7 @@ export default function CheckoutScreen() {
     }
   }, [isLoggedIn, loadAvailableRewards]);
 
-  // Promo code functions
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) {
-      showToast("Please enter a promo code");
-      return;
-    }
 
-    const validation = PromoService.validatePromoCode(promoCode);
-    if (!validation.valid) {
-      showToast(validation.error);
-      return;
-    }
-
-    setIsApplyingPromo(true);
-    
-    try {
-      const result = await PromoService.applyPromoCode(promoCode, cartTotal);
-      
-      if (result.success) {
-        setAppliedPromo(result.data.promo);
-        setPromoDiscount(result.data.discount || 0);
-        setFreeShipping(result.data.freeShipping || false);
-        setPromoCode("");
-        
-        showToast(
-          result.data.freeShipping 
-            ? "Free shipping applied!" 
-            : `Discount of ₱${result.data.discount} applied!`
-        );
-      } else {
-        showToast(result.error || "Failed to apply promo code");
-      }
-    } catch (error) {
-      showToast("Error applying promo code");
-    } finally {
-      setIsApplyingPromo(false);
-    }
-  };
-
-  const handleRemovePromo = () => {
-    setAppliedPromo(null);
-    setPromoDiscount(0);
-    setFreeShipping(false);
-    setPromoCode("");
-    showToast("Promo code removed");
-  };
 
   // Helper functions
   const getDeliveryFee = (method) => {
@@ -526,62 +479,23 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {/* Loyalty Rewards Section */}
-          <View style={s.sectionContainer}>
-            <Text style={s.sectionTitle}>Loyalty Rewards</Text>
-            <LoyaltyRewardSelector
-              onRewardSelected={(reward) => {
-                if (reward) {
-                  applyRewardDiscount(reward);
-                } else {
-                  removeRewardDiscount();
-                }
-              }}
-              selectedReward={appliedReward}
-              rewardDiscount={rewardDiscount}
-            />
-          </View>
-
-          {/* Promo Code Section */}
-          <View style={s.sectionContainer}>
-            <Text style={s.sectionTitle}>Promo Code</Text>
-            {appliedPromo ? (
-              <View style={s.appliedPromoContainer}>
-                <View style={s.appliedPromoInfo}>
-                  <Ionicons name="pricetag" size={16} color={GREEN} />
-                  <Text style={s.appliedPromoText}>
-                    {appliedPromo.code} - ₱{promoDiscount.toFixed(2)} off
-                    {freeShipping && " + Free Shipping"}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={handleRemovePromo} style={s.removePromoButton}>
-                  <Ionicons name="close" size={16} color={GRAY} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={s.promoInputContainer}>
-                <TextInput
-                  value={promoCode}
-                  onChangeText={setPromoCode}
-                  placeholder="Enter promo code"
-                  style={s.promoInput}
-                  placeholderTextColor={GRAY}
-                  autoCapitalize="characters"
-                />
-                <TouchableOpacity
-                  style={[s.applyPromoBtn, isApplyingPromo && s.btnDisabled]}
-                  onPress={handleApplyPromo}
-                  disabled={isApplyingPromo}
-                >
-                  {isApplyingPromo ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={s.applyPromoBtnText}>Apply</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          {/* Vouchers Section */}
+          <VoucherDropdown
+            cartTotal={cartTotal}
+            onPromoApplied={(promo, discount, freeShipping) => {
+              setAppliedPromo(promo);
+              setPromoDiscount(discount);
+              setFreeShipping(freeShipping);
+            }}
+            onPromoRemoved={() => {
+              setAppliedPromo(null);
+              setPromoDiscount(0);
+              setFreeShipping(false);
+            }}
+            appliedPromo={appliedPromo}
+            promoDiscount={promoDiscount}
+            freeShipping={freeShipping}
+          />
 
           {/* Payment Section */}
           <View style={s.sectionContainer}>

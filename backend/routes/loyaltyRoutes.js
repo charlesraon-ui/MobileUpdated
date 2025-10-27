@@ -10,8 +10,7 @@ import {
   getRedemptionHistory,
   addTestPoints,
   getLoyaltyStats,
-  addLoyaltyPoints,
-  getSelectableRewards
+  addLoyaltyPoints
 } from "../controllers/loyaltyController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -28,7 +27,6 @@ router.get("/digital-card", authMiddleware, getDigitalCard);
 // Reward redemption endpoints
 router.get("/rewards", authMiddleware, getAvailableRewards);
 router.get("/usable-rewards", authMiddleware, getUsableRewards);
-router.get("/selectable-rewards", authMiddleware, getSelectableRewards);
 router.post("/redeem", authMiddleware, redeemReward);
 router.get("/redemptions", authMiddleware, getRedemptionHistory);
 
