@@ -95,10 +95,38 @@ export default function AppProvider({ children }) {
       configureGoogleSignIn();
       console.log("🚀 APPCONTEXT REF INIT: Google Sign-In configured successfully");
     } catch (error) {
-      console.error("🚀 APPCONTEXT REF INIT: Google Sign-In configuration failed:", error);
+      // Google Sign-In configuration failed
     }
     
-    // Note: Product loading moved to useEffect to prevent duplicate calls
+    // Initialize API data
+    (async () => {
+      try {
+        console.log("🚀 APPCONTEXT REF INIT: Loading products...");
+        const productsResponse = await getProducts();
+        setProducts(productsResponse.data);
+        console.log("🚀 APPCONTEXT REF INIT: Products loaded successfully:", productsResponse.data?.length);
+      } catch (error) {
+        // Failed to load products
+      }
+
+      try {
+        console.log("🚀 APPCONTEXT REF INIT: Loading categories...");
+        const categoriesResponse = await getCategories();
+        setCategories(categoriesResponse.data);
+        console.log("🚀 APPCONTEXT REF INIT: Categories loaded successfully:", categoriesResponse.data?.length);
+      } catch (error) {
+        // Failed to load categories
+      }
+
+      try {
+        console.log("🚀 APPCONTEXT REF INIT: Loading bundles...");
+        const bundlesResponse = await getBundles();
+        setBundles(bundlesResponse.data);
+        console.log("🚀 APPCONTEXT REF INIT: Bundles loaded successfully:", bundlesResponse.data?.length);
+      } catch (error) {
+        // Failed to load bundles
+      }
+    })();
    }
 
   // UX flags
@@ -134,8 +162,10 @@ export default function AppProvider({ children }) {
     return `${DEFAULT_ADDR_KEY_PREFIX}${uid}`;
   }, [user]);
 
-  const loadAddresses = useCallback(async (key) => {
+  const loadAddresses = useCallback(async () => {
     try {
+      const uid = user?._id || user?.id || user?.email || "guest";
+      const key = `${ADDR_KEY_PREFIX}${uid}`;
       const json = await AsyncStorage.getItem(key);
       const arr = json ? JSON.parse(json) : [];
       setAddresses(Array.isArray(arr) ? arr : []);
@@ -143,10 +173,12 @@ export default function AppProvider({ children }) {
       console.warn("loadAddresses failed:", e?.message);
       setAddresses([]);
     }
-  }, []);
+  }, [user]);
 
-  const loadDefaultAddress = useCallback(async (key) => {
+  const loadDefaultAddress = useCallback(async () => {
     try {
+      const uid = user?._id || user?.id || user?.email || "guest";
+      const key = `${DEFAULT_ADDR_KEY_PREFIX}${uid}`;
       const raw = await AsyncStorage.getItem(key);
       const val = raw ? JSON.parse(raw) : "";
       const addr = typeof val === "string" ? val : String(val || "");
@@ -157,27 +189,31 @@ export default function AppProvider({ children }) {
       console.warn("loadDefaultAddress failed:", e?.message);
       setDefaultAddressState("");
     }
-  }, []);
+  }, [user]);
 
-  const saveAddresses = useCallback(async (next, key = addrKey) => {
+  const saveAddresses = useCallback(async (next, key) => {
     try {
       setAddresses(next);
-      await AsyncStorage.setItem(key, JSON.stringify(next));
+      const uid = user?._id || user?.id || user?.email || "guest";
+      const storageKey = key || `${ADDR_KEY_PREFIX}${uid}`;
+      await AsyncStorage.setItem(storageKey, JSON.stringify(next));
     } catch (e) {
       console.warn("saveAddresses failed:", e?.message);
     }
-  }, [addrKey]);
+  }, [user]);
 
   const setDefaultAddress = useCallback(async (addr) => {
     try {
       const val = String(addr || "").trim();
       setDefaultAddressState(val);
-      await AsyncStorage.setItem(defaultAddrKey, JSON.stringify(val));
-      if (val) setDeliveryAddress(val);
+      const uid = user?._id || user?.id || user?.email || "guest";
+      const key = `${DEFAULT_ADDR_KEY_PREFIX}${uid}`;
+      await AsyncStorage.setItem(key, JSON.stringify(val));
+      // Note: Removed automatic deliveryAddress setting to prevent infinite loops
     } catch (e) {
       console.warn("setDefaultAddress failed:", e?.message);
     }
-  }, [defaultAddrKey]);
+  }, [user]);
 
   const addAddress = useCallback(async (addressText) => {
     const a = String(addressText || "").trim();
@@ -187,7 +223,7 @@ export default function AppProvider({ children }) {
     if ((addresses || []).length === 0) {
       await setDefaultAddress(a);
     }
-    setDeliveryAddress(a);
+    // Note: Removed automatic deliveryAddress setting to prevent infinite loops
   }, [addresses, saveAddresses, setDefaultAddress]);
 
   const removeAddress = useCallback(async (addressText) => {
@@ -196,10 +232,8 @@ export default function AppProvider({ children }) {
     if (String(defaultAddress || "").trim() === String(addressText || "").trim()) {
       await setDefaultAddress("");
     }
-    if (String(deliveryAddress || "").trim() === String(addressText || "").trim()) {
-      setDeliveryAddress(next[0] || "");
-    }
-  }, [addresses, saveAddresses, deliveryAddress, defaultAddress, setDefaultAddress]);
+    // Note: Removed automatic deliveryAddress setting to prevent infinite loops
+  }, [addresses, saveAddresses, defaultAddress, setDefaultAddress]);
 
   // derived
   const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
@@ -334,7 +368,6 @@ export default function AppProvider({ children }) {
   // boot
   useEffect(() => {
     console.log("🚀🚀🚀 APPCONTEXT USEEFFECT: Starting initialization...");
-    console.warn("🚀🚀🚀 APPCONTEXT USEEFFECT: Starting initialization...");
     console.log("🚀 APPCONTEXT BOOT: Starting initialization...");
     (async () => {
       try {
@@ -354,8 +387,8 @@ export default function AppProvider({ children }) {
         // load addresses for current user
         const uid = (u?._id || u?.id || u?.email || "guest");
         console.log("🚀 APPCONTEXT BOOT: Loading addresses for uid:", uid);
-        await loadAddresses(`${ADDR_KEY_PREFIX}${uid}`);
-        await loadDefaultAddress(`${DEFAULT_ADDR_KEY_PREFIX}${uid}`);
+        await loadAddresses();
+        await loadDefaultAddress();
 
         // load persisted UI preferences
         try {
@@ -369,11 +402,9 @@ export default function AppProvider({ children }) {
         let prod, cats, bundlesResp;
         try {
           // Fetch products from API
-        const prod = await getProducts();
+          prod = await getProducts();
         } catch (error) {
-          console.error("🚀 APPCONTEXT BOOT: getProducts() failed:", error);
-          console.error("🚀 APPCONTEXT BOOT: Error details:", error.message, error.stack);
-          console.error("🚀 APPCONTEXT BOOT: Error response:", error.response);
+          // getProducts() failed
           prod = { data: [] };
         }
 
@@ -382,7 +413,7 @@ export default function AppProvider({ children }) {
           cats = await getCategories();
           console.log("🚀 APPCONTEXT BOOT: getCategories() SUCCESS:", cats);
         } catch (error) {
-          console.error("🚀 APPCONTEXT BOOT: getCategories() failed:", error);
+          // getCategories() failed
           cats = { data: [] };
         }
 
@@ -391,7 +422,7 @@ export default function AppProvider({ children }) {
           bundlesResp = await getBundles();
           console.log("🚀 APPCONTEXT BOOT: getBundles() SUCCESS:", bundlesResp);
         } catch (error) {
-          console.error("🚀 APPCONTEXT BOOT: getBundles() failed:", error);
+          // getBundles() failed
           bundlesResp = { data: [] };
         }
 
@@ -426,19 +457,18 @@ export default function AppProvider({ children }) {
 
         if (u) {
           await refreshAuthedData(u);
-          // seed delivery address from user profile if available
+          // seed address from user profile if available
           const seedAddr = String(u?.address || "").trim();
-          if (seedAddr && !String(deliveryAddress || "").trim()) {
-            setDeliveryAddress(seedAddr);
+          if (seedAddr) {
             // ensure seed address is saved
             const existing = (addresses || []);
             if (!existing.includes(seedAddr)) {
               await saveAddresses([seedAddr, ...existing]);
             }
-          }
-          // seed default address if not set
-          if (seedAddr && !String(defaultAddress || "").trim()) {
-            await setDefaultAddress(seedAddr);
+            // seed default address if not set
+            if (!String(defaultAddress || "").trim()) {
+              await setDefaultAddress(seedAddr);
+            }
           }
         } else {
           const guestCart = await loadCart();
@@ -465,13 +495,13 @@ export default function AppProvider({ children }) {
 
   // reload addresses when user changes (e.g., after login/logout)
   useEffect(() => {
-    loadAddresses(addrKey);
-  }, [addrKey]);
+    loadAddresses();
+  }, [user]);
 
   // reload default address when user changes
   useEffect(() => {
-    loadDefaultAddress(defaultAddrKey);
-  }, [defaultAddrKey]);
+    loadDefaultAddress();
+  }, [user]);
 
   // Note: Removed automatic deliveryAddress sync to prevent infinite loops
   // Users can manually select their delivery address from the saved addresses

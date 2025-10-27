@@ -105,7 +105,7 @@ const BundlesScreen = () => {
     );
   };
 
-  if (loading && bundles.length === 0) {
+  if (loading && (!Array.isArray(bundles) || bundles.length === 0)) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" backgroundColor="#10B981" />
@@ -142,7 +142,7 @@ const BundlesScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {bundles.length === 0 ? (
+        {(!Array.isArray(bundles) || bundles.length === 0) ? (
           <View style={styles.emptyState}>
             <Ionicons name="gift-outline" size={80} color={Colors.light.muted} />
             <Text style={styles.emptyTitle}>No Bundles Available</Text>
@@ -152,7 +152,7 @@ const BundlesScreen = () => {
           </View>
         ) : (
           <View style={styles.bundlesGrid}>
-            {bundles.map((bundle) => (
+            {(Array.isArray(bundles) ? bundles : []).map((bundle) => (
               <BundleCard key={bundle._id} bundle={bundle} />
             ))}
           </View>

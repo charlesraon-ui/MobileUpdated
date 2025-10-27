@@ -94,7 +94,9 @@ export const safeTextForDisplay = (text, fallback = '') => {
  * Only logs in development to help developers catch ID display issues
  */
 export const warnIfIdDisplayAttempt = (value, context = '') => {
-  if (__DEV__ && value && typeof value === 'string') {
+  const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV === 'development';
+  
+  if (isDev && value && typeof value === 'string') {
     if (!isTextSafeForDisplay(value)) {
       console.warn(`🚨 SECURITY WARNING: Attempted to display potential ID "${value}" in context: ${context}`);
       console.trace('Stack trace for ID display attempt:');

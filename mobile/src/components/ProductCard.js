@@ -42,7 +42,8 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   const sanitizedProduct = sanitizeProductForDisplay(product);
   
   // Warn if any product fields contain ID-like strings
-  if (__DEV__ && product) {
+  const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV === 'development';
+  if (isDev && product) {
     warnIfIdDisplayAttempt(product.name, 'ProductCard - product.name');
     warnIfIdDisplayAttempt(product.description, 'ProductCard - product.description');
   }

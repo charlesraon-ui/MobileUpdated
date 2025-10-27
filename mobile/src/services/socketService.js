@@ -30,7 +30,7 @@ class SocketService {
       }
 
       // Use local backend URL for development
-      const SOCKET_URL =  'https://goat-agri-trading-backend.onrender.com' || 'http://localhost:5000';
+      const SOCKET_URL =  'https://mobile-backend-zzy4.onrender.com' || 'http://localhost:5000';
       console.log('🔌 Attempting to connect to socket:', SOCKET_URL);
       
       // Disconnect existing socket if any

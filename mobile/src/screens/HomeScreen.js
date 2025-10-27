@@ -153,7 +153,8 @@ export default function HomeScreen() {
     const sanitizedProduct = sanitizeProductForDisplay(product);
     
     // Warn if any product fields contain ID-like strings
-    if (__DEV__ && product) {
+    const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV === 'development';
+    if (isDev && product) {
       warnIfIdDisplayAttempt(product.name, 'HomeScreen ProductCard - product.name');
       warnIfIdDisplayAttempt(product.description, 'HomeScreen ProductCard - product.description');
     }
@@ -338,7 +339,9 @@ export default function HomeScreen() {
 
   // Build Best Offers: mix top bundles and cheapest products (using real-time data)
   const bestOffers = useMemo(() => {
-    const bundleCards = (bundles || [])
+    // Ensure bundles is always an array
+    const bundlesArray = Array.isArray(bundles) ? bundles : [];
+    const bundleCards = bundlesArray
       .slice(0, 4)
       .map((b) => ({ type: 'bundle', item: b }));
     const cheapest = [...(realtimeProducts || [])]
