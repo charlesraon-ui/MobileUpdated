@@ -14,6 +14,7 @@ import {
   createMyOrder,
   getAvailableRewards,
   getUsableRewards,
+  getSelectableRewards,
   getBundleApi,
   getBundles,
   getCategories,
@@ -210,6 +211,7 @@ export default function AppProvider({ children }) {
   // Reward state
   const [availableRewards, setAvailableRewards] = useState([]);
   const [usableRewards, setUsableRewards] = useState([]);
+  const [selectableRewards, setSelectableRewards] = useState([]);
   const [redemptionHistory, setRedemptionHistory] = useState([]);
   const [rewardsLoading, setRewardsLoading] = useState(false);
   
@@ -646,6 +648,21 @@ export default function AppProvider({ children }) {
     }
   }, [isLoggedIn]);
 
+  // Load selectable rewards for checkout
+  const loadSelectableRewards = useCallback(async () => {
+    if (!isLoggedIn) return;
+    
+    try {
+      // Ensure token is set before making API call
+      await getToken();
+      const response = await getSelectableRewards();
+      setSelectableRewards(response.data?.rewards || []);
+    } catch (error) {
+      console.error('Failed to load selectable rewards:', error);
+      setSelectableRewards([]);
+    }
+  }, [isLoggedIn]);
+
   // Redeem a reward
   const handleRedeemReward = useCallback(async (rewardName) => {
     if (!isLoggedIn) {
@@ -964,6 +981,8 @@ const handlePlaceOrder = async (opts = {}) => {
     address: addressInput,
     total: totalInput,
     deliveryFee: deliveryFeeInput,
+    promoCode: promoCodeData,
+    loyaltyReward: loyaltyRewardData,
   } = opts || {};
 
   const deliveryType = String(deliveryTypeInput || "in-house");
@@ -1019,7 +1038,9 @@ const handlePlaceOrder = async (opts = {}) => {
           deliveryFee: deliveryFee,
           address: addr.trim(),
           deliveryType: deliveryType,
-          channel: "multi" // Support all payment methods
+          channel: "multi", // Support all payment methods
+          promoCode: promoCodeData,
+          loyaltyReward: loyaltyRewardData
         };
 
         console.log("🔥 ORDER PLACEMENT DEBUG: E-Payment payload:", ePaymentPayload);
@@ -1085,7 +1106,9 @@ const handlePlaceOrder = async (opts = {}) => {
         deliveryFee: deliveryFee,
         address: addr.trim(),
         deliveryType: deliveryType,
-        paymentMethod: "COD"
+        paymentMethod: "COD",
+        promoCode: promoCodeData,
+        loyaltyReward: loyaltyRewardData
       };
 
       console.log("🔥 ORDER PLACEMENT DEBUG: COD payload:", codPayload);
@@ -1465,10 +1488,12 @@ const handlePlaceOrder = async (opts = {}) => {
     // rewards
     availableRewards,
     usableRewards,
+    selectableRewards,
     redemptionHistory,
     rewardsLoading,
     loadAvailableRewards,
     loadUsableRewards,
+    loadSelectableRewards,
     loadRedemptionHistory,
     handleRedeemReward,
     

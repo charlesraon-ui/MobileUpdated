@@ -19,7 +19,7 @@ import {
 import { createEPaymentOrder } from "../api/apiClient";
 import { AppCtx } from "../context/AppContext";
 import PromoService from "../services/PromoService";
-import VoucherDropdown from "../components/VoucherDropdown";
+import LoyaltyRewardSelector from "../components/LoyaltyRewardSelector";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -526,24 +526,61 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {/* Vouchers Section */}
+          {/* Loyalty Rewards Section */}
           <View style={s.sectionContainer}>
-            <VoucherDropdown
-              cartTotal={cartTotal}
-              onPromoApplied={(promo, discount, freeShip) => {
-                setAppliedPromo(promo);
-                setPromoDiscount(discount);
-                setFreeShipping(freeShip);
+            <Text style={s.sectionTitle}>Loyalty Rewards</Text>
+            <LoyaltyRewardSelector
+              onRewardSelected={(reward) => {
+                if (reward) {
+                  applyRewardDiscount(reward);
+                } else {
+                  removeRewardDiscount();
+                }
               }}
-              onPromoRemoved={() => {
-                setAppliedPromo(null);
-                setPromoDiscount(0);
-                setFreeShipping(false);
-              }}
-              appliedPromo={appliedPromo}
-              promoDiscount={promoDiscount}
-              freeShipping={freeShipping}
+              selectedReward={appliedReward}
+              rewardDiscount={rewardDiscount}
             />
+          </View>
+
+          {/* Promo Code Section */}
+          <View style={s.sectionContainer}>
+            <Text style={s.sectionTitle}>Promo Code</Text>
+            {appliedPromo ? (
+              <View style={s.appliedPromoContainer}>
+                <View style={s.appliedPromoInfo}>
+                  <Ionicons name="pricetag" size={16} color={GREEN} />
+                  <Text style={s.appliedPromoText}>
+                    {appliedPromo.code} - ₱{promoDiscount.toFixed(2)} off
+                    {freeShipping && " + Free Shipping"}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={handleRemovePromo} style={s.removePromoButton}>
+                  <Ionicons name="close" size={16} color={GRAY} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={s.promoInputContainer}>
+                <TextInput
+                  value={promoCode}
+                  onChangeText={setPromoCode}
+                  placeholder="Enter promo code"
+                  style={s.promoInput}
+                  placeholderTextColor={GRAY}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={[s.applyPromoBtn, isApplyingPromo && s.btnDisabled]}
+                  onPress={handleApplyPromo}
+                  disabled={isApplyingPromo}
+                >
+                  {isApplyingPromo ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={s.applyPromoBtnText}>Apply</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Payment Section */}

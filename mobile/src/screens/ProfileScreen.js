@@ -1241,6 +1241,22 @@ export default function ProfileScreen() {
                     <Text style={s.orderDetailLabel}>Payment:</Text>
                     <Text style={s.orderDetailValue}>{selectedOrder.paymentMethod || 'N/A'}</Text>
                   </View>
+                  {selectedOrder.promoCode && selectedOrder.promoCode.code && (
+                    <View style={s.orderDetailRow}>
+                      <Text style={s.orderDetailLabel}>Promo Code:</Text>
+                      <Text style={s.orderDetailValue}>
+                        {selectedOrder.promoCode.code} (-₱{Number(selectedOrder.promoCode.discount || 0).toFixed(2)})
+                      </Text>
+                    </View>
+                  )}
+                  {selectedOrder.loyaltyReward && selectedOrder.loyaltyReward.name && (
+                    <View style={s.orderDetailRow}>
+                      <Text style={s.orderDetailLabel}>Loyalty Reward:</Text>
+                      <Text style={s.orderDetailValue}>
+                        {selectedOrder.loyaltyReward.name} (-₱{Number(selectedOrder.loyaltyReward.discount || 0).toFixed(2)})
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 
                 {selectedOrder.items && selectedOrder.items.length > 0 && (

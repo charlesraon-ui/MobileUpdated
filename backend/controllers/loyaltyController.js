@@ -529,3 +529,59 @@ export const markRewardsAsUsed = async (userId, rewardIds) => {
     return { success: false, message: error.message };
   }
 };
+
+// Get selectable rewards for checkout (simplified view)
+export const getSelectableRewards = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const loyalty = await LoyaltyReward.findOne({ userId });
+    if (!loyalty) {
+      return res.json({
+        success: true,
+        rewards: []
+      });
+    }
+
+    // Get redeemed but unused rewards
+    const usableRewards = loyalty.pointsHistory
+      .filter(entry => entry.source === "reward_redeemed" && !entry.used)
+      .map(entry => {
+        const rewardConfig = rewards.find(r => r.name === entry.rewardName);
+        return {
+          id: entry._id,
+          name: entry.rewardName,
+          displayName: rewardConfig?.description || entry.rewardName,
+          type: rewardConfig?.type || "discount",
+          value: rewardConfig?.value || 0,
+          icon: rewardConfig?.icon || "🎁"
+        };
+      });
+
+    // Group similar rewards and show only the best available
+    const groupedRewards = {};
+    usableRewards.forEach(reward => {
+      if (reward.type === "discount") {
+        const key = "discount";
+        if (!groupedRewards[key] || reward.value > groupedRewards[key].value) {
+          groupedRewards[key] = reward;
+        }
+      } else {
+        groupedRewards[reward.type] = reward;
+      }
+    });
+
+    const selectableRewards = Object.values(groupedRewards);
+
+    res.json({
+      success: true,
+      rewards: selectableRewards
+    });
+  } catch (error) {
+    console.error("GET_SELECTABLE_REWARDS_ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
