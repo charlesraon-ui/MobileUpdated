@@ -22,6 +22,7 @@ import ProductCard from "../components/ProductCard";
 import SearchBar from "../components/SearchBar";
 import { AppCtx } from "../context/AppContext";
 import { ResponsiveUtils } from "../../constants/theme";
+import { sanitizeProductForDisplay, warnIfIdDisplayAttempt } from "../utils/dataSanitizer";
 
 export default function ProductsScreen() {
   const { width } = Dimensions.get('window');
@@ -318,7 +319,7 @@ export default function ProductsScreen() {
                 )}
                 <View style={styles.addedProductDetails}>
                   <Text style={styles.addedProductName} numberOfLines={2}>
-                    {addedProduct.name}
+                    {sanitizeProductForDisplay(addedProduct).name}
                   </Text>
                   <Text style={styles.addedProductPrice}>
                     ₱{addedProduct.price?.toFixed(2)}

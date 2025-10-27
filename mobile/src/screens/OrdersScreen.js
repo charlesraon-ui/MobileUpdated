@@ -97,7 +97,7 @@ function OrderDetailsModal({ order, visible, onClose }) {
         <View style={s.modalHeader}>
           <View>
             <Text style={s.modalTitle}>Order Details</Text>
-            <Text style={s.modalSubtitle}>#{String(order._id).slice(-8).toUpperCase()}</Text>
+            <Text style={s.modalSubtitle}>#{String(order._id).slice(-4).toUpperCase()}</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={s.closeButton}>
             <Text style={s.closeButtonText}>✕</Text>
@@ -672,7 +672,7 @@ export default function OrdersScreen() {
                   <View style={s.orderCardHeader}>
                     <View style={s.orderIdContainer}>
                       <Text style={s.orderIdLabel}>Order</Text>
-                      <Text style={s.orderId}>#{String(order._id).slice(-6).toUpperCase()}</Text>
+                      <Text style={s.orderId}>#{String(order._id).slice(-4).toUpperCase()}</Text>
                     </View>
                     <View style={s.statusContainer}>
                       <Text style={s.statusIcon}>{deliveryStatusIcon}</Text>

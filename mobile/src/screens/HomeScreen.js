@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
 import { AppCtx } from "../context/AppContext";
+import { sanitizeProductForDisplay, warnIfIdDisplayAttempt } from "../utils/dataSanitizer";
 
 export default function HomeScreen() {
   const {
@@ -148,6 +149,14 @@ export default function HomeScreen() {
   };
 
   const ProductCard = ({ product }) => {
+    // Sanitize product data to prevent ID display
+    const sanitizedProduct = sanitizeProductForDisplay(product);
+    
+    // Warn if any product fields contain ID-like strings
+    if (__DEV__ && product) {
+      warnIfIdDisplayAttempt(product.name, 'HomeScreen ProductCard - product.name');
+      warnIfIdDisplayAttempt(product.description, 'HomeScreen ProductCard - product.description');
+    }
     
     const rawImg = product?.imageUrl || product?.images?.[0] || null;
     const img = rawImg ? (toAbsoluteUrl?.(rawImg) || rawImg) : null;
@@ -221,7 +230,7 @@ export default function HomeScreen() {
         
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>
-            {product.name}
+            {sanitizedProduct.name}
           </Text>
           <View style={styles.productMeta}>
             <Text style={styles.productCategory} numberOfLines={1}>

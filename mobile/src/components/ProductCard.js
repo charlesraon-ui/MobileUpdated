@@ -13,6 +13,7 @@ import {
 import { AppCtx } from "../context/AppContext";
 import { platformShadow } from "../utils/shadow";
 import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
+import { sanitizeProductForDisplay, warnIfIdDisplayAttempt } from "../utils/dataSanitizer";
 
 const PLACEHOLDER = require("../../assets/images/placeholder.svg");
 const C = Colors.light;
@@ -36,6 +37,15 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
   const { handleAddToCart, categoryLabelOf, toAbsoluteUrl, toggleWishlist, isInWishlist } = useContext(AppCtx);
   const [imageLoading, setImageLoading] = useState(true);
   const [scaleValue] = useState(new Animated.Value(1));
+  
+  // Sanitize product data to prevent ID display
+  const sanitizedProduct = sanitizeProductForDisplay(product);
+  
+  // Warn if any product fields contain ID-like strings
+  if (__DEV__ && product) {
+    warnIfIdDisplayAttempt(product.name, 'ProductCard - product.name');
+    warnIfIdDisplayAttempt(product.description, 'ProductCard - product.description');
+  }
   
   const s = getStyles();
   
@@ -205,7 +215,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
           <View style={s.topRow}>
             <View style={s.categoryBadge}>
               <Text style={[s.categoryText, compact && { fontSize: 10 }] }>
-                {categoryLabelOf?.(product) || "Product"}
+                {categoryLabelOf?.(sanitizedProduct) || "Product"}
               </Text>
             </View>
             {!compact && averageRating && (
@@ -221,7 +231,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
 
           {/* Product Name */}
           <Text style={[s.name, compact && s.compactName]} numberOfLines={2}>
-            {product?.name || "Unnamed Product"}
+            {sanitizedProduct?.name || "Unnamed Product"}
           </Text>
 
           {/* Product Details */}

@@ -1211,7 +1211,7 @@ export default function ProfileScreen() {
               <ScrollView style={s.modalContent} showsVerticalScrollIndicator={false}>
                 <View style={s.orderDetailHeader}>
                   <Text style={s.orderDetailId}>
-                    Order #{String(selectedOrder._id || "").slice(-8).toUpperCase()}
+                    Order #{String(selectedOrder._id || "").slice(-4).toUpperCase()}
                   </Text>
                   <View style={[s.orderStatus, { backgroundColor: `${getDeliveryStatusColor(selectedOrder)}15` }]}>
                     <Text style={[s.orderStatusText, { color: getDeliveryStatusColor(selectedOrder) }]}>

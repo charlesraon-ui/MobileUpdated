@@ -11,9 +11,9 @@ export default function TabsLayout() {
 }
 
 function TabsInner() {
-  const { orders = [], cart = [], wishlist = [] } = useContext(AppCtx);
+  const { orders = [], cart = [], wishlist = [], user } = useContext(AppCtx);
   const cartItemCount = cart.reduce((total, item) => total + (item.quantity || 0), 0);
-  const wishlistItemCount = wishlist.length;
+  const wishlistItemCount = user ? wishlist.length : 0; // Only show wishlist count for logged-in users
 
   // Custom tab bar icon with badge
   const TabBarIcon = ({ name, color, size, badgeCount }) => (
