@@ -2,6 +2,7 @@
   "expo": {
     "name": "GoAgriTrading",
     "slug": "goagritrading",
+    "owner": "loydmarcelo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -87,10 +88,11 @@
     },
     "extra": {
       "apiUrl": "https://mobile-backend-zzy4.onrender.com",
-      "googleWebClientId": "1006606136969-kka7f7k99ecsnvd0v71j40tqjol6uqct.apps.googleusercontent.com"
-    },
-    "eas": {
-      "projectId": "e762036f-0b8a-4705-a8d9-b3c2c04cecec"
+      "googleWebClientId": "1006606136969-kka7f7k99ecsnvd0v71j40tqjol6uqct.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "df370f3a-c50e-435e-936f-52fd1b50dbd1"
+      }
     },
     "router": {},
     "runtimeVersion": {

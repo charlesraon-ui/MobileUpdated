@@ -21,7 +21,7 @@ export default function SearchScreen() {
       if (debouncedQ.length < 1) { setItems([]); setErr(""); setLoading(false); return; }
       try {
         setLoading(true); setErr("");
-        const res = await axios.get(`${API_URL}/products/search`, { params: { q: debouncedQ, limit: 50 } });
+        const res = await axios.get(`${API_URL}/api/products/search`, { params: { q: debouncedQ, limit: 50 } });
         if (active) setItems(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         if (active) { setErr(e?.response?.data?.message || e?.message || "Failed to search"); setItems([]); }

@@ -1,24 +1,21 @@
 import { Link, useRouter } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
-  ImageBackground,
-  TouchableOpacity,
+  Platform,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  ScrollView,
-  Platform,
-  StatusBar,
+  TouchableOpacity,
+  View
 } from "react-native";
-import Constants from "expo-constants";
-import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
 import { ResponsiveUtils } from "../../constants/theme";
+import { AppCtx } from "../context/AppContext";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -69,7 +66,7 @@ export default function LoginScreen() {
   };
 
   const s = StyleSheet.create({
-    bg: { flex: 1, minHeight: height, overflow: "hidden" },
+    bg: { flex: 1, minHeight: height, overflow: "hidden", backgroundColor: "#A7F3D0" },
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
     container: { 
       flex: 1, 
@@ -236,11 +233,7 @@ export default function LoginScreen() {
   });
 
   return (
-    <ImageBackground
-      source={require("../../../assets/images/farm-landing-background.png")}
-      style={s.bg}
-      resizeMode="cover"
-    >
+    <View style={s.bg}>
       <View style={s.overlay} />
       <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} />
       <ScrollView
@@ -333,6 +326,6 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
-    </ImageBackground>
+    </View>
   );
 }

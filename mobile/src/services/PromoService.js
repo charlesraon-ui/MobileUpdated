@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 class PromoService {
   constructor() {
-    // Use localhost for development, update for production
-    this.baseURL = 'https://mobile-backend-zzy4.onrender.com/api/promo';
+    // Use environment variable for API URL
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || "http://localhost:5000";
+    this.baseURL = `${API_URL}/api/promo`;
   }
 
   async getAuthToken() {

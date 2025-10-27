@@ -1,19 +1,18 @@
 import { Link, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  ImageBackground,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  ScrollView,
+    Dimensions,
+    ImageBackground,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import GoAgriLogo from "../../components/GoAgriLogo";
-import { requestPasswordReset, completePasswordReset } from "../api/apiClient";
 import Toast from "../../components/Toast";
+import { completePasswordReset, requestPasswordReset } from "../api/apiClient";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -63,7 +62,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/farm-landing-background.png")}
+      source={require("../../../assets/images/react-logo.png")}
       style={s.bg}
       resizeMode="cover"
     >

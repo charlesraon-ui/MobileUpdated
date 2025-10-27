@@ -2,7 +2,6 @@ import { Link } from "expo-router";
 import { useEffect } from "react";
 import {
   Dimensions,
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -50,13 +49,9 @@ export default function Landing() {
 
       {/* Card */}
       <Animated.View style={[s.card, contentAnimatedStyle]}>
-        {/* Top image */}
+        {/* Top section with light green background */}
         <View style={s.imageWrap}>
-          <Image
-            source={require("../../assets/images/farm-landing-background.png")}
-            style={s.cardImage}
-          />
-          {/* Logo centered in the middle of the image */}
+          {/* Logo centered in the light green section */}
           <View style={s.imageOverlay}>
             <View
               style={[
@@ -125,8 +120,11 @@ const s = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  imageWrap: { height: Math.round(height * imagePct), overflow: "hidden" },
-  cardImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  imageWrap: { 
+    height: Math.round(height * imagePct), 
+    overflow: "hidden",
+    backgroundColor: "#A7F3D0" // Light green background
+  },
   imageOverlay: {
     position: "absolute",
     top: 0,

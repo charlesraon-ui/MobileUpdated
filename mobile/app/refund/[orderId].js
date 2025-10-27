@@ -1,8 +1,7 @@
-import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image, Modal } from "react-native";
-import { getOrderRefundStatus, uploadRefundImagesFromUris, createRefundTicketApi, toAbsoluteUrl } from "../../src/api/apiClient";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { getOrderRefundStatus, createRefundTicketApi, toAbsoluteUrl } from "../../src/api/apiClient";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -21,9 +20,7 @@ export default function RefundRequestScreen() {
   const [existingTicketId, setExistingTicketId] = useState(null);
   const [refundStatus, setRefundStatus] = useState(null);
   const [reason, setReason] = useState("");
-  const [images, setImages] = useState([]); // [{ uri, fileName, type }]
   const [submitting, setSubmitting] = useState(false);
-  const [viewer, setViewer] = useState({ visible: false, uri: null });
 
   useEffect(() => {
     (async () => {
@@ -48,23 +45,7 @@ export default function RefundRequestScreen() {
     return !hasRefund && allowed.includes(status);
   }, [order, hasRefund]);
 
-  const pickImages = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission required", "Allow photo library access to upload evidence.");
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      selectionLimit: 5,
-      quality: 0.8,
-    });
-    if (!res.canceled) {
-      const picked = (res.assets || []).map((a) => ({ uri: a.uri, fileName: a.fileName || "photo.jpg", type: a.mimeType || "image/jpeg" }));
-      setImages((prev) => [...prev, ...picked].slice(0, 5));
-    }
-  };
+
 
   const submitRefund = async () => {
     if (!canRequestRefund) return;
@@ -74,12 +55,7 @@ export default function RefundRequestScreen() {
     }
     setSubmitting(true);
     try {
-      let attachments = [];
-      if (images.length) {
-        const uploadResp = await uploadRefundImagesFromUris(images);
-        attachments = Array.isArray(uploadResp?.urls) ? uploadResp.urls : [];
-      }
-      const { data } = await createRefundTicketApi({ orderId, reason, attachments });
+      const { data } = await createRefundTicketApi({ orderId, reason, attachments: [] });
       Alert.alert("Refund submitted", "Your request has been submitted.");
       router.replace(`/refund/my-tickets`);
     } catch (e) {
@@ -90,9 +66,7 @@ export default function RefundRequestScreen() {
     }
   };
 
-  const removeImage = (index) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
+
 
   if (loading) {
     return (
@@ -180,25 +154,7 @@ export default function RefundRequestScreen() {
               onChangeText={setReason}
             />
 
-            {/* Images */}
-            <View style={{ marginTop: 12 }}>
-              <Text style={s.subtle}>Optional: upload up to 5 photos</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                {images.map((img, idx) => (
-                  <View key={idx} style={{ width: 80, height: 80 }}>
-                    <TouchableOpacity style={{ width: 80, height: 80 }} onPress={() => setViewer({ visible: true, uri: img.uri })}>
-                      <Image source={{ uri: img.uri }} style={{ width: 80, height: 80, borderRadius: 8 }} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeImage(idx)} style={s.removeBadge}>
-                      <Text style={s.removeBadgeText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-              <TouchableOpacity style={[s.btn, { backgroundColor: GREEN_BG, borderColor: GREEN_BORDER, borderWidth: 1 }]} onPress={pickImages}>
-                <Text style={[s.btnText, { color: GREEN_DARK }]}>Add Photos</Text>
-              </TouchableOpacity>
-            </View>
+
 
             <TouchableOpacity disabled={!canRequestRefund || submitting} style={[s.btn, { backgroundColor: canRequestRefund ? GREEN : GRAY }]} onPress={submitRefund}>
               <Text style={s.btnTextLight}>{submitting ? "Submitting…" : "Submit Refund Request"}</Text>
@@ -211,18 +167,6 @@ export default function RefundRequestScreen() {
         )}
 
       </ScrollView>
-
-      {/* Fullscreen Image Viewer */}
-      <Modal visible={viewer.visible} transparent animationType="fade" onRequestClose={() => setViewer({ visible: false, uri: null })}>
-        <View style={s.viewerBackdrop}>
-          <TouchableOpacity style={s.viewerClose} onPress={() => setViewer({ visible: false, uri: null })}>
-            <Text style={s.btnTextLight}>Close</Text>
-          </TouchableOpacity>
-          {viewer.uri ? (
-            <Image source={{ uri: viewer.uri }} style={s.viewerImage} resizeMode="contain" />
-          ) : null}
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -251,26 +195,6 @@ const s = StyleSheet.create({
   btn: { marginTop: 16, paddingVertical: 14, borderRadius: 10, alignItems: "center" },
   btnText: { fontSize: 14, fontWeight: "700" },
   btnTextLight: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  removeBadge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#EF4444",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  removeBadgeText: { color: "#FFFFFF", fontWeight: "700", fontSize: 16, lineHeight: 16 },
-  viewerBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", alignItems: "center", justifyContent: "center" },
-  viewerImage: { width: "90%", height: "80%" },
-  viewerClose: { position: "absolute", top: 40, right: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#111827", borderRadius: 8 },
   // Order description styles
   detailRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
   detailLabel: { fontSize: 14, color: GRAY, fontWeight: "600" },

@@ -126,7 +126,14 @@ export default function EditProfileScreen() {
     }
   };
 
-  const hasChanges = name !== (user?.name || "") || email !== (user?.email || "");
+  // Combine current name fields to check for changes
+  const currentFullName = [
+    firstName.trim(),
+    middleInitial.trim(),
+    lastName.trim()
+  ].filter(part => part.length > 0).join(" ");
+  
+  const hasChanges = currentFullName !== (user?.name || "") || email !== (user?.email || "");
 
   return (
     <View style={s.container}>

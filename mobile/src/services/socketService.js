@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
+import Constants from 'expo-constants';
 
 class SocketService {
   constructor() {
@@ -29,8 +30,8 @@ class SocketService {
         return;
       }
 
-      // Use local backend URL for development
-      const SOCKET_URL =  'https://mobile-backend-zzy4.onrender.com' || 'http://localhost:5000';
+      // Use environment variable for socket URL
+      const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://localhost:5000';
       console.log('🔌 Attempting to connect to socket:', SOCKET_URL);
       
       // Disconnect existing socket if any

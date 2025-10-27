@@ -10,6 +10,7 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,7 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import BundleCard from "../components/BundleCard";
 import ProductCard from "../components/ProductCard";
 import SearchBar from "../components/SearchBar";
 import { AppCtx } from "../context/AppContext";
@@ -28,7 +28,6 @@ export default function ProductsScreen() {
   const { width } = Dimensions.get('window');
   const {
     products,
-    bundles,
     categories,
     selectedCategory,
     setSelectedCategory,
@@ -64,15 +63,7 @@ export default function ProductsScreen() {
     search: ""
   });
 
-  const filteredBundles = useMemo(() => {
-  console.log('Processing bundles:', bundles);
-  const q = (searchQuery || "").toLowerCase();
-  return (bundles || []).filter((b) => {
-    const name = (b?.name || "").toLowerCase();
-    const desc = (b?.description || "").toLowerCase();
-    return name.includes(q) || desc.includes(q);
-  });
-}, [bundles, searchQuery]);
+
 
 
 
@@ -372,104 +363,110 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Search</Text>
-            <TextInput
-              value={tempFilters.search}
-              onChangeText={(text) => setTempFilters(prev => ({ ...prev, search: text }))}
-              placeholder="Search products..."
-              placeholderTextColor="#9CA3AF"
-              style={styles.priceInput}
-            />
-          </View>
+          <ScrollView 
+            style={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Search</Text>
+              <TextInput
+                value={tempFilters.search}
+                onChangeText={(text) => setTempFilters(prev => ({ ...prev, search: text }))}
+                placeholder="Search products..."
+                placeholderTextColor="#9CA3AF"
+                style={styles.priceInput}
+              />
+            </View>
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Category</Text>
-            <View style={styles.filterOptions}>
-              {categories.map((category) => (
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Category</Text>
+              <View style={styles.filterOptions}>
+                {categories.map((category) => (
+                  <FilterButton
+                    key={category}
+                    title={category}
+                    selected={tempFilters.category === category}
+                    onPress={() => setTempFilters(prev => ({ ...prev, category }))}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>View Mode</Text>
+              <View style={styles.filterOptions}>
                 <FilterButton
-                  key={category}
-                  title={category}
-                  selected={tempFilters.category === category}
-                  onPress={() => setTempFilters(prev => ({ ...prev, category }))}
+                  title="Grid"
+                  selected={tempFilters.viewMode === "grid"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "grid" }))}
                 />
-              ))}
+                <FilterButton
+                  title="List"
+                  selected={tempFilters.viewMode === "list"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "list" }))}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>View Mode</Text>
-            <View style={styles.filterOptions}>
-              <FilterButton
-                title="Grid"
-                selected={tempFilters.viewMode === "grid"}
-                onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "grid" }))}
-              />
-              <FilterButton
-                title="List"
-                selected={tempFilters.viewMode === "list"}
-                onPress={() => setTempFilters(prev => ({ ...prev, viewMode: "list" }))}
-              />
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Sort By</Text>
+              <View style={styles.filterOptions}>
+                <FilterButton
+                  title="Popularity"
+                  selected={tempFilters.sortBy === "popularity"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "popularity" }))}
+                />
+                <FilterButton
+                  title="Newest"
+                  selected={tempFilters.sortBy === "newest"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "newest" }))}
+                />
+                <FilterButton
+                  title="Oldest"
+                  selected={tempFilters.sortBy === "oldest"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "oldest" }))}
+                />
+                <FilterButton
+                  title="High Price"
+                  selected={tempFilters.sortBy === "highPrice"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "highPrice" }))}
+                />
+                <FilterButton
+                  title="Low Price"
+                  selected={tempFilters.sortBy === "lowPrice"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "lowPrice" }))}
+                />
+                <FilterButton
+                  title="Review"
+                  selected={tempFilters.sortBy === "review"}
+                  onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "review" }))}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Sort By</Text>
-            <View style={styles.filterOptions}>
-              <FilterButton
-                title="Popularity"
-                selected={tempFilters.sortBy === "popularity"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "popularity" }))}
-              />
-              <FilterButton
-                title="Newest"
-                selected={tempFilters.sortBy === "newest"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "newest" }))}
-              />
-              <FilterButton
-                title="Oldest"
-                selected={tempFilters.sortBy === "oldest"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "oldest" }))}
-              />
-              <FilterButton
-                title="High Price"
-                selected={tempFilters.sortBy === "highPrice"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "highPrice" }))}
-              />
-              <FilterButton
-                title="Low Price"
-                selected={tempFilters.sortBy === "lowPrice"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "lowPrice" }))}
-              />
-              <FilterButton
-                title="Review"
-                selected={tempFilters.sortBy === "review"}
-                onPress={() => setTempFilters(prev => ({ ...prev, sortBy: "review" }))}
-              />
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Price Range</Text>
+              <View style={styles.priceInputsContainer}>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="Min Price"
+                  placeholderTextColor="#9CA3AF"
+                  value={tempFilters.minPrice}
+                  onChangeText={(text) => setTempFilters(prev => ({ ...prev, minPrice: text }))}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="Max Price"
+                  placeholderTextColor="#9CA3AF"
+                  value={tempFilters.maxPrice}
+                  onChangeText={(text) => setTempFilters(prev => ({ ...prev, maxPrice: text }))}
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
-          </View>
-
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Price Range</Text>
-            <View style={styles.priceInputsContainer}>
-              <TextInput
-                style={styles.priceInput}
-                placeholder="Min Price"
-                placeholderTextColor="#9CA3AF"
-                value={tempFilters.minPrice}
-                onChangeText={(text) => setTempFilters(prev => ({ ...prev, minPrice: text }))}
-                keyboardType="numeric"
-              />
-              <TextInput
-                style={styles.priceInput}
-                placeholder="Max Price"
-                placeholderTextColor="#9CA3AF"
-                value={tempFilters.maxPrice}
-                onChangeText={(text) => setTempFilters(prev => ({ ...prev, maxPrice: text }))}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
+          </ScrollView>
 
           <View style={styles.modalActions}>
             <TouchableOpacity
@@ -529,34 +526,7 @@ export default function ProductsScreen() {
     <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
       <SearchBar onOpenFilters={openFilterModal} />
       
-      {/* Special Bundles Button */}
-      {bundles && bundles.length > 0 && (
-        <TouchableOpacity
-          style={styles.bundlesBox}
-          activeOpacity={0.85}
-          onPress={() => router.push('/bundles')}
-        >
-          <View style={styles.bundlesBoxContent}>
-            <View style={styles.bundlesBoxLeft}>
-              <View style={styles.bundlesIconContainer}>
-                <Text style={styles.bundlesIcon}>🎁</Text>
-              </View>
-              <View style={styles.bundlesTextContainer}>
-                <Text style={styles.bundlesTitle}>Special Bundles</Text>
-                <Text style={styles.bundlesSubtitle}>
-                  {bundles.length} exclusive bundle{bundles.length !== 1 ? 's' : ''} available
-                </Text>
-                <Text style={styles.bundlesDescription}>
-                  Save more with our curated product bundles
-                </Text>
-              </View>
-            </View>
-            <View style={styles.bundlesBoxRight}>
-              <Text style={styles.bundlesChevron}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
+
     </View>
   );
 
@@ -952,7 +922,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingBottom: 34,
-    maxHeight: "80%",
+    maxHeight: "85%",
+    flex: 1,
+  },
+
+  modalScrollContent: {
+    flex: 1,
+    paddingBottom: 10,
   },
 
   modalHeader: {
@@ -1305,11 +1281,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  bundlesSection: {
-  paddingHorizontal: 16,
-  paddingTop: 4,
-  paddingBottom: 12,
-},
+
 
 sectionHeader: {
   flexDirection: "row",
@@ -1325,32 +1297,11 @@ sectionTitle: {
   flex: 1,
 },
 
-bundleBadge: {
-  backgroundColor: "#10B981",
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 12,
-},
-
-bundleBadgeText: {
-  color: "#FFFFFF",
-  fontSize: 12,
-  fontWeight: "700",
-},
-
 sectionSubtitle: {
   fontSize: 12,
   color: "#6B7280",
   marginBottom: 10,
   fontStyle: "italic",
-},
-
-bundleDivider: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginTop: 16,
-  marginBottom: 12,
-  gap: 12,
 },
 
 dividerLine: {
@@ -1367,70 +1318,7 @@ dividerText: {
     letterSpacing: 0.5,
   },
 
-  // Bundles Box Styles (matching HomeScreen)
-  bundlesBox: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
-  },
-  bundlesBoxContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-  },
-  bundlesBoxLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bundlesIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  bundlesIcon: {
-    fontSize: 28,
-  },
-  bundlesTextContainer: {
-    flex: 1,
-  },
-  bundlesTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  bundlesSubtitle: {
-    fontSize: 14,
-    color: '#10B981',
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  bundlesDescription: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 16,
-  },
-  bundlesBoxRight: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingLeft: 10,
-  },
-  bundlesChevron: {
-    fontSize: 24,
-    color: '#6B7280',
-    fontWeight: '300',
-  },
+
 });
 
 

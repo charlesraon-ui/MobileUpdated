@@ -121,10 +121,14 @@ export default function AppProvider({ children }) {
       try {
         console.log("🚀 APPCONTEXT REF INIT: Loading bundles...");
         const bundlesResponse = await getBundles();
-        setBundles(bundlesResponse.data);
-        console.log("🚀 APPCONTEXT REF INIT: Bundles loaded successfully:", bundlesResponse.data?.length);
+        // Handle both local API format (direct array) and remote API format ({data: array})
+        const bundlesArray = Array.isArray(bundlesResponse?.data?.data) ? bundlesResponse.data.data : 
+                            Array.isArray(bundlesResponse?.data) ? bundlesResponse.data : [];
+        setBundles(bundlesArray);
+        console.log("🚀 APPCONTEXT REF INIT: Bundles loaded successfully:", bundlesArray?.length);
       } catch (error) {
-        // Failed to load bundles
+        console.warn("Failed to load bundles during initialization:", error);
+        setBundles([]);
       }
     })();
    }

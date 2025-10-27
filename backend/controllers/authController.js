@@ -141,7 +141,7 @@ export async function googleAuth(req, res) {
 // Initiate email-based account creation: store pending registration and send verification email
 export async function initiateRegistration(req, res) {
   try {
-    const { name, email, password, address } = req.body ?? {};
+    const { name, email, password, phoneNumber } = req.body ?? {};
     if (!name || !email || !password) {
       return res.status(400).json({ message: "name, email, password are required" });
     }
@@ -159,7 +159,7 @@ export async function initiateRegistration(req, res) {
     await PendingRegistration.create({
       email: normalizedEmail,
       name,
-      address: address || "",
+      phoneNumber: phoneNumber || "",
       passwordHash: hash,
       token,
       expiresAt,
@@ -183,6 +183,7 @@ export async function initiateRegistration(req, res) {
           name,
           email: normalizedEmail,
           passwordHash: hash,
+          phoneNumber: phoneNumber || "",
         });
 
         const jwtToken = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {
@@ -247,6 +248,7 @@ export async function confirmRegistration(req, res) {
       name: pending.name,
       email: pending.email,
       passwordHash: pending.passwordHash,
+      phoneNumber: pending.phoneNumber,
     });
 
     await PendingRegistration.deleteOne({ _id: pending._id });

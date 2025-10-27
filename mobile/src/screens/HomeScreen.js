@@ -22,7 +22,6 @@ export default function HomeScreen() {
     recommendedProducts,
     categories, // Get categories from context
     products,
-    bundles,
     user,
     justLoggedInName,
     setJustLoggedInName,
@@ -296,15 +295,10 @@ export default function HomeScreen() {
   );
 
   const OfferCard = ({ data }) => {
-    const isBundle = data?.type === 'bundle';
     const item = data?.item || {};
-    const name = isBundle ? (item?.name || 'Bundle') : (item?.name || 'Product');
-    const price = isBundle
-      ? Number(item?.totalPrice || item?.items?.reduce((s, it) => s + Number(it?.productId?.price || 0) * Number(it?.quantity || 1), 0) || 0)
-      : Number(item?.price || 0);
-    const img = isBundle
-      ? (item?.imageUrl || item?.coverImage || '')
-      : (item?.imageUrl || item?.images?.[0] || '');
+    const name = item?.name || 'Product';
+    const price = Number(item?.price || 0);
+    const img = item?.imageUrl || item?.images?.[0] || '';
     const uri = img ? (toAbsoluteUrl?.(img) || img) : null;
 
     return (
@@ -312,11 +306,7 @@ export default function HomeScreen() {
         style={styles.offerCard}
         activeOpacity={0.85}
         onPress={() => {
-          if (isBundle) {
-            router.push(`/bundle-detail?id=${item?._id || ''}`);
-          } else {
-            router.push(`/product-detail?id=${item?._id || ''}`);
-          }
+          router.push(`/product-detail?id=${item?._id || ''}`);
         }}
       >
         <View style={styles.offerImageWrap}>
@@ -324,9 +314,6 @@ export default function HomeScreen() {
             <Image source={{ uri }} style={styles.offerImage} resizeMode="cover" />
           ) : (
             <View style={styles.offerImagePlaceholder}><Text style={{ fontSize: 28 }}>🛍️</Text></View>
-          )}
-          {isBundle && (
-            <View style={styles.bundleTag}><Text style={styles.bundleTagText}>Bundle</Text></View>
           )}
         </View>
         <View style={styles.offerInfo}>
@@ -337,19 +324,15 @@ export default function HomeScreen() {
     );
   };
 
-  // Build Best Offers: mix top bundles and cheapest products (using real-time data)
+
+  // Build Best Offers: show cheapest products (using real-time data)
   const bestOffers = useMemo(() => {
-    // Ensure bundles is always an array
-    const bundlesArray = Array.isArray(bundles) ? bundles : [];
-    const bundleCards = bundlesArray
-      .slice(0, 4)
-      .map((b) => ({ type: 'bundle', item: b }));
     const cheapest = [...(realtimeProducts || [])]
       .sort((a, b) => Number(a?.price || 0) - Number(b?.price || 0))
-      .slice(0, 6)
+      .slice(0, 8)
       .map((p) => ({ type: 'product', item: p }));
-    return [...bundleCards, ...cheapest].slice(0, 8);
-  }, [bundles, realtimeProducts]);
+    return cheapest;
+  }, [realtimeProducts]);
 
   const FeatureCard = ({ title, subtitle, onPress, icon }) => (
     <TouchableOpacity style={styles.featureCard} onPress={onPress} activeOpacity={0.8}>
@@ -917,22 +900,7 @@ export default function HomeScreen() {
       justifyContent: "center",
     },
     
-    bundleTag: {
-      position: 'absolute',
-      top: 8,
-      left: 8,
-      backgroundColor: '#8B5CF6',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
-    },
-    
-    bundleTagText: {
-      color: '#FFFFFF',
-      fontSize: 10,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-    },
+
     
     offerInfo: {
       padding: 12,
@@ -1258,13 +1226,6 @@ export default function HomeScreen() {
                 subtitle="Browse our complete catalog"
                 icon="🛍️"
                 onPress={() => router.push('/tabs/products')}
-              />
-              
-              <FeatureCard
-                title="Product Bundles"
-                subtitle="Save more with bundle deals"
-                icon="📦"
-                onPress={() => router.push('/bundles')}
               />
               
               {user && (

@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   // Optional legacy field for backward compatibility (not required)
   password: { type: String },
   address: { type: String },
+  phoneNumber: { type: String },
   role: { type: String, enum: ["admin", "superadmin", "user"], default: "user" },
 
   // Profile

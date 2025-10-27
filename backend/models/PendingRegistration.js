@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const pendingSchema = new mongoose.Schema({
   email: { type: String, required: true, index: true },
   name: { type: String, required: true },
-  address: { type: String },
+  phoneNumber: { type: String },
   passwordHash: { type: String, required: true },
   token: { type: String, required: true, unique: true },
   expiresAt: { type: Date, required: true },

@@ -15,10 +15,10 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
 import { AppCtx } from "../context/AppContext";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
-import GoogleSignInButton from "../../components/GoogleSignInButton";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -28,49 +28,35 @@ const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 :
 const bottomPad = Platform.OS === 'ios' ? 72 : 40;
 
 export default function RegisterScreen() {
-  const { doRegisterInitiate, doGoogleRegister } = useContext(AppCtx);
+  const { doRegisterInitiate } = useContext(AppCtx);
 
   // Name fields
   const [firstName, setFirstName] = useState("");
   const [middleInitial, setMiddleInitial] = useState("");
   const [lastName, setLastName] = useState("");
 
-  // Address fields
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("");
-
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const handleGoogleRegister = async () => {
-    setSubmitting(true);
-    setError("");
-    try {
-      await doGoogleRegister();
-    } catch (e) {
-      const apiMsg = e?.response?.data?.message || e?.message;
-      setError(apiMsg || "Google registration failed. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const validate = () => {
     if (!firstName.trim()) return "Please enter your first name.";
     if (/\d/.test(firstName.trim())) return "First name should not contain numbers.";
     if (!lastName.trim()) return "Please enter your last name.";
     if (/\d/.test(lastName.trim())) return "Last name should not contain numbers.";
-    if (!street.trim()) return "Please enter your street address.";
-    if (!city.trim()) return "Please enter your city.";
-    if (!province.trim()) return "Please enter your province.";
     if (!email.trim()) return "Please enter your email.";
     // very light email check
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email.";
-    // Gmail verification is optional; if configured and verified, we show it.
+    if (!phoneNumber.trim()) return "Please enter your phone number.";
+    // Basic phone number validation (Philippine format)
+    if (!/^(\+63|0)?[0-9]{10}$/.test(phoneNumber.replace(/\s|-/g, ''))) {
+      return "Please enter a valid phone number.";
+    }
     if (password.length < 6) return "Password must be at least 6 characters.";
     if (password !== confirm) return "Passwords do not match.";
     return null;
@@ -83,12 +69,11 @@ export default function RegisterScreen() {
     setError("");
     try {
       const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
-      const address = `${street.trim()}, ${city.trim()}, ${province.trim()}`.trim();
 
       await doRegisterInitiate({
         name,
-        address,
         email: email.trim().toLowerCase(),
+        phoneNumber: phoneNumber.trim(),
         password,
       });
       // AppContext will alert and route to Login with instructions
@@ -109,7 +94,7 @@ export default function RegisterScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/farm-landing-background.png")}
+      source={require("../../assets/images/react-logo.png")}
       style={s.bg}
       resizeMode="cover"
     >
@@ -130,7 +115,6 @@ export default function RegisterScreen() {
         </View>
         <Text style={s.title}>Create Account</Text>
 
-      <Text style={s.sectionLabel}>Name</Text>
       <Text style={s.label}>First Name</Text>
       <TextInput
         value={firstName}
@@ -178,68 +162,65 @@ export default function RegisterScreen() {
         editable={!submitting}
       />
 
-      <View style={{ height: 8 }} />
-      <Text style={s.helper}>
-        After submitting, we send a Gmail notification with a verification link. Approve it to create your account, then you’ll be redirected back to the app.
-      </Text>
-
-      <Text style={s.sectionLabel}>Address</Text>
-      <Text style={s.label}>Street</Text>
+      <Text style={s.label}>Phone Number</Text>
       <TextInput
-        value={street}
-        onChangeText={setStreet}
-        placeholder="123 Rizal St."
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+        placeholder="09123456789"
         placeholderTextColor={placeholderColor}
-        autoCapitalize="words"
-        style={s.input}
-        editable={!submitting}
-      />
-
-      <Text style={s.label}>City</Text>
-      <TextInput
-        value={city}
-        onChangeText={setCity}
-        placeholder="Moncada"
-        placeholderTextColor={placeholderColor}
-        autoCapitalize="words"
-        style={s.input}
-        editable={!submitting}
-      />
-
-      <Text style={s.label}>Province</Text>
-      <TextInput
-        value={province}
-        onChangeText={setProvince}
-        placeholder="Tarlac"
-        placeholderTextColor={placeholderColor}
-        autoCapitalize="words"
+        keyboardType="phone-pad"
+        autoCapitalize="none"
         style={s.input}
         editable={!submitting}
       />
 
       <Text style={s.label}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        placeholderTextColor={placeholderColor}
-        secureTextEntry
-        autoCapitalize="none"
-        style={s.input}
-        editable={!submitting}
-      />
+      <View style={s.passwordContainer}>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          placeholderTextColor={placeholderColor}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          style={s.passwordInput}
+          editable={!submitting}
+        />
+        <TouchableOpacity
+          style={s.eyeButton}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Ionicons
+            name={showPassword ? "eye-off" : "eye"}
+            size={20}
+            color="rgba(55, 65, 81, 0.7)"
+          />
+        </TouchableOpacity>
+      </View>
 
       <Text style={s.label}>Confirm Password</Text>
-      <TextInput
-        value={confirm}
-        onChangeText={setConfirm}
-        placeholder="••••••••"
-        placeholderTextColor={placeholderColor}
-        secureTextEntry
-        autoCapitalize="none"
-        style={s.input}
-        editable={!submitting}
-      />
+      <View style={s.passwordContainer}>
+        <TextInput
+          value={confirm}
+          onChangeText={setConfirm}
+          placeholder="••••••••"
+          placeholderTextColor={placeholderColor}
+          secureTextEntry={!showConfirmPassword}
+          autoCapitalize="none"
+          style={s.passwordInput}
+          editable={!submitting}
+        />
+        <TouchableOpacity
+          style={s.eyeButton}
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+        >
+          <Ionicons
+            name={showConfirmPassword ? "eye-off" : "eye"}
+            size={20}
+            color="rgba(55, 65, 81, 0.7)"
+          />
+        </TouchableOpacity>
+      </View>
 
       <View style={{ height: 12 }} />
 
@@ -258,22 +239,6 @@ export default function RegisterScreen() {
           <Text style={s.primaryBtnText}>Register</Text>
         </TouchableOpacity>
       )}
-
-      <View style={{ height: 16 }} />
-
-      <GoogleSignInButton
-        onPress={handleGoogleRegister}
-        disabled={submitting}
-        text="Register with Google"
-      />
-
-      <View style={{ height: 16 }} />
-
-      <View style={s.divider}>
-        <View style={s.dividerLine} />
-        <Text style={s.dividerText}>or</Text>
-        <View style={s.dividerLine} />
-      </View>
 
       <View style={{ height: 16 }} />
 
@@ -321,6 +286,29 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   small: { color: "#6B7280", textAlign: "center" },
   helper: { color: "#6B7280", fontSize: 12, marginTop: 6 },
