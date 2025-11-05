@@ -16,17 +16,17 @@ services:
       - key: PORT
         value: 5000
       - key: APP_URL
-        value: https://mobile-backend-zzy4.onrender.com
+        value: https://goagritrading-backend.onrender.com
       - key: API_URL
-        value: https://mobile-backend-zzy4.onrender.com
+        value: https://goagritrading-backend.onrender.com
       - key: EXPO_PUBLIC_API_URL
-        value: https://mobile-backend-zzy4.onrender.com
+        value: https://goagritrading-backend.onrender.com
       - key: FRONTEND_SUCCESS_URL
         value: goagritrading://payment-success
       - key: FRONTEND_FAILED_URL
         value: goagritrading://payment-failed
       - key: CORS_ORIGIN
-        value: http://localhost:8081,https://mobile-backend-zzy4.onrender.com,*
+        value: http://localhost:8081,https://goagritrading-backend.onrender.com,*
       # Sensitive environment variables (set these in Render dashboard):
       # - key: MONGO_URI
       #   sync: false

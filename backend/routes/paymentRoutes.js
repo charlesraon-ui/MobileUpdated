@@ -13,10 +13,11 @@ const router = Router();
 router.get("/success", async (req, res) => {
   try {
     const { orderId } = req.query;
+    const successUrlBase = process.env.FRONTEND_SUCCESS_URL || 'goagritrading://payment/success';
     
     if (!orderId) {
       console.log("❌ No orderId in success callback");
-      return res.redirect('goagritrading://payment/success');
+      return res.redirect(successUrlBase);
     }
 
     const order = await Order.findById(orderId);
@@ -68,12 +69,14 @@ router.get("/success", async (req, res) => {
       console.warn("push send failed:", e?.message);
     }
     
-    // ✅ Redirect to app deep link
-    res.redirect(`goagritrading://payment/success?orderId=${orderId}`);
+    // ✅ Redirect to app deep link or configured URL
+    const successUrl = `${successUrlBase}${successUrlBase.includes('?') ? '&' : '?'}orderId=${orderId}`;
+    res.redirect(successUrl);
     
   } catch (err) {
     console.error("PAYMENT_SUCCESS_ERROR:", err);
-    res.redirect('goagritrading://payment/cancel');
+    const failedUrlBase = process.env.FRONTEND_FAILED_URL || 'goagritrading://payment/cancel';
+    res.redirect(failedUrlBase);
   }
 });
 
@@ -81,6 +84,7 @@ router.get("/success", async (req, res) => {
 router.get("/cancel", async (req, res) => {
   try {
     const { orderId } = req.query;
+    const failedUrlBase = process.env.FRONTEND_FAILED_URL || 'goagritrading://payment/cancel';
     
     if (orderId) {
       const order = await Order.findById(orderId);
@@ -100,7 +104,7 @@ router.get("/cancel", async (req, res) => {
         <title>Payment Cancelled</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script>
-          window.location.href = 'goagritrading://payment/cancel?orderId=${orderId || ''}';
+          window.location.href = '${failedUrlBase}${failedUrlBase.includes('?') ? '&' : '?'}orderId=${orderId || ''}';
           
           setTimeout(function() {
             document.getElementById('message').style.display = 'block';
@@ -164,7 +168,7 @@ router.get("/cancel", async (req, res) => {
       <html>
       <head>
         <script>
-          window.location.href = 'goagritrading://payment/cancel';
+          window.location.href = '${process.env.FRONTEND_FAILED_URL || 'goagritrading://payment/cancel'}';
         </script>
       </head>
       <body style="font-family: sans-serif; text-align: center; padding: 50px;">
