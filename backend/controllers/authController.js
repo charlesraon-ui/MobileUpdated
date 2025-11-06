@@ -173,8 +173,8 @@ export async function initiateRegistration(req, res) {
     });
 
     try {
-      // For local testing: log the OTP code in non-production environments
-      if (process.env.NODE_ENV !== "production") {
+      // For testing: log the OTP code when not in production OR when explicitly enabled
+      if (process.env.NODE_ENV !== "production" || process.env.DEBUG_LOG_OTP === "1") {
         console.log("🔐 Registration OTP for", normalizedEmail, "is:", otpCode);
       }
 
