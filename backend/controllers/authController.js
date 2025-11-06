@@ -197,17 +197,21 @@ export async function initiateRegistration(req, res) {
 
       // Strict: if email failed to send, do not proceed
       if (!emailResult || emailResult.ok !== true) {
+        const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
         return res.status(502).json({
           message: "Failed to send OTP email. Please try again.",
           otpRequired: true,
           email: normalizedEmail,
-          emailSent: false
+          emailSent: false,
+          ...debugPayload
         });
       }
 
       // Email sent successfully
+      const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
       return res.status(202).json({
         message: "OTP sent via email",
+        ...debugPayload,
         otpRequired: true,
         email: normalizedEmail,
         emailSent: true
