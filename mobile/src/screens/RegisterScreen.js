@@ -1,5 +1,5 @@
 // src/screens/RegisterScreen.js
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,9 +14,11 @@ import {
   ScrollView,
   Platform,
   StatusBar,
+  Modal,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { AppCtx } from "../context/AppContext";
+import psgc from "../services/psgcService";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
 
@@ -28,7 +30,8 @@ const topPad = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 :
 const bottomPad = Platform.OS === 'ios' ? 72 : 40;
 
 export default function RegisterScreen() {
-  const { doRegisterInitiate } = useContext(AppCtx);
+  const router = useRouter();
+  const { doRegisterInitiate, verifyRegisterOtp } = useContext(AppCtx);
 
   // Name fields
   const [firstName, setFirstName] = useState("");
@@ -43,6 +46,74 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // PSGC address state
+  const [province, setProvince] = useState(null);
+  const [cityMun, setCityMun] = useState(null);
+  const [barangay, setBarangay] = useState(null);
+  const [street, setStreet] = useState("");
+  const [provinces, setProvinces] = useState([]);
+  const [citiesMunicipalities, setCitiesMunicipalities] = useState([]);
+  const [barangays, setBarangays] = useState([]);
+  const [loadingAddr, setLoadingAddr] = useState(false);
+  const [showProvinceModal, setShowProvinceModal] = useState(false);
+  const [showCityMunModal, setShowCityMunModal] = useState(false);
+  const [showBarangayModal, setShowBarangayModal] = useState(false);
+  // OTP state
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingAddr(true);
+        const list = await psgc.getProvinces();
+        setProvinces(list);
+      } catch (e) {
+        console.warn("PSGC provinces load failed:", e?.message);
+      } finally {
+        setLoadingAddr(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const code = province?.code;
+      if (!code) { setCitiesMunicipalities([]); setCityMun(null); setBarangays([]); setBarangay(null); return; }
+      try {
+        setLoadingAddr(true);
+        const list = await psgc.getCitiesAndMunicipalities(code);
+        setCitiesMunicipalities(list);
+        setCityMun(null);
+        setBarangays([]);
+        setBarangay(null);
+      } catch (e) {
+        console.warn("PSGC cities/municipalities load failed:", e?.message);
+      } finally {
+        setLoadingAddr(false);
+      }
+    })();
+  }, [province?.code]);
+
+  useEffect(() => {
+    (async () => {
+      const code = cityMun?.code;
+      if (!code) { setBarangays([]); setBarangay(null); return; }
+      try {
+        setLoadingAddr(true);
+        const list = await psgc.getBarangaysByParent(code);
+        setBarangays(list);
+        setBarangay(null);
+      } catch (e) {
+        console.warn("PSGC barangays load failed:", e?.message);
+      } finally {
+        setLoadingAddr(false);
+      }
+    })();
+  }, [cityMun?.code]);
 
   const validate = () => {
     if (!firstName.trim()) return "Please enter your first name.";
@@ -59,6 +130,10 @@ export default function RegisterScreen() {
     }
     if (password.length < 6) return "Password must be at least 6 characters.";
     if (password !== confirm) return "Passwords do not match.";
+    if (!province?.code) return "Please select your province.";
+    if (!cityMun?.code) return "Please select your city/municipality.";
+    if (!barangay?.code) return "Please select your barangay.";
+    if (!street.trim()) return "Please enter your street or house number.";
     return null;
   };
 
@@ -70,13 +145,26 @@ export default function RegisterScreen() {
     try {
       const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
 
-      await doRegisterInitiate({
+      const address = [
+        street.trim(),
+        barangay?.name,
+        cityMun?.name,
+        province?.name,
+      ].filter(Boolean).join(", ");
+
+      const payload = {
         name,
         email: email.trim().toLowerCase(),
         phoneNumber: phoneNumber.trim(),
         password,
-      });
-      // AppContext will alert and route to Login with instructions
+        address,
+      };
+      const data = await doRegisterInitiate(payload);
+      if (data?.otpRequired) {
+        const e = payload.email;
+        // Pass full payload so OTP screen can support "Resend code"
+        router.push({ pathname: "/otp", params: { email: e, name: payload.name, phoneNumber: payload.phoneNumber, password: payload.password, address: payload.address } });
+      }
     } catch (e) {
       const status = e?.response?.status;
       const apiMsg = e?.response?.data?.message;
@@ -89,6 +177,21 @@ export default function RegisterScreen() {
       setError(msg);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const submitOtp = async () => {
+    if (!otpCode || otpCode.length !== 6) { setError("Please enter the 6-digit code."); return; }
+    setOtpSubmitting(true);
+    try {
+      await verifyRegisterOtp({ email: otpEmail, otp: otpCode });
+      setShowOtpModal(false);
+    } catch (e) {
+      const status = e?.response?.status;
+      const msg = status === 410 ? "Code expired. Please re-register." : status === 401 ? "Invalid code." : e?.response?.data?.message || "Unable to verify code.";
+      setError(msg);
+    } finally {
+      setOtpSubmitting(false);
     }
   };
 
@@ -224,6 +327,107 @@ export default function RegisterScreen() {
 
       <View style={{ height: 12 }} />
 
+      {/* Address Group (PSGC) */}
+      <Text style={s.sectionLabel}>Address</Text>
+      <Text style={s.label}>Province</Text>
+      <TouchableOpacity
+        style={s.select}
+        disabled={loadingAddr || submitting}
+        onPress={() => setShowProvinceModal(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={s.selectText}>{province?.name || "Select province"}</Text>
+        <Ionicons name="chevron-down" size={18} color="#374151" />
+      </TouchableOpacity>
+
+      <Text style={s.label}>City / Municipality</Text>
+      <TouchableOpacity
+        style={s.select}
+        disabled={!province?.code || loadingAddr || submitting}
+        onPress={() => setShowCityMunModal(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={s.selectText}>{cityMun?.name || "Select city or municipality"}</Text>
+        <Ionicons name="chevron-down" size={18} color="#374151" />
+      </TouchableOpacity>
+
+      <Text style={s.label}>Barangay</Text>
+      <TouchableOpacity
+        style={s.select}
+        disabled={!cityMun?.code || loadingAddr || submitting}
+        onPress={() => setShowBarangayModal(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={s.selectText}>{barangay?.name || "Select barangay"}</Text>
+        <Ionicons name="chevron-down" size={18} color="#374151" />
+      </TouchableOpacity>
+
+      <Text style={s.label}>Street</Text>
+      <TextInput
+        value={street}
+        onChangeText={setStreet}
+        placeholder="123 Rizal St. / House No."
+        placeholderTextColor={placeholderColor}
+        style={s.input}
+        editable={!submitting}
+      />
+
+      {/* Selection Modals */}
+      <SelectorModal
+        visible={showProvinceModal}
+        title="Select Province"
+        data={provinces}
+        keyExtractor={(item) => item.code}
+        onClose={() => setShowProvinceModal(false)}
+        onSelect={(item) => { setProvince(item); setShowProvinceModal(false); }}
+      />
+
+      <SelectorModal
+        visible={showCityMunModal}
+        title="Select City / Municipality"
+        data={citiesMunicipalities}
+        keyExtractor={(item) => item.code}
+        onClose={() => setShowCityMunModal(false)}
+        onSelect={(item) => { setCityMun(item); setShowCityMunModal(false); }}
+      />
+
+      <SelectorModal
+        visible={showBarangayModal}
+        title="Select Barangay"
+        data={barangays}
+        keyExtractor={(item) => item.code}
+        onClose={() => setShowBarangayModal(false)}
+        onSelect={(item) => { setBarangay(item); setShowBarangayModal(false); }}
+      />
+
+      {/* OTP Modal */}
+      <Modal visible={showOtpModal} transparent animationType="fade" onRequestClose={() => setShowOtpModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Enter Verification Code</Text>
+              <TouchableOpacity onPress={() => setShowOtpModal(false)} style={s.modalClose}>
+                <Ionicons name="close" size={22} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ color: '#6B7280', marginBottom: 8 }}>We sent a 6-digit code to {otpEmail}.</Text>
+            <TextInput
+              value={otpCode}
+              onChangeText={setOtpCode}
+              keyboardType="numeric"
+              maxLength={6}
+              placeholder="123456"
+              placeholderTextColor={placeholderColor}
+              style={s.input}
+            />
+            <View style={{ height: 8 }} />
+            <TouchableOpacity style={[s.primaryBtn, otpSubmitting && s.btnDisabled]} onPress={submitOtp} disabled={otpSubmitting}>
+              {otpSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryBtnText}>Verify</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {submitting ? (
         <View style={s.loading}>
           <ActivityIndicator />
@@ -287,6 +491,23 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
+  select: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectText: { color: "#1F2937" },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -346,5 +567,79 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     fontWeight: "500",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 520,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  modalTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  modalClose: { padding: 6 },
+  modalSearch: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#1F2937",
+    marginBottom: 10,
+  },
+  option: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomColor: "#E5E7EB",
+    borderBottomWidth: 1,
+  },
+  optionText: { color: "#111827" },
   
 });
+
+// Helper component: selector modal
+function SelectorModal({ visible, title, data, keyExtractor, onClose, onSelect }) {
+  const [search, setSearch] = useState("");
+  const list = Array.isArray(data) ? data : [];
+  const filtered = list.filter((d) => String(d.name || "").toLowerCase().includes(search.toLowerCase()));
+  return (
+    <Modal visible={!!visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={s.modalOverlay}>
+        <View style={s.modalContent}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={s.modalClose}>
+              <Ionicons name="close" size={22} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search…"
+            placeholderTextColor={placeholderColor}
+            style={s.modalSearch}
+          />
+          <ScrollView style={{ maxHeight: 360 }}>
+            {filtered.map((item) => (
+              <TouchableOpacity key={keyExtractor(item)} style={s.option} onPress={() => onSelect(item)}>
+                <Text style={s.optionText}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}

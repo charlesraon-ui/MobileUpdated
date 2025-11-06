@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
+import { API_URL } from '../api/apiClient';
 
 class SocketService {
   constructor() {
@@ -30,9 +31,36 @@ class SocketService {
         return;
       }
 
-      // Use environment variable for socket URL
-      const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://localhost:5000';
-      console.log('🔌 Attempting to connect to socket:', SOCKET_URL);
+      // Resolve socket URL from single source of truth
+      const resolvedUrl = (() => {
+        try {
+          return new URL(API_URL).origin;
+        } catch {
+          const envUrl = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || 'http://localhost:5000';
+          try {
+            return new URL(envUrl).origin;
+          } catch {
+            return String(envUrl).replace(/\/+$/, '');
+          }
+        }
+      })();
+
+      // Guard against unexpected/stale domains to prevent misrouted connections
+      const allowedHosts = [
+        'goagritrading-backend.onrender.com',
+        'localhost',
+        '127.0.0.1'
+      ];
+      let hostname = resolvedUrl;
+      try { hostname = new URL(resolvedUrl).hostname; } catch {}
+      const isAllowed = allowedHosts.some(h => hostname.includes(h));
+      if (!isAllowed) {
+        console.warn('⚠️ Blocking socket connection: unexpected base URL', resolvedUrl);
+        this.isConnecting = false;
+        return;
+      }
+
+      console.log('🔌 Attempting to connect to socket:', resolvedUrl);
       
       // Disconnect existing socket if any
       if (this.socket) {
@@ -40,7 +68,7 @@ class SocketService {
         this.socket = null;
       }
 
-      this.socket = io(SOCKET_URL, {
+      this.socket = io(resolvedUrl, {
         auth: {
           token: token
         },
@@ -139,6 +167,14 @@ class SocketService {
       this.connectionTimeout = null;
     }
     
+    // Avoid retry storms on authentication errors; wait for a fresh login/token
+    const msg = String(error?.message || '').toLowerCase();
+    const isAuthError = msg.includes('auth') || msg.includes('jwt') || msg.includes('token');
+    if (isAuthError) {
+      console.warn('⚠️ Authentication error detected. Will not auto-retry until token changes.');
+      return;
+    }
+
     // Schedule reconnect if we haven't exceeded max attempts
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.scheduleReconnect();

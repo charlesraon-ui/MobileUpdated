@@ -15,12 +15,13 @@ import {
 } from "react-native";
 import { Colors, Radii } from "../../constants/theme";
 import { AppCtx } from "../context/AppContext";
+import { api as apiClient } from "../api/apiClient";
 
 const { width } = Dimensions.get("window");
 
 export default function DeliveryTrackingScreen() {
   const { deliveryId } = useLocalSearchParams();
-  const { user, apiClient } = useContext(AppCtx);
+  const { user } = useContext(AppCtx);
   
   const [delivery, setDelivery] = useState(null);
   const [loading, setLoading] = useState(true);

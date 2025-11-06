@@ -264,7 +264,8 @@ export const createEPaymentOrder = async (req, res) => {
 /* ---------------- Create My Order (COD with inventory) ---------------------- */
 export const createMyOrder = async (req, res) => {
   try {
-    const me = req.user?.userId;
+    // Accept both shapes from auth middleware
+    const me = req.user?.userId || req.user?.id;
     if (!me) return res.status(401).json({ message: "Unauthorized" });
 
     const {

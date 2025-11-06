@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as Linking from 'expo-linking';
 // import { Alert } from "react-native";
 import Toast from "../../components/Toast";
 import {
@@ -30,6 +31,7 @@ import {
   getWishlistApi,
   googleAuth,
   initiateRegister,
+  verifyRegisterOtp as verifyRegisterOtpApi,
   issueLoyaltyCard,
   listMyDeliveries,
   setUser as persistUser,
@@ -40,11 +42,15 @@ import {
   toAbsoluteUrl,
   toggleWishlistApi
 } from "../api/apiClient";
+// Push notifications helpers
+import { registerPushToken } from "../api/apiClient";
+import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { configureGoogleSignIn, signInWithGoogle } from "../config/googleSignIn";
 import { imageCache } from "../utils/imageCache";
 // import { registerPushToken } from "../api/apiClient";
 // import { registerForPushNotificationsAsync } from "../utils/notifications";
 import socketService from "../services/socketService";
+import { API_URL } from "../api/apiClient";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 
 export const AppCtx = createContext(null);
@@ -83,6 +89,11 @@ export default function AppProvider({ children }) {
   }, []);
   const hideToast = useCallback(() => {
     setToastVisible(false);
+  }, []);
+
+  // Log the active API base URL once on startup for debugging
+  useEffect(() => {
+    console.log("📡 Active API_URL:", API_URL);
   }, []);
 
   // Ref-based initialization since useEffect doesn't run in SSR
@@ -239,8 +250,9 @@ export default function AppProvider({ children }) {
     // Note: Removed automatic deliveryAddress setting to prevent infinite loops
   }, [addresses, saveAddresses, defaultAddress, setDefaultAddress]);
 
-  // derived
-  const isLoggedIn = !!user?._id || !!user?.id || !!user?.email;
+  // auth state and derived
+  const [hasToken, setHasToken] = useState(false);
+  const isLoggedIn = (hasToken && (!!user?._id || !!user?.id || !!user?.email));
   const userId = useMemo(() => user?._id || user?.id || user?.email || "guest", [user]);
 
   // Loyalty state
@@ -376,7 +388,8 @@ export default function AppProvider({ children }) {
     (async () => {
       try {
         console.log("🚀 APPCONTEXT BOOT: Getting token...");
-        await getToken(); // prime axios Authorization if token exists
+        const tok = await getToken(); // prime axios Authorization if token exists
+        setHasToken(!!tok);
         console.log("🚀 APPCONTEXT BOOT: Reading user...");
         const u = await readUser();
         if (u) {
@@ -613,6 +626,7 @@ export default function AppProvider({ children }) {
   // Auto-activate loyalty upon login/register and refresh loyalty state
   const refreshLoyalty = useCallback(async () => {
     try {
+      if (!isLoggedIn) return;
       // Ensure token is set before making API call
       await getToken();
       const { data } = await getLoyaltyStatus();
@@ -645,7 +659,7 @@ export default function AppProvider({ children }) {
     } catch (e) {
       setLoyalty(null);
     }
-  }, [router]);
+  }, [router, isLoggedIn]);
 
   // Load available rewards
   const loadAvailableRewards = useCallback(async () => {
@@ -1248,6 +1262,7 @@ const handlePlaceOrder = async (opts = {}) => {
     const resp = await apiLogin({ email, password });
     const { token, user: u } = resp.data || {};
     await setToken(token);
+    setHasToken(!!token);
     await persistUser(u);
     setUserState(u);
 
@@ -1276,6 +1291,7 @@ const handlePlaceOrder = async (opts = {}) => {
     const resp = await apiRegister({ name, email, password, address });
     const { token, user: u } = resp.data || {};
     await setToken(token);
+    setHasToken(!!token);
     await persistUser(u);
     setUserState(u);
 
@@ -1300,7 +1316,7 @@ const handlePlaceOrder = async (opts = {}) => {
     router.replace("/tabs/home");
   };
 
-  // Email verification flow: initiate registration without immediate login
+  // Registration initiation: supports OTP or direct creation
   const doRegisterInitiate = async ({ name, email, password, address }) => {
     const response = await initiateRegister({ name, email, password, address });
     const data = response.data || {};
@@ -1308,10 +1324,10 @@ const handlePlaceOrder = async (opts = {}) => {
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);
     
-    // Check if email verification is required or if user was created directly
+    // If backend created the account directly (e.g., email disabled), log in
     if (data.emailVerificationRequired === false && data.token && data.user) {
-      // Direct registration (email service disabled) - log the user in immediately
       await setToken(data.token);
+      setHasToken(!!data.token);
       await persistUser(data.user);
       setUserState(data.user);
       setJustRegistered(true);
@@ -1322,31 +1338,51 @@ const handlePlaceOrder = async (opts = {}) => {
         actionLabel: "Continue",
         onAction: () => router.replace("/tabs/home")
       });
-      
-      // Auto-redirect to home after a delay
-      setTimeout(() => {
-        router.replace("/tabs/home");
-      }, 2000);
+      setTimeout(() => { router.replace("/tabs/home"); }, 2000);
+    } else if (data.otpRequired) {
+      // OTP flow: let caller present OTP UI
+      showToast({ type: "success", message: "We sent a verification code to your email." });
     } else {
-      // Email verification required
+      // Legacy email link flow
       showToast({
         type: "success",
-        message: "Registration initiated! Check your email for a verification link to complete account creation.",
+        message: "Registration initiated! Check your email for a verification link.",
         actionLabel: "Go to Login",
         onAction: () => router.replace("/login")
       });
-      
-      // Auto-redirect to login after a delay
-      setTimeout(() => {
-        router.replace("/login");
-      }, 3000);
+      setTimeout(() => { router.replace("/login"); }, 3000);
     }
+    return data; // allow caller to proceed with OTP UI when needed
+  };
+
+  const verifyRegisterOtp = async ({ email, otp }) => {
+    const resp = await verifyRegisterOtpApi(email, otp);
+    const { token, user: u } = resp.data || {};
+    await setToken(token);
+    setHasToken(!!token);
+    await persistUser(u);
+    setUserState(u);
+    setJustRegistered(true);
+
+    try {
+      const expoToken = await registerForPushNotificationsAsync();
+      if (expoToken) await registerPushToken(expoToken);
+    } catch (e) {
+      console.warn("push token register (otp verify) failed:", e?.message);
+    }
+
+    await mergeGuestCartInto(u);
+    await refreshAuthedData(u);
+    await refreshLoyalty();
+    await socketService.connect();
+    router.replace("/tabs/home");
   };
 
   const doGoogleAuth = async ({ accessToken }) => {
     const resp = await googleAuth({ accessToken });
     const { token, user: u } = resp.data || {};
     await setToken(token);
+    setHasToken(!!token);
     await persistUser(u);
     setUserState(u);
 
@@ -1388,6 +1424,7 @@ const handlePlaceOrder = async (opts = {}) => {
     socketService.disconnect();
     
     await clearAuth();
+    setHasToken(false);
     setUserState(null);
     setCart([]);
     setOrders([]);
@@ -1518,6 +1555,7 @@ const handlePlaceOrder = async (opts = {}) => {
     doLogin,
     doRegister,
     doRegisterInitiate,
+    verifyRegisterOtp,
     doGoogleAuth,
     doGoogleRegister,
     refreshAuthedData,

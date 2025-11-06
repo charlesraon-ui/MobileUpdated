@@ -2,7 +2,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { sendWelcomeEmail, sendRegistrationVerificationEmail, sendPasswordResetEmail } from "./emailController.js";
+import { sendWelcomeEmail, sendRegistrationVerificationEmail, sendPasswordResetEmail, sendRegistrationOtpEmail } from "./emailController.js";
 import { v4 as uuidv4 } from "uuid";
 import PendingRegistration from "../models/PendingRegistration.js";
 import PasswordReset from "../models/PasswordReset.js";
@@ -155,6 +155,11 @@ export async function initiateRegistration(req, res) {
     const ttlMinutes = Number(process.env.REG_VERIFY_TTL_MIN || 60); // default 60m
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
+    // Generate OTP and store with pending registration
+    const otpTtlMin = Number(process.env.REG_OTP_TTL_MIN || 10);
+    const otpExpiresAt = new Date(Date.now() + otpTtlMin * 60 * 1000);
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+
     await PendingRegistration.deleteMany({ email: normalizedEmail }); // invalidate prior requests
     await PendingRegistration.create({
       email: normalizedEmail,
@@ -163,63 +168,115 @@ export async function initiateRegistration(req, res) {
       passwordHash: hash,
       token,
       expiresAt,
+      otpCode,
+      otpExpiresAt,
     });
 
-    const baseUrl = process.env.APP_BASE_URL || process.env.API_URL || "http://localhost:5000";
-    const verifyUrl = `${baseUrl}/api/auth/register/confirm?token=${encodeURIComponent(token)}`;
-
     try {
-      const emailResult = await sendRegistrationVerificationEmail({ to: normalizedEmail, name, verifyUrl });
-      
-      // If email service is disabled, fall back to direct registration
-      if (emailResult && emailResult.disabled) {
-        console.log("EMAIL_DISABLED: Creating user directly without email verification");
-        
-        // Clean up pending registration since we're creating the user directly
-        await PendingRegistration.deleteMany({ email: normalizedEmail });
-        
-        // Create user directly
-        const user = await User.create({
-          name,
-          email: normalizedEmail,
-          passwordHash: hash,
-          phoneNumber: phoneNumber || "",
-        });
+      // For local testing: log the OTP code in non-production environments
+      if (process.env.NODE_ENV !== "production") {
+        console.log("🔐 Registration OTP for", normalizedEmail, "is:", otpCode);
+      }
 
-        const jwtToken = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {
-          expiresIn: JWT_EXPIRES,
-        });
+      const emailResult = await sendRegistrationOtpEmail({ to: normalizedEmail, name, otpCode, ttlMinutes: otpTtlMin }).catch(e => {
+        console.warn("OTP_EMAIL_SEND_FAILED:", e?.message);
+        return { ok: false };
+      });
 
-        // Send welcome email if possible (fire-and-forget)
-        try {
-          await sendWelcomeEmail({ to: user.email, name: user.name });
-        } catch (e) {
-          console.warn("WELCOME_EMAIL_SEND_FAILED:", e?.message);
-        }
+      const emailDisabled = Boolean(emailResult && emailResult.disabled);
 
-        return res.status(201).json({
-          message: "Account created successfully",
-          user: { id: user._id, name: user.name, email: user.email },
-          token: jwtToken,
-          emailVerificationRequired: false
+      // Strict enforcement: require email OTP and do NOT create user if email delivery is disabled
+      if (emailDisabled) {
+        console.warn("EMAIL_OTP_REQUIRED_BUT_DISABLED: SMTP not configured or delivery disabled");
+        return res.status(503).json({
+          message: "Email OTP is required but not configured. Please contact support.",
+          otpRequired: true,
+          email: normalizedEmail
         });
       }
-      
-      // Email was sent successfully
-      res.status(202).json({ 
-        message: "Verification email sent",
-        emailVerificationRequired: true
+
+      // Strict: if email failed to send, do not proceed
+      if (!emailResult || emailResult.ok !== true) {
+        return res.status(502).json({
+          message: "Failed to send OTP email. Please try again.",
+          otpRequired: true,
+          email: normalizedEmail,
+          emailSent: false
+        });
+      }
+
+      // Email sent successfully
+      return res.status(202).json({
+        message: "OTP sent via email",
+        otpRequired: true,
+        email: normalizedEmail,
+        emailSent: true
       });
-      
     } catch (e) {
-      console.warn("VERIFY_EMAIL_SEND_FAILED:", e?.message);
-      res.status(202).json({ 
-        message: "Registration initiated, but email could not be sent",
-        emailVerificationRequired: true
+      console.warn("OTP_SEND_FAILED:", e?.message);
+      return res.status(502).json({
+        message: "Failed to send OTP email.",
+        otpRequired: true,
+        email: normalizedEmail
       });
     }
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+}
+
+// Verify 6-digit OTP and create the user
+export async function verifyRegistrationOtp(req, res) {
+  try {
+    const emailRaw = String(req.body?.email || "");
+    const email = emailRaw.toLowerCase().trim();
+    const otp = String(req.body?.otp || "").trim();
+    if (!email || !otp) return res.status(400).json({ message: "email and otp are required" });
+
+    const pending = await PendingRegistration.findOne({ email });
+    if (!pending) return res.status(404).json({ message: "No pending registration found" });
+    if (!pending.otpCode || !pending.otpExpiresAt) {
+      return res.status(400).json({ message: "OTP not issued for this registration" });
+    }
+    if (pending.otpExpiresAt < new Date()) {
+      await PendingRegistration.deleteOne({ _id: pending._id });
+      return res.status(410).json({ message: "OTP expired" });
+    }
+    if (pending.otpCode !== otp) {
+      return res.status(401).json({ message: "Invalid OTP" });
+    }
+
+    // Ensure not already registered
+    const existing = await User.findOne({ email: pending.email });
+    if (existing) {
+      await PendingRegistration.deleteOne({ _id: pending._id });
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    // Create user
+    const user = await User.create({
+      name: pending.name,
+      email: pending.email,
+      passwordHash: pending.passwordHash,
+      phoneNumber: pending.phoneNumber,
+    });
+
+    await PendingRegistration.deleteOne({ _id: pending._id });
+
+    const jwtToken = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: JWT_EXPIRES,
+    });
+
+    // Fire-and-forget welcome email
+    try { await sendWelcomeEmail({ to: user.email, name: user.name }); } catch {}
+
+    return res.status(201).json({
+      message: "Account created successfully",
+      user: { id: user._id, name: user.name, email: user.email },
+      token: jwtToken,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err?.message || "Server error" });
   }
 }
 

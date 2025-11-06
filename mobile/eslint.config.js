@@ -10,7 +10,7 @@ module.exports = defineConfig([
   {
     rules: {
       // Custom rule to prevent direct display of ID fields in Text components
-      'no-id-display': 'error',
+      'custom/no-id-display': 'error',
     },
     plugins: {
       'custom': {

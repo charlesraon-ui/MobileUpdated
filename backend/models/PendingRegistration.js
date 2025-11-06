@@ -7,6 +7,8 @@ const pendingSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   token: { type: String, required: true, unique: true },
   expiresAt: { type: Date, required: true },
+  otpCode: { type: String },
+  otpExpiresAt: { type: Date },
 }, { timestamps: true });
 
 const PendingRegistration = mongoose.model("PendingRegistration", pendingSchema);

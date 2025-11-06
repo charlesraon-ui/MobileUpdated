@@ -100,6 +100,7 @@ export const isValidGcash = (num) => /^09\d{9}$/.test((num || "").trim());
 /** ------------- Core APIs (relative paths) ------------- */
 export const register = (payload) => api.post(`/api/auth/register`, payload);
 export const initiateRegister = (payload) => api.post(`/api/auth/register/initiate`, payload);
+export const verifyRegisterOtp = (email, otp) => api.post(`/api/auth/register/otp/verify`, { email, otp });
 export const login    = (payload) => api.post(`/api/auth/login`, payload);
 export const googleAuth = (payload) => api.post(`/api/auth/google`, payload);
 // Forgot password

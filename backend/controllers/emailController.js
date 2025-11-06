@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import twilio from "twilio";
 
 function buildTransport() {
   const host = process.env.SMTP_HOST;
@@ -94,6 +95,54 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
     return { ok: true };
   } catch (e) {
     console.error("SEND_RESET_EMAIL_ERROR:", e?.message || e);
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }) {
+  try {
+    const transporter = buildTransport();
+    if (!transporter) {
+      console.warn("EMAIL_DISABLED: SMTP env not configured");
+      return { ok: false, disabled: true };
+    }
+    const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+    const subject = "Your GoAgriTrading verification code";
+    const text = `Hello ${name || "there"},\n\nYour verification code is: ${otpCode}\nIt expires in ${ttlMinutes} minutes.\n\nEnter this code in the app to complete registration.`;
+    const html = `
+      <div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;">
+        <h2>Verification Code</h2>
+        <p>Hello ${name || "there"},</p>
+        <p>Your verification code is:</p>
+        <p style="font-size:24px;font-weight:700;letter-spacing:2px;">${otpCode}</p>
+        <p>This code expires in ${ttlMinutes} minutes.</p>
+        <p>Enter this code in the app to complete registration.</p>
+      </div>
+    `;
+    await transporter.sendMail({ from, to, subject, text, html });
+    return { ok: true };
+  } catch (e) {
+    console.error("SEND_OTP_EMAIL_ERROR:", e?.message || e);
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+export async function sendRegistrationOtpSms({ to, otpCode, ttlMinutes }) {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_FROM_NUMBER;
+    if (!accountSid || !authToken || !from) {
+      console.warn("SMS_DISABLED: Twilio env not configured");
+      return { ok: false, disabled: true };
+    }
+
+    const client = twilio(accountSid, authToken);
+    const body = `Your GoAgriTrading code is ${otpCode}. Expires in ${ttlMinutes} minutes.`;
+    await client.messages.create({ body, from, to });
+    return { ok: true };
+  } catch (e) {
+    console.error("SEND_OTP_SMS_ERROR:", e?.message || e);
     return { ok: false, error: e?.message || String(e) };
   }
 }
