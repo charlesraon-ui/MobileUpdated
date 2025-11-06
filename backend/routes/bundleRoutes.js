@@ -177,9 +177,11 @@ router.post("/:id/order", authMiddleware, async (req, res) => {
       weightKg: item.productId.weightKg || 0
     }));
 
-    // Calculate totals
+    // Calculate totals with VAT (12%)
     const subtotal = bundlePrice * quantity;
-    const total = subtotal + deliveryFee;
+    const VAT_RATE = 0.12;
+    const taxAmount = Math.round(subtotal * VAT_RATE * 100) / 100;
+    const total = Math.round((subtotal + taxAmount + deliveryFee) * 100) / 100;
 
     // Create the order
     const newOrder = new Order({
@@ -187,6 +189,7 @@ router.post("/:id/order", authMiddleware, async (req, res) => {
       items: orderItems,
       subtotal: subtotal,
       deliveryFee: deliveryFee,
+      taxAmount: taxAmount,
       total: total,
       address: address,
       deliveryType: deliveryType,
@@ -211,6 +214,7 @@ router.post("/:id/order", authMiddleware, async (req, res) => {
         subtotal: subtotal,
         deliveryFee: deliveryFee,
         total: total,
+        taxAmount: taxAmount,
         status: savedOrder.status,
         estimatedDelivery: deliveryType === "pickup" ? "Ready for pickup" : "2-3 business days"
       }

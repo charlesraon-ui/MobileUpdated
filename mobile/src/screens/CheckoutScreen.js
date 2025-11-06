@@ -103,11 +103,14 @@ export default function CheckoutScreen() {
   };
 
   const calculateOrderTotals = () => {
+    const VAT_RATE = 0.12;
     const deliveryFee = (freeShipping || rewardFreeShipping) ? 0 : getDeliveryFee(deliveryMethod);
-    const subtotal = cartTotalAfterDiscount - promoDiscount - rewardDiscount;
-    const total = subtotal + deliveryFee;
+    // Apply promo and reward discounts before tax; cartTotalAfterDiscount already includes loyalty discount
+    const subtotal = Math.max(0, (cartTotalAfterDiscount || 0) - Number(promoDiscount || 0) - Number(rewardDiscount || 0));
+    const taxAmount = Math.round(subtotal * VAT_RATE * 100) / 100;
+    const total = Math.round((subtotal + taxAmount + deliveryFee) * 100) / 100;
 
-    return { deliveryFee, subtotal, total };
+    return { deliveryFee, subtotal, taxAmount, total };
   };
 
   // Validations
@@ -123,7 +126,7 @@ export default function CheckoutScreen() {
   const disabled = !isLoggedIn || cartTotalAfterDiscount <= 0 || !!addrError || placing;
 
   // Calculate final total for display
-  const { deliveryFee, subtotal, total: finalTotal } = calculateOrderTotals();
+  const { deliveryFee, subtotal, taxAmount, total: finalTotal } = calculateOrderTotals();
 
   // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
@@ -335,6 +338,11 @@ export default function CheckoutScreen() {
               <Text style={s.summaryValue}>-₱{promoDiscount.toFixed(2)}</Text>
             </View>
           )}
+          {/* VAT */}
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>VAT (12%)</Text>
+            <Text style={s.summaryValue}>₱{taxAmount.toFixed(2)}</Text>
+          </View>
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>Delivery Fee</Text>
             <Text style={[s.summaryValue, (deliveryMethod === "pickup" || freeShipping || rewardFreeShipping) && s.freeText]}>

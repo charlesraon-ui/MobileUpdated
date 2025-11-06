@@ -247,6 +247,12 @@ function OrderDetailsModal({ order, visible, onClose }) {
                       <Text style={[s.summaryValue, { color: GREEN_DARK }]}>-₱{Number(order.deliveryFee || 0).toFixed(2)}</Text>
                     </View>
                   )}
+                  {Number(order.taxAmount || 0) > 0 && (
+                    <View style={s.summaryRow}>
+                      <Text style={s.summaryLabel}>VAT (12%):</Text>
+                      <Text style={s.summaryValue}>₱{Number(order.taxAmount || 0).toFixed(2)}</Text>
+                    </View>
+                  )}
                   <View style={[s.summaryRow, s.summaryTotal]}>
                     <Text style={s.summaryTotalLabel}>Total:</Text>
                     <Text style={s.summaryTotalValue}>₱{Number(order.total || 0).toFixed(2)}</Text>

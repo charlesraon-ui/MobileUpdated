@@ -524,6 +524,7 @@ const s = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    color: "#111827",
   },
   eyeButton: {
     paddingHorizontal: 14,

@@ -1054,11 +1054,20 @@ const handlePlaceOrder = async (opts = {}) => {
     return 50; // default
   };
 
-  // Calculate totals (apply loyalty discount)
+  // Calculate totals (apply loyalty, promo, and reward discounts, then VAT)
   const rawSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const discountedSubtotal = cartTotalAfterDiscount != null ? cartTotalAfterDiscount : rawSubtotal;
   const deliveryFee = Number.isFinite(Number(deliveryFeeInput)) ? Number(deliveryFeeInput) : getDeliveryFee(deliveryType);
-  const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0 ? Number(totalInput) : (discountedSubtotal + deliveryFee);
+  const promoDiscountAmt = Number(promoCodeData?.discount || 0);
+  const rewardDiscountAmt = Number(loyaltyRewardData?.discount || 0);
+  const freeShippingApplied = Boolean(promoCodeData?.freeShipping || loyaltyRewardData?.freeShipping);
+  const effectiveDeliveryFee = freeShippingApplied ? 0 : deliveryFee;
+  const VAT_RATE = 0.12;
+  const taxBase = Math.max(0, discountedSubtotal - promoDiscountAmt - rewardDiscountAmt);
+  const taxAmount = Math.round(taxBase * VAT_RATE * 100) / 100;
+  const total = Number.isFinite(Number(totalInput)) && Number(totalInput) > 0
+    ? Number(totalInput)
+    : Math.round((taxBase + taxAmount + effectiveDeliveryFee) * 100) / 100;
 
   console.log("🔥 ORDER PLACEMENT DEBUG: Calculated values:");
   console.log("🔥 ORDER PLACEMENT DEBUG: rawSubtotal:", rawSubtotal);
@@ -1082,7 +1091,8 @@ const handlePlaceOrder = async (opts = {}) => {
             quantity: Number(item.quantity || 1)
           })),
           total: total,
-          deliveryFee: deliveryFee,
+          deliveryFee: effectiveDeliveryFee,
+          taxAmount: taxAmount,
           address: addr.trim(),
           deliveryType: deliveryType,
           channel: "multi", // Support all payment methods
@@ -1150,7 +1160,8 @@ const handlePlaceOrder = async (opts = {}) => {
           quantity: Number(item.quantity || 1)
         })),
         total: total,
-        deliveryFee: deliveryFee,
+        deliveryFee: effectiveDeliveryFee,
+        taxAmount: taxAmount,
         address: addr.trim(),
         deliveryType: deliveryType,
         paymentMethod: "COD",
