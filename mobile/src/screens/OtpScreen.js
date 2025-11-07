@@ -1,5 +1,5 @@
-import { Link, useRouter } from "expo-router";
-import { useContext, useMemo, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useContext, useMemo, useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -29,10 +29,9 @@ export default function OtpScreen({ route }) {
   const resendPayload = useMemo(() => ({
     name: String(route?.params?.name || ""),
     email: String(route?.params?.email || ""),
-    phoneNumber: String(route?.params?.phoneNumber || ""),
     password: String(route?.params?.password || ""),
     address: String(route?.params?.address || ""),
-  }), [route?.params?.name, route?.params?.email, route?.params?.phoneNumber, route?.params?.password, route?.params?.address]);
+  }), [route?.params?.name, route?.params?.email, route?.params?.password, route?.params?.address]);
 
   const [email, setEmail] = useState(initialEmail);
   const [editingEmail, setEditingEmail] = useState(false);
@@ -193,7 +192,13 @@ export default function OtpScreen({ route }) {
         </Text>
 
         <View style={{ height: 16 }} />
-        <Text style={styles.small}>Or go back to <Link href="/login">Login</Link></Text>
+        <View style={{ alignItems: "center" }}>
+          <Text style={styles.small}>Or go back to</Text>
+          <TouchableOpacity onPress={() => router.push("/login")} activeOpacity={0.7}
+          >
+            <Text style={[styles.small, { color: "#2563EB", textDecorationLine: "underline" }]}>Login</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

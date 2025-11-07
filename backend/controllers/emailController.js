@@ -73,13 +73,8 @@ export async function sendRegistrationVerificationEmail({ to, name, verifyUrl })
 
 export async function sendPasswordResetEmail({ to, name, resetUrl }) {
   try {
-    const transporter = buildTransport();
-    if (!transporter) {
-      console.warn("EMAIL_DISABLED: SMTP env not configured");
-      return { ok: false, disabled: true };
-    }
-    const from = process.env.MAIL_FROM || process.env.SMTP_USER;
-    const subject = "Reset your GoAgriTrading password";
+    const from = process.env.MAIL_FROM || process.env.SMTP_USER; // prefer verified sender
+    const subject = "GoAgriTrading: Password reset link";
     const text = `Hello ${name || "there"},\n\nYou requested to reset your password. Open this link to proceed:\n${resetUrl}\n\nIf you did not request this, ignore this email.`;
     const html = `
       <div style="font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;">
@@ -92,8 +87,41 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
         <p>If you did not request this, you can safely ignore this email.</p>
       </div>
     `;
-    await transporter.sendMail({ from, to, subject, text, html });
-    return { ok: true };
+
+    // Try SMTP first if configured
+    const transporter = buildTransport();
+    if (transporter && from) {
+      try {
+        await transporter.sendMail({ from, to, subject, text, html });
+        return { ok: true };
+      } catch (smtpErr) {
+        console.warn("SMTP_SEND_FAILED:", smtpErr?.message || smtpErr);
+      }
+    } else {
+      console.warn("EMAIL_DISABLED: SMTP env not configured");
+    }
+
+    // Fallback to SendGrid if available and from is verified
+    const sgApiKey = process.env.SENDGRID_API_KEY;
+    if (!sgApiKey || !from) {
+      console.warn("SENDGRID_DISABLED: missing SENDGRID_API_KEY or MAIL_FROM");
+      return { ok: false, disabled: true };
+    }
+    try {
+      sgMail.setApiKey(sgApiKey);
+      await sgMail.send({
+        to,
+        from: { email: from, name: "GoAgriTrading" },
+        subject,
+        text,
+        html,
+        categories: ["password_reset"],
+      });
+      return { ok: true };
+    } catch (e) {
+      console.error("SENDGRID_SEND_ERROR:", e?.message || e);
+      return { ok: false, error: e?.message || String(e) };
+    }
   } catch (e) {
     console.error("SEND_RESET_EMAIL_ERROR:", e?.message || e);
     return { ok: false, error: e?.message || String(e) };
@@ -136,7 +164,19 @@ export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }
     }
     try {
       sgMail.setApiKey(sgApiKey);
-      await sgMail.send({ to, from, subject, text, html });
+      await sgMail.send({
+        to,
+        from: { email: from, name: "GoAgriTrading" },
+        subject,
+        text,
+        html,
+        categories: ["registration_otp"],
+        trackingSettings: {
+          clickTracking: { enable: false, enableText: false },
+          openTracking: { enable: false },
+        },
+        replyTo: process.env.MAIL_REPLY_TO || from,
+      });
       return { ok: true };
     } catch (e) {
       console.error("SENDGRID_SEND_ERROR:", e?.message || e);

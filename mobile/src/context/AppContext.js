@@ -1348,8 +1348,12 @@ const handlePlaceOrder = async (opts = {}) => {
       data = response.data || {};
     } catch (err) {
       const status = err?.response?.status;
-      // Fallback: if OTP email is unavailable or failed, attempt direct registration
-      if (status === 503 || status === 502) {
+      const code = err?.code;
+      const msg = String(err?.message || "").toLowerCase();
+      const isNetworkAbort = !status || code === 'ERR_NETWORK' || code === 'ERR_CANCELED' || msg.includes('aborted') || msg.includes('network');
+      const isServerError = typeof status === 'number' && status >= 500;
+      // Fallback: if OTP email is unavailable or failed, or network/abort error occurred, attempt direct registration
+      if (status === 503 || status === 502 || isNetworkAbort || isServerError) {
         const resp = await apiRegister({ name, email, password });
         const { token, user: u } = resp.data || {};
         await setToken(token);

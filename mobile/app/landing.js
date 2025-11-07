@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import { useEffect } from "react";
 import {
   Dimensions,
@@ -82,11 +82,13 @@ export default function Landing() {
           </View>
 
           <View style={s.ctaBottom}>
-            <Link href="/login" asChild>
-              <TouchableOpacity style={s.cta} activeOpacity={0.8}>
-                <Text style={s.ctaText}>Get Started</Text>
-              </TouchableOpacity>
-            </Link>
+            <TouchableOpacity
+              style={s.cta}
+              activeOpacity={0.8}
+              onPress={() => router.push("/login")}
+            >
+              <Text style={s.ctaText}>Get Started</Text>
+            </TouchableOpacity>
             
             {/* Additional info */}
             <Text style={s.footerText}>

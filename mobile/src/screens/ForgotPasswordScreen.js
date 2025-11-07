@@ -1,4 +1,4 @@
-import { Link, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
     Dimensions,
@@ -18,6 +18,7 @@ const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
 
 export default function ForgotPasswordScreen() {
+  const router = useRouter();
   const { token: tokenParam } = useLocalSearchParams();
   const token = String(tokenParam || "");
   const [email, setEmail] = useState("");
@@ -149,9 +150,12 @@ export default function ForgotPasswordScreen() {
           <View style={{ height: 16 }} />
 
           {!token && (
-            <Text style={s.small}>
-              Remembered your password? <Link href="/login">Back to Login</Link>
-            </Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={s.small}>Remembered your password?</Text>
+              <TouchableOpacity onPress={() => router.push("/login")} activeOpacity={0.7}>
+                <Text style={[s.small, { color: "#065F46", textDecorationLine: "underline" }]}>Back to Login</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </ScrollView>

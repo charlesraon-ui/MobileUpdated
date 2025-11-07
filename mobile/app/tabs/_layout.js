@@ -51,47 +51,9 @@ function TabsInner() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        headerStyle: { 
-          backgroundColor: "#10B981",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 4,
-        },
-        headerTintColor: "#fff",
-        headerTitleStyle: { 
-          fontWeight: "700", 
-          fontSize: 18, 
-          color: "#fff" 
-        },
+        // Minimal config to avoid any style arrays reaching DOM anchors on web.
         tabBarActiveTintColor: "#10B981",
         tabBarInactiveTintColor: "#9CA3AF",
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopWidth: 1,
-          borderTopColor: "#E5E7EB",
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 15,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
-          marginTop: 4,
-          letterSpacing: 0.5,
-        },
-        tabBarIconStyle: {
-          marginBottom: 0,
-          marginTop: 2,
-        },
       }}
     >
       <Tabs.Screen

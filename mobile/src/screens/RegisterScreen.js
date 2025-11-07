@@ -1,11 +1,10 @@
 // src/screens/RegisterScreen.js
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  ImageBackground,
   TouchableOpacity,
   StyleSheet,
   Text,
@@ -39,7 +38,6 @@ export default function RegisterScreen() {
   const [lastName, setLastName] = useState("");
 
   const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -123,11 +121,7 @@ export default function RegisterScreen() {
     if (!email.trim()) return "Please enter your email.";
     // very light email check
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email.";
-    if (!phoneNumber.trim()) return "Please enter your phone number.";
-    // Basic phone number validation (Philippine format)
-    if (!/^(\+63|0)?[0-9]{10}$/.test(phoneNumber.replace(/\s|-/g, ''))) {
-      return "Please enter a valid phone number.";
-    }
+    // Phone number is not required in email-only registration.
     if (password.length < 6) return "Password must be at least 6 characters.";
     if (password !== confirm) return "Passwords do not match.";
     if (!province?.code) return "Please select your province.";
@@ -155,7 +149,6 @@ export default function RegisterScreen() {
       const payload = {
         name,
         email: email.trim().toLowerCase(),
-        phoneNumber: phoneNumber.trim(),
         password,
         address,
       };
@@ -164,7 +157,7 @@ export default function RegisterScreen() {
         const e = payload.email;
         // Pass full payload so OTP screen can support "Resend code"
         // Also pass debugOtp if backend provided it (for dev/testing)
-        router.push({ pathname: "/otp", params: { email: e, name: payload.name, phoneNumber: payload.phoneNumber, password: payload.password, address: payload.address, debugOtp: String(data?.debugOtp || "") } });
+        router.push({ pathname: "/otp", params: { email: e, name: payload.name, password: payload.password, address: payload.address, debugOtp: String(data?.debugOtp || "") } });
       }
     } catch (e) {
       const status = e?.response?.status;
@@ -197,12 +190,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/react-logo.png")}
-      style={s.bg}
-      resizeMode="cover"
-    >
-      <View style={s.overlay} />
+    <View style={s.bg}>
       <Toast visible={!!error} type="error" message={error} onClose={() => setError("")} />
       <ScrollView
         style={s.scroll}
@@ -266,17 +254,7 @@ export default function RegisterScreen() {
         editable={!submitting}
       />
 
-      <Text style={s.label}>Phone Number</Text>
-      <TextInput
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        placeholder="09123456789"
-        placeholderTextColor={placeholderColor}
-        keyboardType="phone-pad"
-        autoCapitalize="none"
-        style={s.input}
-        editable={!submitting}
-      />
+      {/* Phone number removed: email-only registration */}
 
       <Text style={s.label}>Password</Text>
       <View style={s.passwordContainer}>
@@ -447,17 +425,20 @@ export default function RegisterScreen() {
 
       <View style={{ height: 16 }} />
 
-      <Text style={s.small}>
-        Already have an account? <Link href="/login">Login</Link>
-      </Text>
+      <View style={{ alignItems: "center" }}>
+        <Text style={s.small}>Already have an account?</Text>
+        <TouchableOpacity onPress={() => router.push("/login")} activeOpacity={0.7}>
+          <Text style={[s.small, { color: "#065F46", textDecorationLine: "underline" }]}>Login</Text>
+        </TouchableOpacity>
+      </View>
         </View>
       </ScrollView>
-    </ImageBackground>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  bg: { flex: 1, minHeight: height, overflow: "hidden" },
+  bg: { flex: 1, minHeight: height, overflow: "hidden", backgroundColor: "#F0FDF4" },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
   scroll: { flex: 1 },
   container: { paddingHorizontal: 20, paddingTop: topPad, paddingBottom: bottomPad },

@@ -1,4 +1,4 @@
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import {
   ActivityIndicator,
@@ -312,17 +312,24 @@ export default function LoginScreen() {
           </View>
 
           <View style={s.linksContainer}>
-            <Text style={s.small}>
-              Don't have an account? <Link href="/register" style={s.link}>Sign up</Link>
-            </Text>
-            
-            <Text style={s.small}>
-              <Link href="/forgot-password" style={s.link}>Forgot password?</Link>
-            </Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={s.small}>Don't have an account?</Text>
+              <TouchableOpacity onPress={() => router.push("/register")} activeOpacity={0.7}>
+                <Text style={[s.small, s.link]}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
 
-            <Text style={s.small}>
-              <Link href="/landing" style={s.link}>← Back to landing</Link>
-            </Text>
+            <View style={{ alignItems: "center", marginTop: 6 }}>
+              <TouchableOpacity onPress={() => router.push("/forgot-password")} activeOpacity={0.7}>
+                <Text style={[s.small, s.link]}>Forgot password?</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ alignItems: "center", marginTop: 6 }}>
+              <TouchableOpacity onPress={() => router.push("/landing")} activeOpacity={0.7}>
+                <Text style={[s.small, s.link]}>← Back to landing</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>

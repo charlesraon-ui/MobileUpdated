@@ -1,22 +1,6 @@
-import { Redirect, Stack, useRouter } from "expo-router";
+// Simplify profile route to avoid redundant redirects on web.
+// Tabs already define /tabs/profile which exports ProfileScreen.
+// This file should just export the screen directly for /profile.
 import ProfileScreen from "../src/screens/ProfileScreen";
 
-export default function ProfileRoute() {
-  const router = useRouter();
-  const navigation = {
-    navigate: (dest) => {
-      const to = String(dest || "").toLowerCase();
-      if (to === "login") router.push("/login");
-      else if (to === "register") router.push("/register");
-      else router.push("/home");
-    },
-  };
-
-  return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <ProfileScreen navigation={navigation} />
-      <Redirect href="/tabs/profile" />;
-    </>
-  );
-}
+export default ProfileScreen;

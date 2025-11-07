@@ -3,10 +3,20 @@ import axios from "axios";
 import Constants from "expo-constants";
 
 /** ------------- Config (single source of truth) ------------- */
-// Prefer app.json extra over environment; include manifestExtra fallback on web
+// Prefer environment over app.json extra; include manifestExtra fallback on web
 const configApiUrl = (Constants?.expoConfig?.extra?.apiUrl) || (Constants?.manifestExtra?.apiUrl);
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-let API_URL = configApiUrl || envApiUrl || "http://localhost:5000";
+let API_URL = envApiUrl || configApiUrl || "http://localhost:5000";
+
+// Normalize common localhost dev setups (Expo often sets 3000; backend uses 5000)
+try {
+  const u = new URL(API_URL);
+  const isLocal = u.hostname === "localhost" || u.hostname === "127.0.0.1";
+  if (isLocal && (!u.port || u.port === "3000")) {
+    u.port = "5000";
+    API_URL = u.toString();
+  }
+} catch {}
 
 // Guard against unexpected/stale domains; default to the new backend
 try {
@@ -224,10 +234,11 @@ export const getLoyaltyStatus = async () => {
   console.log('getLoyaltyStatus called');
   try {
     const result = await withFallbackGet(`/api/loyalty/status`, `/api/app/loyalty/status`);
-    console.log('getLoyaltyStatus success:', result);
+    // Reduce noisy success logs in production; keep data flow silent.
     return result;
   } catch (error) {
-    console.error('getLoyaltyStatus error:', error);
+    // Avoid alarming error logs on web; surface as a warning instead.
+    console.warn('getLoyaltyStatus warning:', error?.message || error);
     throw error;
   }
 };
