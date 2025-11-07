@@ -330,14 +330,14 @@ export default function RegisterScreen() {
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
-      <Text style={s.label}>Barangay</Text>
+      <Text style={s.label}>District</Text>
       <TouchableOpacity
         style={s.select}
         disabled={!cityMun?.code || loadingAddr || submitting}
         onPress={() => setShowBarangayModal(true)}
         activeOpacity={0.8}
       >
-        <Text style={s.selectText}>{barangay?.name || "Select barangay"}</Text>
+        <Text style={s.selectText}>{barangay?.name || "Select district"}</Text>
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
@@ -372,7 +372,7 @@ export default function RegisterScreen() {
 
       <SelectorModal
         visible={showBarangayModal}
-        title="Select Barangay"
+        title="Select District"
         data={barangays}
         keyExtractor={(item) => item.code}
         onClose={() => setShowBarangayModal(false)}

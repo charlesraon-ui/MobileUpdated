@@ -44,14 +44,14 @@ export default function Landing() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.scroll}>
-      <StatusBar barStyle="dark-content" />
-      {/* Header removed to center logo on card seam */}
+      <StatusBar barStyle="light-content" />
+      {/* Header removed as requested */}
 
       {/* Card */}
       <Animated.View style={[s.card, contentAnimatedStyle]}>
-        {/* Top section with light green background */}
+        {/* Top section with solid background color (no hero image) */}
         <View style={s.imageWrap}>
-          {/* Logo centered in the light green section */}
+          {/* Logo centered over the background */}
           <View style={s.imageOverlay}>
             <View
               style={[
@@ -102,9 +102,9 @@ export default function Landing() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F8FAFC" },
-  scroll: { flexGrow: 1, backgroundColor: "#F8FAFC", minHeight: height },
-  header: { paddingTop: 24, paddingHorizontal: 20, marginBottom: 8 },
+  screen: { flex: 1, backgroundColor: "#F1F5F9" },
+  scroll: { flexGrow: 1, backgroundColor: "#F1F5F9", minHeight: height },
+  
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 0,
@@ -125,7 +125,7 @@ const s = StyleSheet.create({
   imageWrap: { 
     height: Math.round(height * imagePct), 
     overflow: "hidden",
-    backgroundColor: "#A7F3D0" // Light green background
+    backgroundColor: "#A7F3D0"
   },
   imageOverlay: {
     position: "absolute",
@@ -138,7 +138,7 @@ const s = StyleSheet.create({
     zIndex: 2,
   },
   logoBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
@@ -152,10 +152,10 @@ const s = StyleSheet.create({
     }),
   },
   cardBody: {
-    backgroundColor: "#064E3B",
+    backgroundColor: "#065F46",
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 32,
+    paddingTop: 24,
+    paddingBottom: 36,
     flex: 1,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
@@ -163,28 +163,28 @@ const s = StyleSheet.create({
     justifyContent: "flex-start",
   },
   textBlock: {
-    gap: 12,
-    paddingTop: 16,
+    gap: 14,
+    paddingTop: 18,
     alignItems: "center",
   },
   ctaBottom: {
     marginTop: "auto",
     alignItems: "center",
-    gap: 16,
+    gap: 18,
   },
   title: { 
     color: "#FFFFFF", 
-    fontSize: 32, 
+    fontSize: 33, 
     fontWeight: "900", 
-    letterSpacing: -0.8, 
+    letterSpacing: -0.6, 
     textAlign: "center",
-    lineHeight: 38,
+    lineHeight: 40,
   },
   subtitle: { 
-    color: "#D1FAE5", 
+    color: "#E7F9F2", 
     marginTop: 12, 
     fontSize: 17, 
-    lineHeight: 26, 
+    lineHeight: 27, 
     textAlign: "center",
     paddingHorizontal: 8,
   },
@@ -193,7 +193,7 @@ const s = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    backgroundColor: "rgba(16, 185, 129, 0.14)",
     borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: "#10B981",
@@ -208,9 +208,9 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   verseText: {
-    color: "#E6FFFA",
+    color: "#F0FFFB",
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
     textAlign: "center",
     fontStyle: "italic",
   },
@@ -240,7 +240,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   footerText: {
-    color: "#A7F3D0",
+    color: "#BFF7E4",
     fontSize: 14,
     textAlign: "center",
     fontWeight: "500",

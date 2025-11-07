@@ -2,13 +2,13 @@
 // Script to diagnose and fix loyalty system issues
 
 import dotenv from "dotenv";
-dotenv.config();
 
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Order from "../models/Order.js";
 import LoyaltyReward from "../models/LoyaltyReward.js";
 import { updateLoyaltyAfterPurchase } from "../controllers/loyaltyController.js";
+dotenv.config();
 
 async function connectDB() {
   try {

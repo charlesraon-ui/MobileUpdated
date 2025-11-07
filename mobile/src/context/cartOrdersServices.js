@@ -1,4 +1,4 @@
-﻿import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../api/apiClient";
 
 const CART_KEY = "goat_cart_v1";

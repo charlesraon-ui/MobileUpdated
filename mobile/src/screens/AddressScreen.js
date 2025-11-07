@@ -4,8 +4,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import Toast from "../../components/Toast";
 import { Colors } from "../../constants/theme";
-const placeholderColor = 'rgba(55, 65, 81, 0.5)';
 import { AppCtx } from "../context/AppContext";
+const placeholderColor = 'rgba(55, 65, 81, 0.5)';
 
 export default function AddressesScreen() {
   const { addresses, addAddress, removeAddress, setDeliveryAddress, defaultAddress, setDefaultAddress } = useContext(AppCtx);

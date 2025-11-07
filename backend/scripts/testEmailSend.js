@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-dotenv.config();
 
 import { sendRegistrationOtpEmail } from '../controllers/emailController.js';
+dotenv.config();
 
 async function main() {
   const to = process.env.TEST_EMAIL_TO || process.env.MAIL_FROM || 'charlesraon@gmail.com';

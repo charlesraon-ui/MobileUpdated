@@ -2,12 +2,12 @@
 // Script to test reward redemption functionality
 
 import dotenv from "dotenv";
-dotenv.config();
 
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import LoyaltyReward from "../models/LoyaltyReward.js";
 import { redeemReward } from "../controllers/loyaltyController.js";
+dotenv.config();
 
 async function connectDB() {
   try {

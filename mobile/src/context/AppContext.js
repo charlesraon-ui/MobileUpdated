@@ -41,7 +41,7 @@ import {
   setToken,
   toAbsoluteUrl,
   toggleWishlistApi
-} from "../api/apiClient";
+, API_URL } from "../api/apiClient";
 // Push notifications helpers
 import { registerPushToken } from "../api/apiClient";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
@@ -50,7 +50,7 @@ import { imageCache } from "../utils/imageCache";
 // import { registerPushToken } from "../api/apiClient";
 // import { registerForPushNotificationsAsync } from "../utils/notifications";
 import socketService from "../services/socketService";
-import { API_URL } from "../api/apiClient";
+
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
 import { safeTextForDisplay } from "../utils/dataSanitizer";
 

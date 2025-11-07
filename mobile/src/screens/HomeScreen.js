@@ -16,6 +16,7 @@ import {
 import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
 import { AppCtx } from "../context/AppContext";
 import { sanitizeProductForDisplay, warnIfIdDisplayAttempt } from "../utils/dataSanitizer";
+import { pickProductImageSource } from "../utils/imageUtils";
 
 export default function HomeScreen() {
   const {
@@ -159,8 +160,7 @@ export default function HomeScreen() {
       warnIfIdDisplayAttempt(product.description, 'HomeScreen ProductCard - product.description');
     }
     
-    const rawImg = product?.imageUrl || product?.images?.[0] || null;
-    const img = rawImg ? (toAbsoluteUrl?.(rawImg) || rawImg) : null;
+    const source = pickProductImageSource(product, toAbsoluteUrl);
     const saved = isInWishlist?.(product?._id);
 
     return (
@@ -170,8 +170,8 @@ export default function HomeScreen() {
         onPress={() => router.push(`/product-detail?id=${product._id}`)}
       >
         <View style={styles.productImageContainer}>
-          {img ? (
-            <Image source={{ uri: img }} style={styles.productImage} resizeMode="cover" />
+          {source ? (
+            <Image source={source} style={styles.productImage} resizeMode="cover" />
           ) : (
             <View style={styles.productImagePlaceholder}>
               <Text style={styles.productImageText}>📦</Text>
@@ -208,24 +208,28 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* Real-time stock indicator */}
+          {/* Real-time stock indicator: show labels only when low/out; otherwise a small availability dot */}
           {product.stock !== undefined && (
-            <View style={[
-              styles.stockBadge, 
-              product.stock === 0 && styles.outOfStockBadge,
-              product.stock > 0 && product.stock <= 5 && styles.lowStockBadge,
-              product.stock > 5 && product.stock <= 10 && styles.mediumStockBadge
-            ]}>
-              <Text style={[
-                styles.stockBadgeText,
-                product.stock === 0 && styles.outOfStockText,
-                product.stock > 0 && product.stock <= 10 && styles.lowStockText
+            product.stock > 10 ? (
+              <View style={[styles.stockDot, { backgroundColor: "#F59E0B" }]} />
+            ) : (
+              <View style={[
+                styles.stockBadge, 
+                product.stock === 0 && styles.outOfStockBadge,
+                product.stock > 0 && product.stock <= 5 && styles.lowStockBadge,
+                product.stock > 5 && product.stock <= 10 && styles.mediumStockBadge
               ]}>
-                {product.stock === 0 ? 'Out of Stock' : 
-                 product.stock <= 5 ? `${product.stock} left` :
-                 product.stock <= 10 ? 'Low Stock' : 'In Stock'}
-              </Text>
-            </View>
+                <Text style={[
+                  styles.stockBadgeText,
+                  product.stock === 0 && styles.outOfStockText,
+                  product.stock > 0 && product.stock <= 10 && styles.lowStockText
+                ]}>
+                  {product.stock === 0 ? 'Out of Stock' : 
+                   product.stock <= 5 ? `${product.stock} left` :
+                   'Low Stock'}
+                </Text>
+              </View>
+            )
           )}
         </View>
         
@@ -240,14 +244,15 @@ export default function HomeScreen() {
                 : (product?.category?.name || product?.category?.categoryName || product?.category || 'Uncategorized')}
             </Text>
             {product.stock !== undefined && (
-              <Text style={[
-                styles.stockIndicator, 
-                product.stock === 0 && styles.outOfStock,
-                product.stock > 0 && product.stock <= 10 && styles.lowStock
-              ]}>
-                {product.stock === 0 ? 'Out of Stock' :
-                 product.stock <= 10 ? 'Low Stock' : 'In Stock'}
-              </Text>
+              product.stock > 10 ? null : (
+                <Text style={[
+                  styles.stockIndicator, 
+                  product.stock === 0 && styles.outOfStock,
+                  product.stock > 0 && product.stock <= 10 && styles.lowStock
+                ]}>
+                  {product.stock === 0 ? 'Out of Stock' : 'Low Stock'}
+                </Text>
+              )
             )}
           </View>
         </View>
@@ -255,22 +260,45 @@ export default function HomeScreen() {
     );
   };
 
-  // Category icons mapping
+  // Category icons mapping (case-insensitive)
   const getCategoryIcon = (category) => {
+    const key = String(category || '').trim().toLowerCase();
     const icons = {
-      'All': '🛍️',
-      'Seeds': '🌱',
-      'new code': '💻',
-      'neee': '✨',
-      'Electronics': '📱',
-      'Fashion': '👕',
-      'Home': '🏡',
-      'Sports': '⚽',
-      'Books': '📚',
-      'Health': '💊',
-      'Food': '🍕',
+      // General
+      'all': '🛍️',
+      // Agriculture-focused
+      'seeds': '🌱',
+      'fertilizer': '🧪',
+      'grains': '🌾',
+      'rice': '🌾',
+      'corn': '🌽',
+      'vegetables': '🥦',
+      'fruits': '🍎',
+      'tools': '🛠️',
+      'equipment': '🚜',
+      'machinery': '🚜',
+      'irrigation': '💧',
+      'pesticides': '🐞',
+      'herbicides': '🌿',
+      'feed': '🍽️',
+      'livestock': '🐄',
+      'organic': '🌿',
+      'nursery': '🌼',
+      'soil': '🟫',
+      'compost': '🪴',
+      'containers': '🧺',
+      'planting': '🪴',
+      'greenhouse': '🏠',
+      // e-commerce fallbacks
+      'electronics': '📱',
+      'fashion': '👕',
+      'home': '🏡',
+      'sports': '⚽',
+      'books': '📚',
+      'health': '💊',
+      'food': '🍕',
     };
-    return icons[category] || '📂';
+    return icons[key] || '📂';
   };
 
   const getCategoryColor = (index) => {
@@ -605,32 +633,36 @@ export default function HomeScreen() {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 12,
+      justifyContent: 'center',
     },
 
     categoryChip: {
       width: categoryChipWidth,
       minWidth: ResponsiveUtils.isTablet(width) ? 100 : 80,
-      backgroundColor: Colors.light.surface,
+      backgroundColor: 'transparent',
       borderRadius: Radii.lg,
-      borderWidth: 1,
-      borderColor: Colors.light.border,
-      paddingVertical: ResponsiveUtils.isTablet(width) ? 12 : 10,
-      paddingHorizontal: 8,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      paddingVertical: 4,
+      paddingHorizontal: 0,
       alignItems: 'center',
       justifyContent: 'center',
     },
 
     categoryChipIconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: ResponsiveUtils.isTablet(width) ? 60 : 56,
+      height: ResponsiveUtils.isTablet(width) ? 60 : 56,
+      borderRadius: ResponsiveUtils.isTablet(width) ? 30 : 28,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 8,
+      borderWidth: 1,
+      borderColor: Colors.light.border,
+      overflow: 'hidden',
     },
 
     categoryChipIcon: {
-      fontSize: 18,
+      fontSize: ResponsiveUtils.isTablet(width) ? 24 : 22,
     },
 
     categoryChipLabel: {
@@ -833,6 +865,23 @@ export default function HomeScreen() {
 
     mediumStockBadge: {
       backgroundColor: "#3B82F6",
+    },
+
+    // Small availability dot for healthy stock
+    stockDot: {
+      position: "absolute",
+      top: 8,
+      left: 8,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 1,
+      borderColor: "#FFFFFF",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 1.5,
+      elevation: 2,
     },
     
     productFooter: {
@@ -1134,20 +1183,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Search */}
-        <View style={styles.searchSection}>
-          <TouchableOpacity 
-            style={styles.searchBar}
-            onPress={() => router.push('/search')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.searchIcon}>🔍</Text>
-            <Text style={styles.searchPlaceholder}>Search products...</Text>
-            <View style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Search</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+        {/* Search removed from Home as requested */}
 
         <ScrollView style={styles.mainScrollView} showsVerticalScrollIndicator={false}>
           {/* Categories */}

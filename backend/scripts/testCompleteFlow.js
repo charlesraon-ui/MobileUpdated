@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import User from "../models/User.js";
 import LoyaltyReward from "../models/LoyaltyReward.js";
-import { redeemReward, getUsableRewards } from "../controllers/loyaltyController.js";
-import { markRewardsAsUsed } from "../controllers/loyaltyController.js";
+import { redeemReward, getUsableRewards , markRewardsAsUsed } from "../controllers/loyaltyController.js";
+
 
 dotenv.config();
 

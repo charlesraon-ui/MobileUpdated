@@ -8,6 +8,12 @@ import {
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
+
+
+
+
+import { platformShadow } from "../utils/shadow";
+
 export default function BundleCard({ bundle, onPress }) {
 
   const itemCount = bundle?.products?.length || bundle?.items?.length || 0;
@@ -199,12 +205,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-
-
-
-
-import { platformShadow } from "../utils/shadow";
 
 
 

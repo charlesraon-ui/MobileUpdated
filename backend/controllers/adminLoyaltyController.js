@@ -3,8 +3,9 @@ import LoyaltyReward from "../models/LoyaltyReward.js";
 import LoyaltyTier from "../models/LoyaltyTier.js";
 import PointRule from "../models/PointRule.js";
 import User from "../models/User.js";
+import Order from "../models/Order.js";
 import mongoose from "mongoose";
-import loyaltyService from "../services/loyaltyService.js";
+import { calculatePoints, getTier } from "../services/loyaltyService.js";
 import { initializeLoyaltyTiers, checkTierConsistency } from "../scripts/initializeLoyaltyTiers.js";
 
 // TIER MANAGEMENT
@@ -341,7 +342,7 @@ export const bulkUpdateLoyalty = async (req, res) => {
             const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
             loyalty.totalSpent = totalSpent;
             loyalty.purchaseCount = orders.length;
-            loyalty.points = loyaltyService.calculatePoints({ total: totalSpent });
+loyalty.points = calculatePoints({ total: totalSpent });
             loyalty.pointsHistory.push({
               points: loyalty.points,
               source: "admin_recalculation",
@@ -356,7 +357,7 @@ export const bulkUpdateLoyalty = async (req, res) => {
         }
 
         // Update tier
-        const newTier = loyaltyService.getTier(loyalty.points);
+const newTier = getTier(loyalty.points);
         loyalty.tier = newTier;
         
         await loyalty.save();

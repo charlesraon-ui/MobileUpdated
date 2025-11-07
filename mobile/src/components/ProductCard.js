@@ -155,9 +155,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
             </View>
           )}
           {inStock && (
-            <View style={[s.infoBadge, { top: isNew ? (isOnSale ? 72 : 42) : (isOnSale ? 42 : 12), left: 12, backgroundColor: "#DCFCE7", borderColor: "#86EFAC" }]}>
-              <Text style={[s.infoBadgeText, { color: "#16A34A" }]}>IN STOCK</Text>
-            </View>
+            <View style={[s.stockDot, { top: isNew ? (isOnSale ? 76 : 46) : (isOnSale ? 46 : 16), left: 16, backgroundColor: "#F59E0B" }]} />
           )}
           <View style={s.imageGradient} />
 
@@ -622,6 +620,19 @@ const getStyles = () => {
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
+  },
+  stockDot: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1.5,
+    elevation: 2,
   },
   
   // Compact card overlays

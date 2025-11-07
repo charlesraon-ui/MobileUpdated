@@ -1,6 +1,5 @@
 // server.js
 import dotenv from "dotenv";
-dotenv.config();
 
 import cors from "cors";
 import express from "express";
@@ -40,6 +39,7 @@ import promoRoutes from "./routes/promoRoutes.js";
 import deliveryMessageRoutes from "./routes/deliveryMessageRoutes.js";
 import priceAlertRoutes from "./routes/priceAlertRoutes.js";
 import priceMonitoringService from "./services/priceMonitoringService.js";
+dotenv.config();
 
 // ──────────────────────────────────────────────────────
 const app = express();

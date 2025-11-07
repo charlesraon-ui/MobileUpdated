@@ -17,7 +17,7 @@ import { AppCtx } from "../context/AppContext";
 import { platformShadow } from "../utils/shadow";
 import { Colors, Radii } from "../../constants/theme";
 
-const PLACEHOLDER = require("../../assets/images/placeholder.svg");
+const PLACEHOLDER = require("../../assets/images/icon.png");
 const C = Colors.light;
 
 function formatPrice(n) {
@@ -114,7 +114,7 @@ export default function WishlistScreen() {
           {/* Image Container */}
           <View style={styles.imageContainer}>
             <Image 
-              source={{ uri: img }} 
+              source={typeof img === 'string' ? { uri: img } : img} 
               style={styles.image} 
               resizeMode="cover"
               onLoadStart={() => {

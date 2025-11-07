@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
-dotenv.config();
 
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
+dotenv.config();
 
 // Connect to MongoDB
 const connectDB = async () => {

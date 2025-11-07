@@ -36,7 +36,8 @@ export default function ProductsScreen() {
     loading,
     user,
     handleAddToCart: contextAddToCart,
-    categoryLabelOf
+    categoryLabelOf,
+    toAbsoluteUrl,
   } = useContext(AppCtx);
   
   // Check if user is logged in
@@ -302,9 +303,14 @@ export default function ProductsScreen() {
               <Text style={styles.cartModalTitle}>Added to Cart!</Text>
               
               <View style={styles.addedProductInfo}>
-                {addedProduct.images && addedProduct.images[0] && (
+                {addedProduct?.images && addedProduct.images[0] ? (
                   <Image 
-                    source={{ uri: addedProduct.images[0] }}
+                    source={{ uri: (toAbsoluteUrl?.(addedProduct.images[0]) || addedProduct.images[0]) }}
+                    style={styles.addedProductImage}
+                  />
+                ) : (
+                  <Image 
+                    source={require("../../assets/images/icon.png")}
                     style={styles.addedProductImage}
                   />
                 )}

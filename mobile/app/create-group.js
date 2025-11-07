@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useContext } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { searchUsersApi } from '../src/api/apiClient';
-import { useContext } from 'react';
+
 import { AppCtx } from '../src/context/AppContext';
 import { safeGoBackToHome } from '../src/utils/navigationUtils';
 

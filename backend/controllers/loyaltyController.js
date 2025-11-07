@@ -3,7 +3,15 @@ import Order from "../models/Order.js";
 import LoyaltyTier from "../models/LoyaltyTier.js";
 import User from "../models/User.js";
 import { rewards } from "../config/loyaltyConfig.js";
-import loyaltyService from "../services/loyaltyService.js";
+import {
+  getTier,
+  getTierBenefits,
+  getTierDiscountPercentage,
+  calculatePoints,
+  canRedeemReward,
+  validatePointsTransaction,
+  getAvailableRewards as getAvailableRewardsService,
+} from "../services/loyaltyService.js";
 
 export const getLoyaltyStatus = async (req, res) => {
   try {
@@ -115,7 +123,7 @@ export const issueLoyaltyCard = async (req, res) => {
     }
     
     // Set the discount percentage based on current tier
-    const discountPercentage = loyaltyService.getTierDiscountPercentage(loyalty.tier);
+const discountPercentage = getTierDiscountPercentage(loyalty.tier);
     loyalty.discountAmount = discountPercentage;
     
     await loyalty.save();
@@ -158,7 +166,7 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
     loyalty.totalSpent += validAmount;
 
     // Use loyalty service to calculate points
-    const pointsEarned = loyaltyService.calculatePoints({ total: validAmount });
+const pointsEarned = calculatePoints({ total: validAmount });
     loyalty.points += pointsEarned;
 
     loyalty.pointsHistory.push({
@@ -181,7 +189,7 @@ export const updateLoyaltyAfterPurchase = async (userId, amount, orderId) => {
 const updateLoyaltyTier = async (loyalty) => {
   try {
     // Use loyalty service to determine tier
-    const newTier = loyaltyService.getTier(loyalty.points);
+const newTier = getTier(loyalty.points);
     
     // Always update the user's loyalty points, and tier if it changed
     const updateData = {
@@ -194,7 +202,7 @@ const updateLoyaltyTier = async (loyalty) => {
     }
     
     // Update discount amount to be the percentage for the current tier
-    const discountPercentage = loyaltyService.getTierDiscountPercentage(loyalty.tier || newTier);
+const discountPercentage = getTierDiscountPercentage(loyalty.tier || newTier);
     loyalty.discountAmount = discountPercentage;
     
     // Update user model with current points and tier
@@ -259,7 +267,7 @@ export const redeemReward = async (req, res) => {
     }
 
     // Use loyalty service to check if reward can be redeemed
-    const redemptionCheck = loyaltyService.canRedeemReward(loyalty.points, rewardName);
+const redemptionCheck = canRedeemReward(loyalty.points, rewardName);
     if (!redemptionCheck.canRedeem) {
       return res.status(400).json({ 
         success: false, 
@@ -271,7 +279,7 @@ export const redeemReward = async (req, res) => {
     const reward = redemptionCheck.reward;
     
     // Validate points transaction
-    const validation = loyaltyService.validatePointsTransaction(loyalty.points, reward.cost);
+const validation = validatePointsTransaction(loyalty.points, reward.cost);
     if (!validation.valid) {
       return res.status(400).json({ 
         success: false, 
@@ -347,14 +355,14 @@ export const getAvailableRewards = async (req, res) => {
     const currentPoints = loyalty?.points || 0;
 
     // Use loyalty service to get available rewards
-    const availableRewards = loyaltyService.getAvailableRewards(currentPoints);
+const availableRewards = getAvailableRewardsService(currentPoints);
 
     res.json({
       success: true,
       rewards: availableRewards,
       currentPoints,
-      tier: loyalty?.tier || loyaltyService.getTier(currentPoints),
-      tierBenefits: loyaltyService.getTierBenefits(loyalty?.tier || loyaltyService.getTier(currentPoints))
+  tier: loyalty?.tier || getTier(currentPoints),
+  tierBenefits: getTierBenefits(loyalty?.tier || getTier(currentPoints))
     });
   } catch (error) {
     console.error("GET_AVAILABLE_REWARDS_ERROR:", error);
