@@ -25,6 +25,7 @@ export default function OtpScreen({ route }) {
   const router = useRouter();
   const { verifyRegisterOtp, doRegisterInitiate } = useContext(AppCtx);
   const initialEmail = useMemo(() => String(route?.params?.email || ""), [route?.params?.email]);
+  const initialDebugOtp = useMemo(() => String(route?.params?.debugOtp || ""), [route?.params?.debugOtp]);
   const resendPayload = useMemo(() => ({
     name: String(route?.params?.name || ""),
     email: String(route?.params?.email || ""),
@@ -40,8 +41,19 @@ export default function OtpScreen({ route }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [resending, setResending] = useState(false);
+  const [devHint, setDevHint] = useState("");
 
   const code = digits.join("");
+
+  // Prefill dev OTP code if provided
+  useEffect(() => {
+    if (initialDebugOtp && initialDebugOtp.length === 6) {
+      setDigits(initialDebugOtp.split(""));
+      setDevHint(`Dev-only: code ${initialDebugOtp} prefilled`);
+    } else {
+      setDevHint("");
+    }
+  }, [initialDebugOtp]);
 
   const onVerify = async () => {
     const e = String(email || "").trim().toLowerCase();
@@ -143,6 +155,9 @@ export default function OtpScreen({ route }) {
         {/* Email-only flow: no phone display */}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        {/* Dev hint when debugOtp was prefilled */}
+        {devHint ? <Text style={styles.small}>{devHint}</Text> : null}
 
         {/* Segmented OTP inputs */}
         <View style={styles.otpRow}>

@@ -1331,10 +1331,10 @@ const handlePlaceOrder = async (opts = {}) => {
   const doRegisterInitiate = async ({ name, email, password, address }) => {
     const response = await initiateRegister({ name, email, password, address });
     const data = response.data || {};
-    
+
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);
-    
+
     // If backend created the account directly (e.g., email disabled), log in
     if (data.emailVerificationRequired === false && data.token && data.user) {
       await setToken(data.token);
@@ -1342,7 +1342,7 @@ const handlePlaceOrder = async (opts = {}) => {
       await persistUser(data.user);
       setUserState(data.user);
       setJustRegistered(true);
-      
+
       showToast({
         type: "success",
         message: "Account created successfully! Welcome to GoAgriTrading.",
@@ -1351,8 +1351,21 @@ const handlePlaceOrder = async (opts = {}) => {
       });
       setTimeout(() => { router.replace("/tabs/home"); }, 2000);
     } else if (data.otpRequired) {
-      // OTP flow: let caller present OTP UI
-      showToast({ type: "success", message: "We sent a verification code to your email." });
+      // OTP flow: show contextual messaging based on email sending state
+      if (data.emailSent === false) {
+        showToast({
+          type: "error",
+          message: "We couldn’t send the verification code. Please check email settings.",
+        });
+        if (data.debugOtp) {
+          showToast({
+            type: "success",
+            message: `Dev-only: use code ${String(data.debugOtp)} to verify`,
+          });
+        }
+      } else {
+        showToast({ type: "success", message: "We sent a verification code to your email." });
+      }
     } else {
       // Legacy email link flow
       showToast({
