@@ -24,7 +24,7 @@ services:
       - key: EXPO_PUBLIC_API_URL
         value: https://goagritrading-backend.onrender.com
       - key: ALLOW_DIRECT_REG_WHEN_EMAIL_DISABLED
-        value: "1"
+        value: "0"
       - key: FRONTEND_SUCCESS_URL
         value: goagritrading://payment-success
       - key: FRONTEND_FAILED_URL
