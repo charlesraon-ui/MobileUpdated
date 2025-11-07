@@ -1342,8 +1342,33 @@ const handlePlaceOrder = async (opts = {}) => {
 
   // Registration initiation: supports OTP or direct creation
   const doRegisterInitiate = async ({ name, email, password, address }) => {
-    const response = await initiateRegister({ name, email, password, address });
-    const data = response.data || {};
+    let data;
+    try {
+      const response = await initiateRegister({ name, email, password, address });
+      data = response.data || {};
+    } catch (err) {
+      const status = err?.response?.status;
+      // Fallback: if OTP email is unavailable or failed, attempt direct registration
+      if (status === 503 || status === 502) {
+        const resp = await apiRegister({ name, email, password });
+        const { token, user: u } = resp.data || {};
+        await setToken(token);
+        setHasToken(!!token);
+        await persistUser(u);
+        setUserState(u);
+        setJustRegistered(true);
+
+        showToast({
+          type: "success",
+          message: "Account created successfully! Welcome to GoAgriTrading.",
+          actionLabel: "Continue",
+          onAction: () => router.replace("/tabs/home")
+        });
+        setTimeout(() => { router.replace("/tabs/home"); }, 2000);
+        return { emailVerificationRequired: false, token, user: u };
+      }
+      throw err;
+    }
 
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);

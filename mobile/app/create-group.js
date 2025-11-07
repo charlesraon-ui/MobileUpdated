@@ -67,7 +67,8 @@ export default function CreateGroupScreen() {
       setSearching(true);
       
       // For testing: make direct API call with token
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
+      const base = (require('../src/api/apiClient').API_URL);
+      const response = await fetch(`${base}/api/users/search?q=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +134,8 @@ export default function CreateGroupScreen() {
       
       const participantIds = selectedUsers.map(user => user._id);
       
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/group-chats`, {
+      const base2 = (require('../src/api/apiClient').API_URL);
+      const response = await fetch(`${base2}/api/group-chats`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

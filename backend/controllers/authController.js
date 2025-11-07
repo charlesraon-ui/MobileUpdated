@@ -184,19 +184,57 @@ export async function initiateRegistration(req, res) {
       });
 
       const emailDisabled = Boolean(emailResult && emailResult.disabled);
+      const emailFailed = !emailResult || emailResult.ok !== true;
+      const allowDirect = String(process.env.ALLOW_DIRECT_REG_WHEN_EMAIL_DISABLED || "1") === "1"; // default allow
 
-      // Strict enforcement: require email OTP and do NOT create user if email delivery is disabled
-      if (emailDisabled) {
-        console.warn("EMAIL_OTP_REQUIRED_BUT_DISABLED: SMTP not configured or delivery disabled");
-        return res.status(503).json({
-          message: "Email OTP is required but not configured. Please contact support.",
-          otpRequired: true,
-          email: normalizedEmail
+      // If email is disabled or failed and direct creation is allowed, create the user immediately
+      if ((emailDisabled || emailFailed) && allowDirect) {
+        console.warn("REGISTRATION: Email OTP not available, falling back to direct account creation");
+
+        // Ensure not already registered (re-check for safety)
+        const existing2 = await User.findOne({ email: normalizedEmail });
+        if (existing2) return res.status(409).json({ message: "Email already registered" });
+
+        const user = await User.create({
+          name,
+          email: normalizedEmail,
+          passwordHash: hash,
+          phoneNumber: phoneNumber || "",
+        });
+
+        // cleanup any pending registration records for this email
+        await PendingRegistration.deleteMany({ email: normalizedEmail });
+
+        const jwtToken = jwt.sign({ sub: user._id, email: user.email }, process.env.JWT_SECRET, {
+          expiresIn: JWT_EXPIRES,
+        });
+
+        // Fire-and-forget welcome email (best-effort)
+        try { await sendWelcomeEmail({ to: user.email, name: user.name }); } catch {}
+
+        return res.status(201).json({
+          message: "Account created successfully",
+          user: { id: user._id, name: user.name, email: user.email },
+          token: jwtToken,
+          emailVerificationRequired: false,
         });
       }
 
-      // Strict: if email failed to send, do not proceed
-      if (!emailResult || emailResult.ok !== true) {
+      // If email disabled but direct creation not allowed, inform client; include dev OTP when enabled
+      if (emailDisabled && !allowDirect) {
+        console.warn("EMAIL_OTP_REQUIRED_BUT_DISABLED: SMTP not configured or delivery disabled");
+        const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
+        return res.status(503).json({
+          message: "Email OTP is required but not configured. Please contact support.",
+          otpRequired: true,
+          email: normalizedEmail,
+          emailSent: false,
+          ...debugPayload
+        });
+      }
+
+      // If email failed to send and direct creation not allowed, return 502 with guidance
+      if (emailFailed && !allowDirect) {
         const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
         return res.status(502).json({
           message: "Failed to send OTP email. Please try again.",
@@ -207,7 +245,7 @@ export async function initiateRegistration(req, res) {
         });
       }
 
-      // Email sent successfully
+      // Email sent successfully -> OTP flow
       const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
       return res.status(202).json({
         message: "OTP sent via email",
@@ -218,10 +256,12 @@ export async function initiateRegistration(req, res) {
       });
     } catch (e) {
       console.warn("OTP_SEND_FAILED:", e?.message);
+      const debugPayload = (process.env.DEBUG_LOG_OTP === "1") ? { debugOtp: otpCode } : {};
       return res.status(502).json({
         message: "Failed to send OTP email.",
         otpRequired: true,
-        email: normalizedEmail
+        email: normalizedEmail,
+        ...debugPayload
       });
     }
   } catch (err) {

@@ -4,7 +4,19 @@ import Constants from 'expo-constants';
 class PromoService {
   constructor() {
     // Use environment variable for API URL
-    const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiUrl || "http://localhost:5000";
+    // Prefer app.json extra over environment; include manifestExtra fallback
+    const configApiUrl = (Constants?.expoConfig?.extra?.apiUrl) || (Constants?.manifestExtra?.apiUrl);
+    const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+    let API_URL = configApiUrl || envApiUrl || "http://localhost:5000";
+    try {
+      const host = new URL(API_URL).hostname;
+      const allowed = ["goagritrading-backend.onrender.com", "localhost", "127.0.0.1"];
+      if (!allowed.some(h => host.includes(h))) {
+        API_URL = "https://goagritrading-backend.onrender.com";
+      }
+    } catch {
+      API_URL = "https://goagritrading-backend.onrender.com";
+    }
     this.baseURL = `${API_URL}/api/promo`;
   }
 
