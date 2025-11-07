@@ -52,6 +52,7 @@ import { imageCache } from "../utils/imageCache";
 import socketService from "../services/socketService";
 import { API_URL } from "../api/apiClient";
 import { clearCart, loadCart, saveCart } from "./cartOrdersServices";
+import { safeTextForDisplay } from "../utils/dataSanitizer";
 
 export const AppCtx = createContext(null);
 
@@ -1202,6 +1203,18 @@ const handlePlaceOrder = async (opts = {}) => {
     console.log("🔥 ORDER PLACEMENT DEBUG: Error message:", e?.message);
     console.log("🔥 ORDER PLACEMENT DEBUG: Error response:", e?.response);
     console.log("🔥 ORDER PLACEMENT DEBUG: Error response data:", e?.response?.data);
+    // Handle expired/invalid session gracefully
+    if (e?.response?.status === 401) {
+      const msg = e?.response?.data?.message || "Session expired. Please login to continue.";
+      showToast({ type: "error", message: msg });
+      try {
+        await clearAuth();
+      } catch {}
+      setUserState(null);
+      setHasToken(false);
+      router.push("/login");
+      return { success: false, message: msg };
+    }
     return { 
       success: false, 
       message: e?.response?.data?.message || e?.message || "Order failed" 
@@ -1461,13 +1474,16 @@ const handlePlaceOrder = async (opts = {}) => {
     const c = p?.category;
     if (!c) return "Uncategorized";
     if (typeof c === "string") {
-      // First check if it's a valid category name (not an ID)
-      // Category IDs are typically long hex strings, category names are readable
-      if (c.length < 20 && !/^[0-9a-f]{24}$/i.test(c)) {
-        return c; // It's already a category name
+      // If it's a readable name, use it directly; otherwise prefer map lookup
+      const looksLikeObjectId = /^[0-9a-f]{24}$/i.test(c) || c.length >= 20;
+      if (!looksLikeObjectId) {
+        // Extra safety: avoid rendering any accidental ID-like text
+        return safeTextForDisplay(c, "Uncategorized") || "Uncategorized";
       }
-      // Otherwise, try to look it up in categoryMap (it's an ID)
-      return categoryMap[c] || c;
+      // Otherwise, try to look it up in categoryMap (it's likely an ID)
+      // If not found, do NOT render the raw ID — fall back to a friendly label
+      const label = categoryMap[c];
+      return safeTextForDisplay(label || "", "Uncategorized") || "Uncategorized";
     }
     if (typeof c === "object") return c?.name || c?.categoryName || "Uncategorized";
     return "Uncategorized";

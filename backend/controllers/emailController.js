@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import twilio from "twilio";
+import sgMail from "@sendgrid/mail";
 
 function buildTransport() {
   const host = process.env.SMTP_HOST;
@@ -102,11 +103,10 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
 export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }) {
   try {
     const transporter = buildTransport();
-    if (!transporter) {
-      console.warn("EMAIL_DISABLED: SMTP env not configured");
-      return { ok: false, disabled: true };
+    const from = process.env.MAIL_FROM; // must be a verified sender email
+    if (!from) {
+      console.warn("MAIL_FROM not set: please configure a verified sender email");
     }
-    const from = process.env.MAIL_FROM || process.env.SMTP_USER;
     const subject = "Your GoAgriTrading verification code";
     const text = `Hello ${name || "there"},\n\nYour verification code is: ${otpCode}\nIt expires in ${ttlMinutes} minutes.\n\nEnter this code in the app to complete registration.`;
     const html = `
@@ -119,8 +119,29 @@ export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }
         <p>Enter this code in the app to complete registration.</p>
       </div>
     `;
-    await transporter.sendMail({ from, to, subject, text, html });
-    return { ok: true };
+    if (transporter && from) {
+      try {
+        await transporter.sendMail({ from, to, subject, text, html });
+        return { ok: true };
+      } catch (smtpErr) {
+        console.warn("SMTP_SEND_FAILED:", smtpErr?.message || smtpErr);
+      }
+    }
+
+    // Fallback: Twilio SendGrid API
+    const sgApiKey = process.env.SENDGRID_API_KEY;
+    if (!sgApiKey || !from) {
+      console.warn("SENDGRID_DISABLED: missing SENDGRID_API_KEY or MAIL_FROM");
+      return { ok: false, disabled: true };
+    }
+    try {
+      sgMail.setApiKey(sgApiKey);
+      await sgMail.send({ to, from, subject, text, html });
+      return { ok: true };
+    } catch (e) {
+      console.error("SENDGRID_SEND_ERROR:", e?.message || e);
+      return { ok: false, error: e?.message || String(e) };
+    }
   } catch (e) {
     console.error("SEND_OTP_EMAIL_ERROR:", e?.message || e);
     return { ok: false, error: e?.message || String(e) };

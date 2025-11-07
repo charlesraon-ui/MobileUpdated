@@ -26,8 +26,10 @@ export default function DigitalCardScreen() {
     redemptionHistory,
     rewardsLoading,
     loadAvailableRewards,
+    loadUsableRewards,
     loadRedemptionHistory,
     handleRedeemReward,
+    applyRewardDiscount,
     isLoggedIn,
     getLoyaltyStatus,
   } = useContext(AppCtx);

@@ -33,6 +33,7 @@ export default function HomeScreen() {
     setSelectedCategory,
     loyalty,
     socketService,
+    categoryLabelOf,
   } = useContext(AppCtx);
 
   // Local state for real-time product updates
@@ -234,7 +235,9 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.productMeta}>
             <Text style={styles.productCategory} numberOfLines={1}>
-              {product.category || 'General'}
+              {typeof categoryLabelOf === 'function'
+                ? categoryLabelOf(product)
+                : (product?.category?.name || product?.category?.categoryName || product?.category || 'Uncategorized')}
             </Text>
             {product.stock !== undefined && (
               <Text style={[
