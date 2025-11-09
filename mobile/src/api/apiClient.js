@@ -51,11 +51,22 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+const isAbortLike = (err) => {
+  const msg = String(err?.message || "").toLowerCase();
+  const code = err?.code;
+  const status = err?.response?.status;
+  return code === 'ERR_CANCELED' || msg.includes('aborted') || status === 499;
+};
+
 api.interceptors.response.use(
   (r) => {
     return r;
   },
   (err) => {
+    // Tag aborted/canceled requests so callers can silence logs
+    if (isAbortLike(err)) {
+      err.__silent = true;
+    }
     return Promise.reject(err);
   }
 );
@@ -132,23 +143,7 @@ export const googleAuth = (payload) => api.post(`/api/auth/google`, payload);
 export const requestPasswordReset = (email) => api.post(`/api/auth/password/forgot`, { email });
 export const completePasswordReset = (token, password) => api.post(`/api/auth/password/reset`, { token, password });
 
-export const getProducts = async () => {
-  console.log("🔥 API: getProducts() called");
-  try {
-    console.log("🔥 API: Making request to /api/products...");
-    const response = await api.get(`/api/products`);
-    console.log("🔥 API: getProducts() response status:", response.status);
-    console.log("🔥 API: getProducts() response data:", response.data);
-    console.log("🔥 API: getProducts() response data type:", typeof response.data);
-    console.log("🔥 API: getProducts() response data length:", response.data?.length);
-    return response;
-  } catch (error) {
-    console.error("🔥 API: getProducts() error:", error);
-    console.error("🔥 API: getProducts() error message:", error.message);
-    console.error("🔥 API: getProducts() error response:", error.response);
-    throw error;
-  }
-};
+export const getProducts = () => api.get(`/api/products`);
 export const getProductApi = (id) => api.get(`/api/products/${id}`);
 export const getCategories = () => api.get(`/api/categories`);
 
@@ -170,23 +165,7 @@ export const createOrder = (payload) => api.post(`/api/orders`, payload);
 export const createMyOrder = (payload) => api.post(`/api/orders/me`, payload);
 
 /** ------------- Bundles ------------- */
-export const getBundles = async () => {
-  console.log("🔥 API: getBundles() called");
-  try {
-    console.log("🔥 API: Making request to /api/bundles...");
-    const response = await api.get(`/api/bundles`);
-    console.log("🔥 API: getBundles() response status:", response.status);
-    console.log("🔥 API: getBundles() response data:", response.data);
-    console.log("🔥 API: getBundles() response data type:", typeof response.data);
-    console.log("🔥 API: getBundles() response data length:", response.data?.length);
-    return response;
-  } catch (error) {
-    console.error("🔥 API: getBundles() error:", error);
-    console.error("🔥 API: getBundles() error message:", error.message);
-    console.error("🔥 API: getBundles() error response:", error.response);
-    throw error;
-  }
-};
+export const getBundles = () => api.get(`/api/bundles`);
 export const getBundleApi = (id) => api.get(`/api/bundles/${id}`);
 
 /** ------------- Deliveries ------------- */

@@ -45,6 +45,9 @@ export default function RegisterScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Terms & Conditions consent
+  const [agreeTerms, setAgreeTerms] = useState(false);
+
   // PSGC address state
   const [province, setProvince] = useState(null);
   const [cityMun, setCityMun] = useState(null);
@@ -62,6 +65,9 @@ export default function RegisterScreen() {
   const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSubmitting, setOtpSubmitting] = useState(false);
+  // Legal modals
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -128,6 +134,7 @@ export default function RegisterScreen() {
     if (!cityMun?.code) return "Please select your city/municipality.";
     if (!barangay?.code) return "Please select your barangay.";
     if (!street.trim()) return "Please enter your street or house number.";
+    if (!agreeTerms) return "Please agree to the Terms and Privacy Policy.";
     return null;
   };
 
@@ -330,14 +337,14 @@ export default function RegisterScreen() {
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
-      <Text style={s.label}>Barangay</Text>
+      <Text style={s.label}>District</Text>
       <TouchableOpacity
         style={s.select}
         disabled={!cityMun?.code || loadingAddr || submitting}
         onPress={() => setShowBarangayModal(true)}
         activeOpacity={0.8}
       >
-        <Text style={s.selectText}>{barangay?.name || "Select barangay"}</Text>
+        <Text style={s.selectText}>{barangay?.name || "Select district"}</Text>
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
@@ -372,7 +379,7 @@ export default function RegisterScreen() {
 
       <SelectorModal
         visible={showBarangayModal}
-        title="Select Barangay"
+        title="Select District"
         data={barangays}
         keyExtractor={(item) => item.code}
         onClose={() => setShowBarangayModal(false)}
@@ -407,6 +414,102 @@ export default function RegisterScreen() {
         </View>
       </Modal>
 
+      {/* Terms & Conditions Modal */}
+      <Modal visible={showTermsModal} transparent animationType="fade" onRequestClose={() => setShowTermsModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Terms and Conditions</Text>
+              <TouchableOpacity onPress={() => setShowTermsModal(false)} style={s.modalClose}>
+                <Ionicons name="close" size={22} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={s.legalBody} showsVerticalScrollIndicator>
+              <Text style={s.helper}>
+                Welcome to Go Agri Trading. By creating an account, you agree to use the
+                application lawfully and responsibly. Do not share your login credentials
+                or attempt to compromise the system.
+              </Text>
+              <Text style={s.helper}>
+                We provide the services “as is” without warranties of any kind. To the
+                maximum extent permitted by law, Go Agri Trading is not liable for
+                indirect or consequential damages.
+              </Text>
+              <Text style={s.helper}>
+                You agree to provide accurate information during registration and keep
+                it up to date. We may suspend accounts engaged in fraud, abuse,
+                or other violations of these terms.
+              </Text>
+              <Text style={s.helper}>
+                These terms may change over time. Continued use after updates constitutes
+                acceptance of the revised terms.
+              </Text>
+            </ScrollView>
+            <View style={{ height: 8 }} />
+            <TouchableOpacity style={s.primaryBtn} onPress={() => { setAgreeTerms(true); setShowTermsModal(false); }}>
+              <Text style={s.primaryBtnText}>Agree & Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal visible={showPrivacyModal} transparent animationType="fade" onRequestClose={() => setShowPrivacyModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Privacy Policy</Text>
+              <TouchableOpacity onPress={() => setShowPrivacyModal(false)} style={s.modalClose}>
+                <Ionicons name="close" size={22} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={s.legalBody} showsVerticalScrollIndicator>
+              <Text style={s.helper}>
+                We collect the information you provide (such as name, email, and address)
+                to create and manage your account, and to deliver our services.
+              </Text>
+              <Text style={s.helper}>
+                We may use analytics to improve the app. We do not sell your personal data.
+                We may share information with service providers only as necessary to
+                operate the platform.
+              </Text>
+              <Text style={s.helper}>
+                You can request access, correction, or deletion of your data by contacting
+                support. We retain data as required for legal or operational purposes.
+              </Text>
+              <Text style={s.helper}>
+                By using the app, you consent to this policy. Policy updates will be
+                posted in-app; continued use indicates acceptance.
+              </Text>
+            </ScrollView>
+            <View style={{ height: 8 }} />
+            <TouchableOpacity style={s.primaryBtn} onPress={() => { setAgreeTerms(true); setShowPrivacyModal(false); }}>
+              <Text style={s.primaryBtnText}>Agree & Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Terms and Privacy consent */}
+      <View style={s.termsRow}>
+        <TouchableOpacity
+          onPress={() => setAgreeTerms(!agreeTerms)}
+          style={[s.checkbox, agreeTerms && s.checkboxChecked]}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: agreeTerms }}
+        >
+          {agreeTerms && (
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
+        <Text style={s.termsText}>
+          I agree to the <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>Terms and Conditions</Text>
+          <Text> and </Text>
+          <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>Privacy Policy</Text>
+          <Text>.</Text>
+        </Text>
+      </View>
+
       {submitting ? (
         <View style={s.loading}>
           <ActivityIndicator />
@@ -414,9 +517,9 @@ export default function RegisterScreen() {
         </View>
       ) : (
         <TouchableOpacity
-          style={[s.primaryBtn, submitting && s.btnDisabled]}
+          style={[s.primaryBtn, (submitting || !agreeTerms) && s.btnDisabled]}
           onPress={onSubmit}
-          disabled={submitting}
+          disabled={submitting || !agreeTerms}
           activeOpacity={0.9}
         >
           <Text style={s.primaryBtnText}>Register</Text>
@@ -428,7 +531,7 @@ export default function RegisterScreen() {
       <View style={{ alignItems: "center" }}>
         <Text style={s.small}>Already have an account?</Text>
         <Link href="/login" asChild>
-          <Text style={[s.small, { color: "#065F46", textDecorationLine: "underline" }]}>Login</Text>
+          <Text style={StyleSheet.flatten([s.small, { color: "#065F46", textDecorationLine: "underline" }])}>Login</Text>
         </Link>
       </View>
         </View>
@@ -564,6 +667,10 @@ const s = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
   },
+  legalBody: {
+    maxHeight: 380,
+    paddingHorizontal: 4,
+  },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -589,6 +696,37 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
   },
   optionText: { color: "#111827" },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  checkboxChecked: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
+  },
+  termsText: {
+    flex: 1,
+    color: "#6B7280",
+    fontSize: 12,
+  },
+  termsLink: {
+    color: "#065F46",
+    textDecorationLine: "underline",
+    fontWeight: "700",
+  },
   
 });
 

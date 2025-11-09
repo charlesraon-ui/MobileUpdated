@@ -315,19 +315,19 @@ export default function LoginScreen() {
             <View style={{ alignItems: "center" }}>
               <Text style={s.small}>Don't have an account?</Text>
               <Link href="/register" asChild>
-                <Text style={[s.small, s.link]}>Sign up</Text>
+                <Text style={StyleSheet.flatten([s.small, s.link])}>Sign up</Text>
               </Link>
             </View>
 
             <View style={{ alignItems: "center", marginTop: 6 }}>
               <Link href="/forgot-password" asChild>
-                <Text style={[s.small, s.link]}>Forgot password?</Text>
+                <Text style={StyleSheet.flatten([s.small, s.link])}>Forgot password?</Text>
               </Link>
             </View>
 
             <View style={{ alignItems: "center", marginTop: 6 }}>
               <Link href="/landing" asChild>
-                <Text style={[s.small, s.link]}>← Back to landing</Text>
+                <Text style={StyleSheet.flatten([s.small, s.link])}>← Back to landing</Text>
               </Link>
             </View>
           </View>
