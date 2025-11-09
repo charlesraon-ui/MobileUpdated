@@ -30,8 +30,7 @@ const orderSchema = new mongoose.Schema(
     // keep totals in PESOS; compute in a pre-save if not provided
     subtotal: { type: Number, min: 0, default: 0 },     // items sum (pesos)
     deliveryFee: { type: Number, min: 0, default: 0 },  // pesos
-    taxAmount: { type: Number, min: 0, default: 0 },    // VAT amount (pesos)
-    total: { type: Number, min: 0, default: 0 },        // pesos = (subtotal - discounts) + tax + deliveryFee
+    total: { type: Number, min: 0, default: 0 },        // pesos = subtotal + deliveryFee
     totalWeightKg: { type: Number, min: 0, default: 0 }, // total weight in kg
 
     address: { type: String, default: "" },
@@ -92,24 +91,24 @@ orderSchema.pre("save", function (next) {
   this.subtotal = Math.round((Number(this.subtotal) || subtotal) * 100) / 100;
   this.deliveryFee = Math.round((Number(this.deliveryFee) || 0) * 100) / 100;
   
-  // Discounts
-  const promoDiscount = Number(this?.promoCode?.discount || 0);
-  const loyaltyDiscount = Number(this?.loyaltyReward?.discount || 0);
-  const discountTotal = Math.max(0, promoDiscount + loyaltyDiscount);
-
-  // Free shipping adjustment
-  const freeShipping = !!((this?.promoCode?.freeShipping) || (this?.loyaltyReward?.freeShipping));
-  const deliveryFeeAdjusted = freeShipping ? 0 : this.deliveryFee;
-
-  // Tax base = subtotal - discounts (not below 0)
-  const taxBase = Math.max(0, this.subtotal - discountTotal);
-  const VAT_RATE = 0.12;
-  const taxAmount = Math.round(taxBase * VAT_RATE * 100) / 100;
-  this.taxAmount = Math.round((Number(this.taxAmount) || taxAmount) * 100) / 100;
-
-  // Total = tax base + tax + delivery
-  const calculatedTotal = taxBase + this.taxAmount + deliveryFeeAdjusted;
-
+  // Calculate total with discounts
+  let calculatedTotal = this.subtotal + this.deliveryFee;
+  
+  // Apply promo code discount
+  if (this.promoCode && this.promoCode.discount > 0) {
+    calculatedTotal -= Number(this.promoCode.discount || 0);
+  }
+  
+  // Apply loyalty reward discount
+  if (this.loyaltyReward && this.loyaltyReward.discount > 0) {
+    calculatedTotal -= Number(this.loyaltyReward.discount || 0);
+  }
+  
+  // Apply free shipping discount
+  if ((this.promoCode && this.promoCode.freeShipping) || (this.loyaltyReward && this.loyaltyReward.freeShipping)) {
+    calculatedTotal -= this.deliveryFee;
+  }
+  
   // Only update total if it wasn't explicitly set or if it's being recalculated
   this.total = Math.round(Math.max(0, calculatedTotal) * 100) / 100; // Ensure total is never negative
   this.totalWeightKg = Math.round(totalWeight * 100) / 100; // round to 2 decimal places

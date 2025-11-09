@@ -323,9 +323,9 @@ export default function ProductDetailScreen() {
   );
 
   const img = useMemo(() => {
-    if (!productDetail) return require("../../assets/images/icon.png");
+    if (!productDetail) return require("../../assets/images/placeholder.svg");
     const imageSource = productDetail?.imageUrl || productDetail?.images?.[0];
-    if (!imageSource) return require("../../assets/images/icon.png");
+    if (!imageSource) return require("../../assets/images/placeholder.svg");
     if (String(imageSource).startsWith("http")) return imageSource;
     return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
   }, [productDetail, toAbsoluteUrl]);
@@ -489,8 +489,7 @@ export default function ProductDetailScreen() {
   const RecoRow = useCallback(({ item }) => {
     if (!item) return null;
     
-    const rawImg = item?.imageUrl || null;
-    const imgSrc = rawImg ? { uri: (toAbsoluteUrl?.(rawImg) || rawImg) } : require("../../assets/images/icon.png");
+    const imgSrc = item.imageUrl || require("../../assets/images/placeholder-small.svg");
     const averageRating = item.reviews?.length 
       ? (item.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / item.reviews.length)
       : (item.averageRating || 0);
@@ -503,7 +502,7 @@ export default function ProductDetailScreen() {
         activeOpacity={0.7}
       >
         <Image 
-          source={imgSrc} 
+          source={{ uri: imgSrc }} 
           style={s.recoImg}
           onError={(e) => console.log('Reco image load error:', e.nativeEvent.error)}
         />
@@ -637,7 +636,7 @@ export default function ProductDetailScreen() {
           {/* Image */}
           <View style={s.imageContainer}>
             <Image
-              source={typeof img === 'string' ? { uri: img } : img}
+              source={{ uri: img }}
               style={s.productImage}
               resizeMode="cover"
               onLoadStart={() => setImageLoading(true)}

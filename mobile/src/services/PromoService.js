@@ -10,12 +10,13 @@ class PromoService {
     let API_URL = configApiUrl || envApiUrl || "http://localhost:5000";
     try {
       const host = new URL(API_URL).hostname;
-      const allowed = ["goagritrading-backend.onrender.com", "localhost", "127.0.0.1"];
-      if (!allowed.some(h => host.includes(h))) {
-        API_URL = "https://goagritrading-backend.onrender.com";
+      const isLocal = host === "localhost" || host === "127.0.0.1";
+      const isRender = host.endsWith(".onrender.com") || host === "onrender.com";
+      if (!(isLocal || isRender)) {
+        API_URL = "https://goagritrading-backend.onrender.com"; // safe default
       }
     } catch {
-      API_URL = "https://goagritrading-backend.onrender.com";
+      API_URL = "https://goagritrading-backend.onrender.com"; // safe default when parsing fails
     }
     this.baseURL = `${API_URL}/api/promo`;
   }

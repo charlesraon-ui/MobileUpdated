@@ -55,14 +55,13 @@ export default function CartScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const qty = Number(item.quantity || 0);
     const price = Number(item.price || 0);
-    const img = item?.imageUrl;
-    const source = img ? { uri: img } : require("../../assets/images/icon.png");
+    const img = item.imageUrl || require("../../assets/images/placeholder-small.svg");
 
     return (
       <View style={s.modernItemCard}>
         <View style={s.itemContent}>
           <TouchableOpacity style={s.imageContainer} onPress={() => goToProductDetail(item)} activeOpacity={0.8}>
-            <Image source={source} style={s.modernThumb} />
+            <Image source={{ uri: img }} style={s.modernThumb} />
           </TouchableOpacity>
           
           <View style={s.itemDetails}>

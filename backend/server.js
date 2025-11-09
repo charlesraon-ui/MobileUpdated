@@ -1,5 +1,6 @@
 // server.js
 import dotenv from "dotenv";
+dotenv.config();
 
 import cors from "cors";
 import express from "express";
@@ -39,7 +40,6 @@ import promoRoutes from "./routes/promoRoutes.js";
 import deliveryMessageRoutes from "./routes/deliveryMessageRoutes.js";
 import priceAlertRoutes from "./routes/priceAlertRoutes.js";
 import priceMonitoringService from "./services/priceMonitoringService.js";
-dotenv.config();
 
 // ──────────────────────────────────────────────────────
 const app = express();
@@ -57,7 +57,6 @@ const io = new Server(server, {
   allowEIO3: true
 });
 const PORT = Number(process.env.PORT) || 5000; // Render sets PORT
-const HOST = "0.0.0.0"; // THIS IS CRITICAL FOR RENDER
 
 // middleware
 app.set("trust proxy", 1); // Render runs behind a proxy
@@ -242,18 +241,9 @@ const start = async () => {
     console.warn("⚠️ Starting API without DB connection. Set MONGO_URI in .env.");
   }
 
-  server.listen(PORT, HOST, () => {
-    console.log(`✅ Server is live on ${HOST}:${PORT}`);
-    console.log("✅ Socket.IO server ready");
-    console.log('Environment Check:', {
-      nodeEnv: process.env.NODE_ENV,
-      port: PORT,
-      host: HOST,
-      hasMongoUrl: !!process.env.MONGO_URL,
-      hasMongoUri: !!process.env.MONGO_URI,
-      hasLalamoveKey: !!process.env.LALAMOVE_API_KEY,
-      hasLalamoveSecret: !!process.env.LALAMOVE_API_SECRET,
-    });
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ API listening on ${PORT}`);
+    console.log(`✅ Socket.IO server ready`);
     if (!dbConnected) console.warn("⚠️ API running, but DB is not connected.");
     
     // Start price monitoring service if DB is connected

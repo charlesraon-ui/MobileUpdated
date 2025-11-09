@@ -10,7 +10,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
 
@@ -29,15 +28,6 @@ export default function CartScreen({ navigation }) {
   } = useContext(AppCtx);
 
   const [showMergeBanner, setShowMergeBanner] = useState(false);
-
-  // Responsive sizing for recommendation cards
-  const { width: screenWidth } = Dimensions.get("window");
-  const isTablet = screenWidth >= 768;
-  const isLarge = screenWidth >= 1024;
-  const recoCardWidth = isLarge ? 160 : isTablet ? 140 : screenWidth <= 360 ? 110 : 120;
-  const recoImageSize = isLarge ? 56 : isTablet ? 48 : 40;
-  const recoNameFont = isLarge ? 12 : isTablet ? 12 : 11;
-  const recoPriceFont = isLarge ? 12 : isTablet ? 12 : 11;
 
   useEffect(() => {
     if (justMergedFromGuest) {
@@ -65,14 +55,13 @@ export default function CartScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const qty = Number(item.quantity || 0);
     const price = Number(item.price || 0);
-    const img = item?.imageUrl;
-    const source = img ? { uri: img } : require("../../assets/images/icon.png");
+    const img = item.imageUrl || require("../../assets/images/placeholder-small.svg");
 
     return (
       <View style={s.modernItemCard}>
         <View style={s.itemContent}>
           <TouchableOpacity style={s.imageContainer} onPress={() => goToProductDetail(item)} activeOpacity={0.8}>
-            <Image source={source} style={s.modernThumb} />
+            <Image source={{ uri: img }} style={s.modernThumb} />
           </TouchableOpacity>
           
           <View style={s.itemDetails}>
@@ -215,95 +204,24 @@ export default function CartScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.recoScrollContent}
           >
-            {recoItems.map((p) => {
-              const categoryRaw = p?.category || p?.categoryName || p?.categoryLabel || "Product";
-              const category = String(categoryRaw).toLowerCase();
-
-              // Accent color and icon by category
-              const accentMap = {
-                seeds: "#10B981",
-                fertilizer: "#3B82F6",
-                pesticide: "#EF4444",
-                tools: "#8B5CF6",
-                rice: "#16A34A",
-                onion: "#F59E0B",
-                garlic: "#F87171",
-                vegetables: "#22C55E",
-                fruits: "#FB7185",
-                animal: "#6B7280",
-              };
-              const emojiMap = {
-                seeds: "🌱",
-                fertilizer: "🧪",
-                pesticide: "🛡️",
-                tools: "🧰",
-                rice: "🌾",
-                onion: "🧅",
-                garlic: "🧄",
-                vegetables: "🥬",
-                fruits: "🍎",
-                animal: "🐄",
-                product: "📦",
-              };
-
-              const accent = accentMap[category] || "#0EA5E9";
-              const emoji = emojiMap[category] || "📦";
-
-              const img = p?.imageUrl || p?.image || p?.thumbnail;
-              const source = img ? { uri: img } : null;
-              const price = Number(p?.price || 0).toFixed(2);
-
-              const stockVal = p?.stock ?? p?.quantityAvailable;
-              const inStock = typeof stockVal === "number" ? stockVal > 0 : true;
-
-              const reviews = Array.isArray(p?.reviews) ? p.reviews : [];
-              const rating = reviews.length
-                ? (reviews.reduce((sum, r) => sum + Number(r?.rating || 0), 0) / reviews.length).toFixed(1)
-                : null;
-
-              return (
-                <View key={p._id} style={[s.compactRecoCard, { borderColor: accent, backgroundColor: `${accent}10`, width: recoCardWidth }]}> 
-                  {/* Stock availability dot (yellow for in-stock) */}
-                  <View style={[s.compactRecoStockDot, { backgroundColor: inStock ? "#F59E0B" : "#EF4444" }]} accessibilityLabel={inStock ? "In stock" : "Out of stock"} />
-
-                  {/* Image or Emoji */}
-                  {source ? (
-                    <View style={[s.compactRecoImageWrap, { borderColor: accent, width: recoImageSize, height: recoImageSize, borderRadius: recoImageSize / 2 }]}> 
-                      <Image source={source} style={s.compactRecoImage} resizeMode="cover" />
-                    </View>
-                  ) : (
-                    <View style={[s.compactRecoImagePlaceholder, { backgroundColor: `${accent}22`, width: recoImageSize, height: recoImageSize, borderRadius: recoImageSize / 2 }]}> 
-                      <Text style={[s.compactRecoEmoji, { color: accent, fontSize: Math.round(recoImageSize * 0.45) }]}>{emoji}</Text>
-                    </View>
-                  )}
-
-                  {/* Name */}
-                  <Text style={[s.compactRecoName, { fontSize: recoNameFont }]} numberOfLines={2}>{p.name}</Text>
-
-                  {/* Price and rating row */}
-                  <View style={s.compactRecoMetaRow}>
-                    <View style={[s.compactRecoPriceTag, { backgroundColor: accent }]}> 
-                      <Text style={[s.compactRecoPriceText, { fontSize: recoPriceFont }]}>₱{price}</Text>
-                    </View>
-                    {rating && (
-                      <View style={s.compactRecoRating}>
-                        <Text style={s.compactRecoRatingText}>⭐ {rating}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Add button */}
-                  <TouchableOpacity 
-                    onPress={() => handleAddToCart(p)}
-                    style={[s.compactRecoAddButton, { borderColor: accent }]}
-                    activeOpacity={0.9}
-                  >
-                    <Ionicons name="add" size={12} color={accent} />
-                    <Text style={[s.compactRecoAddText, { color: accent }]}>Add</Text>
-                  </TouchableOpacity>
+            {recoItems.map((p) => (
+              <View key={p._id} style={s.compactRecoCard}>
+                <View style={s.compactRecoImagePlaceholder}>
+                  <Text style={s.compactRecoEmoji}>🌾</Text>
                 </View>
-              );
-            })}
+                <Text style={s.compactRecoName} numberOfLines={2}>{p.name}</Text>
+                <Text style={s.compactRecoPrice}>
+                  ₱{Number(p.price || 0).toFixed(2)}
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => handleAddToCart(p)}
+                  style={s.compactRecoAddButton}
+                >
+                  <Ionicons name="add" size={12} color="#10B981" />
+                  <Text style={s.compactRecoAddText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </ScrollView>
         </View>
       )}
@@ -680,136 +598,57 @@ const s = StyleSheet.create({
   },
 
   compactRecoCard: {
-    width: 120,
+    width: 100,
     backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 8,
+    padding: 8,
     alignItems: "center",
     marginRight: 12,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-    position: "relative",
-  },
-
-  compactRecoStockBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-
-  compactRecoStockText: {
-    fontSize: 9,
-    fontWeight: "700",
-  },
-
-  compactRecoStockDot: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-
-  compactRecoImageWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: "hidden",
-    marginBottom: 8,
-    backgroundColor: "#FFFFFF",
-  },
-
-  compactRecoImage: {
-    width: "100%",
-    height: "100%",
   },
 
   compactRecoImagePlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   compactRecoEmoji: {
-    fontSize: 18,
+    fontSize: 12,
   },
 
   compactRecoName: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "600",
     color: "#111827",
     textAlign: "center",
-    marginBottom: 6,
-    lineHeight: 14,
+    marginBottom: 4,
+    lineHeight: 12,
   },
 
-  compactRecoMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-
-  compactRecoPriceTag: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-
-  compactRecoPriceText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 11,
-  },
-
-  compactRecoRating: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-
-  compactRecoRatingText: {
-    color: "#6B7280",
+  compactRecoPrice: {
+    fontSize: 12,
     fontWeight: "700",
-    fontSize: 10,
+    color: "#10B981",
+    marginBottom: 6,
   },
 
   compactRecoAddButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-    borderWidth: 1,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    gap: 2,
   },
 
   compactRecoAddText: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "600",
     color: "#10B981",
   },
   checkoutSection: {

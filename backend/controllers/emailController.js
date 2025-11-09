@@ -2,28 +2,35 @@ import nodemailer from "nodemailer";
 import twilio from "twilio";
 import sgMail from "@sendgrid/mail";
 
-function buildTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+function getEmailEnv() {
+  const profile = (process.env.SMTP_PROFILE || "primary").toLowerCase();
+  const isSecondary = profile === "secondary";
+  const host = isSecondary ? (process.env.SMTP2_HOST || process.env.SMTP_HOST) : process.env.SMTP_HOST;
+  const portRaw = isSecondary ? (process.env.SMTP2_PORT || process.env.SMTP_PORT) : process.env.SMTP_PORT;
+  const port = Number(portRaw || 587);
+  const user = isSecondary ? (process.env.SMTP2_USER || process.env.SMTP_USER) : process.env.SMTP_USER;
+  const pass = isSecondary ? (process.env.SMTP2_PASS || process.env.SMTP_PASS) : process.env.SMTP_PASS;
+  const mailFrom = isSecondary ? (process.env.MAIL_FROM2 || process.env.MAIL_FROM || user) : (process.env.MAIL_FROM || user);
+  const sgApiKey = isSecondary ? (process.env.SENDGRID2_API_KEY || process.env.SENDGRID_API_KEY) : process.env.SENDGRID_API_KEY;
+  const replyTo = isSecondary ? (process.env.MAIL_REPLY_TO2 || process.env.MAIL_REPLY_TO || mailFrom) : (process.env.MAIL_REPLY_TO || mailFrom);
+  return { smtp: { host, port, user, pass }, mailFrom, sgApiKey, replyTo, profile };
+}
+
+function buildTransport(env) {
+  const { host, port, user, pass } = env.smtp || {};
   if (!host || !user || !pass) return null;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: { user, pass },
-  });
+  return nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
 }
 
 export async function sendWelcomeEmail({ to, name }) {
   try {
-    const transporter = buildTransport();
+    const cfg = getEmailEnv();
+    const transporter = buildTransport(cfg);
     if (!transporter) {
       console.warn("EMAIL_DISABLED: SMTP env not configured");
       return { ok: false, disabled: true };
     }
-    const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+    const from = cfg.mailFrom;
     const subject = "Welcome to GoAgriTrading";
     const text = `Hello ${name || "there"},\n\nYour account has been created successfully.\n\nHappy shopping!`;
     const html = `
@@ -44,12 +51,13 @@ export async function sendWelcomeEmail({ to, name }) {
 
 export async function sendRegistrationVerificationEmail({ to, name, verifyUrl }) {
   try {
-    const transporter = buildTransport();
+    const cfg = getEmailEnv();
+    const transporter = buildTransport(cfg);
     if (!transporter) {
       console.warn("EMAIL_DISABLED: SMTP env not configured");
       return { ok: false, disabled: true };
     }
-    const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+    const from = cfg.mailFrom;
     const subject = "Confirm your GoAgriTrading account";
     const text = `Hello ${name || "there"},\n\nPlease confirm account creation by opening this link:\n${verifyUrl}\n\nIf you did not request this, ignore this email.`;
     const html = `
@@ -73,7 +81,8 @@ export async function sendRegistrationVerificationEmail({ to, name, verifyUrl })
 
 export async function sendPasswordResetEmail({ to, name, resetUrl }) {
   try {
-    const from = process.env.MAIL_FROM || process.env.SMTP_USER; // prefer verified sender
+    const cfg = getEmailEnv();
+    const from = cfg.mailFrom;
     const subject = "GoAgriTrading: Password reset link";
     const text = `Hello ${name || "there"},\n\nYou requested to reset your password. Open this link to proceed:\n${resetUrl}\n\nIf you did not request this, ignore this email.`;
     const html = `
@@ -88,8 +97,7 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
       </div>
     `;
 
-    // Try SMTP first if configured
-    const transporter = buildTransport();
+    const transporter = buildTransport(cfg);
     if (transporter && from) {
       try {
         await transporter.sendMail({ from, to, subject, text, html });
@@ -101,8 +109,7 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
       console.warn("EMAIL_DISABLED: SMTP env not configured");
     }
 
-    // Fallback to SendGrid if available and from is verified
-    const sgApiKey = process.env.SENDGRID_API_KEY;
+    const sgApiKey = cfg.sgApiKey;
     if (!sgApiKey || !from) {
       console.warn("SENDGRID_DISABLED: missing SENDGRID_API_KEY or MAIL_FROM");
       return { ok: false, disabled: true };
@@ -130,8 +137,9 @@ export async function sendPasswordResetEmail({ to, name, resetUrl }) {
 
 export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }) {
   try {
-    const transporter = buildTransport();
-    const from = process.env.MAIL_FROM; // must be a verified sender email
+    const cfg = getEmailEnv();
+    const transporter = buildTransport(cfg);
+    const from = cfg.mailFrom;
     if (!from) {
       console.warn("MAIL_FROM not set: please configure a verified sender email");
     }
@@ -156,8 +164,7 @@ export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }
       }
     }
 
-    // Fallback: Twilio SendGrid API
-    const sgApiKey = process.env.SENDGRID_API_KEY;
+    const sgApiKey = cfg.sgApiKey;
     if (!sgApiKey || !from) {
       console.warn("SENDGRID_DISABLED: missing SENDGRID_API_KEY or MAIL_FROM");
       return { ok: false, disabled: true };
@@ -175,7 +182,7 @@ export async function sendRegistrationOtpEmail({ to, name, otpCode, ttlMinutes }
           clickTracking: { enable: false, enableText: false },
           openTracking: { enable: false },
         },
-        replyTo: process.env.MAIL_REPLY_TO || from,
+        replyTo: cfg.replyTo,
       });
       return { ok: true };
     } catch (e) {

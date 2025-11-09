@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { Link } from "expo-router";
 import { useEffect } from "react";
 import {
   Dimensions,
@@ -44,14 +44,14 @@ export default function Landing() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.scroll}>
-      <StatusBar barStyle="light-content" />
-      {/* Header removed as requested */}
+      <StatusBar barStyle="dark-content" />
+      {/* Header removed to center logo on card seam */}
 
       {/* Card */}
       <Animated.View style={[s.card, contentAnimatedStyle]}>
-        {/* Top section with solid background color (no hero image) */}
+        {/* Top section with light green background */}
         <View style={s.imageWrap}>
-          {/* Logo centered over the background */}
+          {/* Logo centered in the light green section */}
           <View style={s.imageOverlay}>
             <View
               style={[
@@ -82,13 +82,11 @@ export default function Landing() {
           </View>
 
           <View style={s.ctaBottom}>
-            <TouchableOpacity
-              style={s.cta}
-              activeOpacity={0.8}
-              onPress={() => router.push("/login")}
-            >
-              <Text style={s.ctaText}>Get Started</Text>
-            </TouchableOpacity>
+            <Link href="/login" asChild>
+              <TouchableOpacity style={s.cta} activeOpacity={0.8}>
+                <Text style={s.ctaText}>Get Started</Text>
+              </TouchableOpacity>
+            </Link>
             
             {/* Additional info */}
             <Text style={s.footerText}>
@@ -102,9 +100,9 @@ export default function Landing() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F1F5F9" },
-  scroll: { flexGrow: 1, backgroundColor: "#F1F5F9", minHeight: height },
-  
+  screen: { flex: 1, backgroundColor: "#F8FAFC" },
+  scroll: { flexGrow: 1, backgroundColor: "#F8FAFC", minHeight: height },
+  header: { paddingTop: 24, paddingHorizontal: 20, marginBottom: 8 },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 0,
@@ -125,7 +123,7 @@ const s = StyleSheet.create({
   imageWrap: { 
     height: Math.round(height * imagePct), 
     overflow: "hidden",
-    backgroundColor: "#A7F3D0"
+    backgroundColor: "#A7F3D0" // Light green background
   },
   imageOverlay: {
     position: "absolute",
@@ -138,7 +136,7 @@ const s = StyleSheet.create({
     zIndex: 2,
   },
   logoBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
@@ -152,10 +150,10 @@ const s = StyleSheet.create({
     }),
   },
   cardBody: {
-    backgroundColor: "#065F46",
+    backgroundColor: "#064E3B",
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 36,
+    paddingTop: 20,
+    paddingBottom: 32,
     flex: 1,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
@@ -163,28 +161,28 @@ const s = StyleSheet.create({
     justifyContent: "flex-start",
   },
   textBlock: {
-    gap: 14,
-    paddingTop: 18,
+    gap: 12,
+    paddingTop: 16,
     alignItems: "center",
   },
   ctaBottom: {
     marginTop: "auto",
     alignItems: "center",
-    gap: 18,
+    gap: 16,
   },
   title: { 
     color: "#FFFFFF", 
-    fontSize: 33, 
+    fontSize: 32, 
     fontWeight: "900", 
-    letterSpacing: -0.6, 
+    letterSpacing: -0.8, 
     textAlign: "center",
-    lineHeight: 40,
+    lineHeight: 38,
   },
   subtitle: { 
-    color: "#E7F9F2", 
+    color: "#D1FAE5", 
     marginTop: 12, 
     fontSize: 17, 
-    lineHeight: 27, 
+    lineHeight: 26, 
     textAlign: "center",
     paddingHorizontal: 8,
   },
@@ -193,7 +191,7 @@ const s = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "rgba(16, 185, 129, 0.14)",
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
     borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: "#10B981",
@@ -208,9 +206,9 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   verseText: {
-    color: "#F0FFFB",
+    color: "#E6FFFA",
     fontSize: 15,
-    lineHeight: 23,
+    lineHeight: 22,
     textAlign: "center",
     fontStyle: "italic",
   },
@@ -240,7 +238,7 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   footerText: {
-    color: "#BFF7E4",
+    color: "#A7F3D0",
     fontSize: 14,
     textAlign: "center",
     fontWeight: "500",

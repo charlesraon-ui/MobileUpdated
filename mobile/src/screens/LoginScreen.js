@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import {
   ActivityIndicator,
@@ -314,21 +314,21 @@ export default function LoginScreen() {
           <View style={s.linksContainer}>
             <View style={{ alignItems: "center" }}>
               <Text style={s.small}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push("/register")} activeOpacity={0.7}>
+              <Link href="/register" asChild>
                 <Text style={[s.small, s.link]}>Sign up</Text>
-              </TouchableOpacity>
+              </Link>
             </View>
 
             <View style={{ alignItems: "center", marginTop: 6 }}>
-              <TouchableOpacity onPress={() => router.push("/forgot-password")} activeOpacity={0.7}>
+              <Link href="/forgot-password" asChild>
                 <Text style={[s.small, s.link]}>Forgot password?</Text>
-              </TouchableOpacity>
+              </Link>
             </View>
 
             <View style={{ alignItems: "center", marginTop: 6 }}>
-              <TouchableOpacity onPress={() => router.push("/landing")} activeOpacity={0.7}>
+              <Link href="/landing" asChild>
                 <Text style={[s.small, s.link]}>← Back to landing</Text>
-              </TouchableOpacity>
+              </Link>
             </View>
           </View>
         </View>

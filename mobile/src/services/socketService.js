@@ -46,14 +46,12 @@ class SocketService {
       })();
 
       // Guard against unexpected/stale domains to prevent misrouted connections
-      const allowedHosts = [
-        'goagritrading-backend.onrender.com',
-        'localhost',
-        '127.0.0.1'
-      ];
+      // Allow any Render subdomain and localhost for WebSocket origin
       let hostname = resolvedUrl;
       try { hostname = new URL(resolvedUrl).hostname; } catch {}
-      const isAllowed = allowedHosts.some(h => hostname.includes(h));
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+      const isRender = String(hostname).endsWith('.onrender.com') || hostname === 'onrender.com';
+      const isAllowed = isLocal || isRender;
       if (!isAllowed) {
         console.warn('⚠️ Blocking socket connection: unexpected base URL', resolvedUrl);
         this.isConnecting = false;

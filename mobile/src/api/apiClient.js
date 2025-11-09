@@ -18,16 +18,16 @@ try {
   }
 } catch {}
 
-// Guard against unexpected/stale domains; default to the new backend
+// Guard against unexpected/stale domains; allow any Render subdomain and localhost
 try {
   const host = new URL(API_URL).hostname;
-  const allowed = ["goagritrading-backend.onrender.com", "localhost", "127.0.0.1"];
-  if (!allowed.some(h => host.includes(h))) {
-    API_URL = "https://goagritrading-backend.onrender.com";
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  const isRender = host.endsWith(".onrender.com") || host === "onrender.com";
+  if (!(isLocal || isRender)) {
+    API_URL = "https://goagritrading-backend.onrender.com"; // safe default
   }
 } catch {
-  // Non-URL string; force to new backend
-  API_URL = "https://goagritrading-backend.onrender.com";
+  API_URL = "https://goagritrading-backend.onrender.com"; // safe default when parsing fails
 }
 
 /** ------------- Axios instance ------------- */

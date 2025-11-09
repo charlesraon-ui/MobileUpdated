@@ -1,5 +1,5 @@
 // src/screens/RegisterScreen.js
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,7 +20,6 @@ import { AppCtx } from "../context/AppContext";
 import psgc from "../services/psgcService";
 import GoAgriLogo from "../../components/GoAgriLogo";
 import Toast from "../../components/Toast";
-import TERMS_CONTENT from "../constants/terms";
 
 const { height } = Dimensions.get('window');
 const placeholderColor = 'rgba(55, 65, 81, 0.5)';
@@ -63,9 +62,6 @@ export default function RegisterScreen() {
   const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSubmitting, setOtpSubmitting] = useState(false);
-  // Terms & Conditions state
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -132,7 +128,6 @@ export default function RegisterScreen() {
     if (!cityMun?.code) return "Please select your city/municipality.";
     if (!barangay?.code) return "Please select your barangay.";
     if (!street.trim()) return "Please enter your street or house number.";
-    if (!agreeTerms) return "You must agree to our terms & conditions.";
     return null;
   };
 
@@ -141,43 +136,43 @@ export default function RegisterScreen() {
     if (err) { setError(err); return; }
     setSubmitting(true);
     setError("");
-    const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
-
-    const address = [
-      street.trim(),
-      barangay?.name,
-      cityMun?.name,
-      province?.name,
-    ].filter(Boolean).join(", ");
-
-    const payload = {
-      name,
-      email: email.trim().toLowerCase(),
-      password,
-      address,
-    };
     try {
+      const name = `${firstName.trim()}${middleInitial.trim() ? " " + middleInitial.trim() + "." : ""} ${lastName.trim()}`.trim();
+
+      const address = [
+        street.trim(),
+        barangay?.name,
+        cityMun?.name,
+        province?.name,
+      ].filter(Boolean).join(", ");
+
+      const payload = {
+        name,
+        email: email.trim().toLowerCase(),
+        password,
+        address,
+      };
       const data = await doRegisterInitiate(payload);
-      // Regardless of server response, proceed to OTP screen so user can verify or resend
-      router.push({ pathname: "/otp", params: { email: payload.email, name: payload.name, password: payload.password, address: payload.address, debugOtp: String(data?.debugOtp || "") } });
+      if (data?.otpRequired) {
+        const e = payload.email;
+        // Pass full payload so OTP screen can support "Resend code"
+        // Also pass debugOtp if backend provided it (for dev/testing)
+        router.push({ pathname: "/otp", params: { email: e, name: payload.name, password: payload.password, address: payload.address, debugOtp: String(data?.debugOtp || "") } });
+      }
     } catch (e) {
       const status = e?.response?.status;
       const apiMsg = e?.response?.data?.message;
-      if (status === 409) {
-        // Email already exists: stay on register and show error, guide to login
-        setError("Email is already registered.");
-      } else {
-        // Navigate to OTP screen anyway; user can try Resend from there
-        router.push({ pathname: "/otp", params: { email: payload.email, name: payload.name, password: payload.password, address: payload.address } });
-        setError(apiMsg || "We couldn’t initiate verification. You can request a new code.");
-      }
+      const msg =
+        status === 409
+          ? "Email is already registered."
+          : status === 400
+          ? apiMsg || "Please check the information you entered."
+          : "Unable to register right now. Please try again.";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
-
-  // Button enabled state: only true when entire form is valid
-  const canSubmit = validate() === null;
 
   const submitOtp = async () => {
     if (!otpCode || otpCode.length !== 6) { setError("Please enter the 6-digit code."); return; }
@@ -335,14 +330,14 @@ export default function RegisterScreen() {
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
-      <Text style={s.label}>District</Text>
+      <Text style={s.label}>Barangay</Text>
       <TouchableOpacity
         style={s.select}
         disabled={!cityMun?.code || loadingAddr || submitting}
         onPress={() => setShowBarangayModal(true)}
         activeOpacity={0.8}
       >
-        <Text style={s.selectText}>{barangay?.name || "Select district"}</Text>
+        <Text style={s.selectText}>{barangay?.name || "Select barangay"}</Text>
         <Ionicons name="chevron-down" size={18} color="#374151" />
       </TouchableOpacity>
 
@@ -377,7 +372,7 @@ export default function RegisterScreen() {
 
       <SelectorModal
         visible={showBarangayModal}
-        title="Select District"
+        title="Select Barangay"
         data={barangays}
         keyExtractor={(item) => item.code}
         onClose={() => setShowBarangayModal(false)}
@@ -412,71 +407,29 @@ export default function RegisterScreen() {
         </View>
       </Modal>
 
-      {/* Terms Modal */}
-      <Modal visible={showTermsModal} transparent animationType="fade" onRequestClose={() => setShowTermsModal(false)}>
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { maxHeight: height * 0.75 }] }>
-            <View style={s.modalHeader}>
-              <View style={s.modalClose} />
-              <Text style={s.modalTitle}>Terms & Conditions</Text>
-              <TouchableOpacity onPress={() => setShowTermsModal(false)} style={s.modalClose}>
-                <Ionicons name="close" size={22} color="#374151" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator>
-              <Text style={{ color: '#374151', lineHeight: 22 }}>{TERMS_CONTENT}</Text>
-            </ScrollView>
-            <View style={{ height: 8 }} />
-            <View>
-              <TouchableOpacity style={[s.primaryBtn]} onPress={() => { setAgreeTerms(true); setShowTermsModal(false); }}>
-                <Text style={s.primaryBtnText}>Agree & Continue</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       {submitting ? (
         <View style={s.loading}>
           <ActivityIndicator />
           <Text style={{ marginLeft: 8 }}>Creating your account…</Text>
         </View>
       ) : (
-        <>
-        {/* Terms & Conditions */}
-        <View style={{ marginBottom: 8 }}>
-          <TouchableOpacity onPress={() => setShowTermsModal(true)} activeOpacity={0.7}>
-            <Text style={[s.small, { color: "#2563EB" }]}>Show Terms</Text>
-          </TouchableOpacity>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
-            <TouchableOpacity onPress={() => setAgreeTerms(!agreeTerms)} activeOpacity={0.7} style={{ padding: 4 }}>
-              <Ionicons name={agreeTerms ? "checkbox" : "square-outline"} size={20} color={agreeTerms ? "#065F46" : "#374151"} />
-            </TouchableOpacity>
-            <Text style={s.small}>Please confirm that you agree to our terms & conditions</Text>
-          </View>
-        </View>
         <TouchableOpacity
-          style={[
-            s.primaryBtn,
-            !canSubmit ? { backgroundColor: '#9CA3AF', shadowColor: '#9CA3AF' } : null,
-            submitting && s.btnDisabled,
-          ]}
+          style={[s.primaryBtn, submitting && s.btnDisabled]}
           onPress={onSubmit}
-          disabled={submitting || !canSubmit}
+          disabled={submitting}
           activeOpacity={0.9}
         >
           <Text style={s.primaryBtnText}>Register</Text>
         </TouchableOpacity>
-        </>
       )}
 
       <View style={{ height: 16 }} />
 
       <View style={{ alignItems: "center" }}>
         <Text style={s.small}>Already have an account?</Text>
-        <TouchableOpacity onPress={() => router.push("/login")} activeOpacity={0.7}>
+        <Link href="/login" asChild>
           <Text style={[s.small, { color: "#065F46", textDecorationLine: "underline" }]}>Login</Text>
-        </TouchableOpacity>
+        </Link>
       </View>
         </View>
       </ScrollView>
@@ -670,6 +623,6 @@ function SelectorModal({ visible, title, data, keyExtractor, onClose, onSelect }
           </ScrollView>
         </View>
       </View>
-      </Modal>
+    </Modal>
   );
 }

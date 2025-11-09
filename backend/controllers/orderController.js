@@ -105,19 +105,9 @@ export const createEPaymentOrder = async (req, res) => {
     const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
     const totalWeight = items.reduce((s, it) => s + Number(it.weightKg || 0) * Number(it.quantity), 0);
     
-    // Compute VAT after discounts (if any provided in body meta)
-    const promoDiscount = Number(promoCode?.discount || 0);
-    const loyaltyDiscount = Number(loyaltyReward?.discount || 0);
-    const discountTotal = Math.max(0, promoDiscount + loyaltyDiscount);
-    const VAT_RATE = 0.12;
-    const taxBase = Math.max(0, subtotal - discountTotal);
-    const taxAmount = Math.round(taxBase * VAT_RATE * 100) / 100;
-
-    const effectiveDeliveryFee = (promoCode?.freeShipping || loyaltyReward?.freeShipping) ? 0 : deliveryFee;
-
     const total = Number.isFinite(toNum(totalInBody)) && toNum(totalInBody) > 0
       ? toNum(totalInBody)
-      : Math.round((taxBase + taxAmount + effectiveDeliveryFee) * 100) / 100;
+      : Math.round((subtotal + deliveryFee) * 100) / 100;
 
     // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
    // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
@@ -158,7 +148,6 @@ export const createEPaymentOrder = async (req, res) => {
       items,
       subtotal,
       deliveryFee,
-      taxAmount,
       total,
       totalWeight: Math.round(totalWeight * 100) / 100,
       address,
@@ -195,24 +184,6 @@ export const createEPaymentOrder = async (req, res) => {
       name: item.name,
       quantity: item.quantity,
     }));
-
-    // Add delivery fee and VAT as separate line items for accurate checkout total
-    if (Number(effectiveDeliveryFee) > 0) {
-      lineItems.push({
-        currency: "PHP",
-        amount: Math.round(Number(effectiveDeliveryFee) * 100),
-        name: "Delivery Fee",
-        quantity: 1,
-      });
-    }
-    if (Number(taxAmount) > 0) {
-      lineItems.push({
-        currency: "PHP",
-        amount: Math.round(Number(taxAmount) * 100),
-        name: "VAT (12%)",
-        quantity: 1,
-      });
-    }
 
     const backendUrl = process.env.BACKEND_URL || 'https://goagritrading-backend.onrender.com';
 
@@ -358,19 +329,9 @@ export const createMyOrder = async (req, res) => {
       : deliveryType === "third-party" ? 80
       : 50;
 
-    // Compute VAT after discounts (if any provided in body)
-    const promoDiscount = Number(promoCode?.discount || 0);
-    const loyaltyDiscount = Number(loyaltyReward?.discount || 0);
-    const discountTotal = Math.max(0, promoDiscount + loyaltyDiscount);
-    const VAT_RATE = 0.12;
-    const taxBase = Math.max(0, subtotal - discountTotal);
-    const taxAmount = Math.round(taxBase * VAT_RATE * 100) / 100;
-
-    const effectiveDeliveryFee = (promoCode?.freeShipping || loyaltyReward?.freeShipping) ? 0 : deliveryFee;
-
     const total = Number.isFinite(Number(totalInBody)) && Number(totalInBody) > 0
       ? Number(totalInBody)
-      : Math.round((taxBase + taxAmount + effectiveDeliveryFee) * 100) / 100;
+      : Math.round((subtotal + deliveryFee) * 100) / 100;
 
     // ⭐ DECREASE INVENTORY
     await processOrderInventory(items);
@@ -387,7 +348,6 @@ export const createMyOrder = async (req, res) => {
       items,
       subtotal,
       deliveryFee,
-      taxAmount,
       total,
       totalWeight: Math.round(totalWeight * 100) / 100,
       address,
@@ -584,12 +544,9 @@ export const createOrder = async (req, res) => {
       : deliveryType === "third-party" ? 80
       : 50;
 
-    // Compute VAT without promo/loyalty context (admin may set totals). If none provided, compute basic VAT.
-    const VAT_RATE = 0.12;
-    const taxAmount = Math.round(subtotal * VAT_RATE * 100) / 100;
     const total = Number.isFinite(Number(totalInBody)) && Number(totalInBody) > 0
       ? Number(totalInBody)
-      : Math.round((subtotal + taxAmount + deliveryFee) * 100) / 100;
+      : Math.round((subtotal + deliveryFee) * 100) / 100;
 
     // ⭐ DECREASE INVENTORY
     await processOrderInventory(items);
@@ -605,7 +562,6 @@ export const createOrder = async (req, res) => {
       items,
       subtotal,
       deliveryFee,
-      taxAmount,
       total,
       totalWeight: Math.round(totalWeight * 100) / 100,
       address,

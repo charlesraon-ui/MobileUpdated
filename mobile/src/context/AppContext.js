@@ -1347,15 +1347,52 @@ const handlePlaceOrder = async (opts = {}) => {
       const response = await initiateRegister({ name, email, password, address });
       data = response.data || {};
     } catch (err) {
-      // Do not auto-register on failures. Surface the error and let
-      // the Register/OTP screens handle resend or recovery.
+      const status = err?.response?.status;
+      const code = err?.code;
+      const msg = String(err?.message || "").toLowerCase();
+      const isNetworkAbort = !status || code === 'ERR_NETWORK' || code === 'ERR_CANCELED' || msg.includes('aborted') || msg.includes('network');
+      const isServerError = typeof status === 'number' && status >= 500;
+      // Fallback: if OTP email is unavailable or failed, or network/abort error occurred, attempt direct registration
+      if (status === 503 || status === 502 || isNetworkAbort || isServerError) {
+        const resp = await apiRegister({ name, email, password });
+        const { token, user: u } = resp.data || {};
+        await setToken(token);
+        setHasToken(!!token);
+        await persistUser(u);
+        setUserState(u);
+        setJustRegistered(true);
+
+        showToast({
+          type: "success",
+          message: "Account created successfully! Welcome to GoAgriTrading.",
+          actionLabel: "Continue",
+          onAction: () => router.replace("/tabs/home")
+        });
+        setTimeout(() => { router.replace("/tabs/home"); }, 2000);
+        return { emailVerificationRequired: false, token, user: u };
+      }
       throw err;
     }
 
     setJustLoggedInName(name || email || "there");
     setJustRegistered(false);
 
-    if (data.otpRequired) {
+    // If backend created the account directly (e.g., email disabled), log in
+    if (data.emailVerificationRequired === false && data.token && data.user) {
+      await setToken(data.token);
+      setHasToken(!!data.token);
+      await persistUser(data.user);
+      setUserState(data.user);
+      setJustRegistered(true);
+
+      showToast({
+        type: "success",
+        message: "Account created successfully! Welcome to GoAgriTrading.",
+        actionLabel: "Continue",
+        onAction: () => router.replace("/tabs/home")
+      });
+      setTimeout(() => { router.replace("/tabs/home"); }, 2000);
+    } else if (data.otpRequired) {
       // OTP flow: show contextual messaging based on email sending state
       if (data.emailSent === false) {
         showToast({
@@ -1371,6 +1408,15 @@ const handlePlaceOrder = async (opts = {}) => {
       } else {
         showToast({ type: "success", message: "We sent a verification code to your email." });
       }
+    } else {
+      // Legacy email link flow
+      showToast({
+        type: "success",
+        message: "Registration initiated! Check your email for a verification link.",
+        actionLabel: "Go to Login",
+        onAction: () => router.replace("/login")
+      });
+      setTimeout(() => { router.replace("/login"); }, 3000);
     }
     return data; // allow caller to proceed with OTP UI when needed
   };
