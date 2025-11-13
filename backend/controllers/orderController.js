@@ -20,6 +20,7 @@ export const createEPaymentOrder = async (req, res) => {
       address = "",
       deliveryFee: deliveryFeeInBody = 0,
       total: totalInBody,
+      taxAmount: taxInBody,
       channel = "multi",
       promoCode = null,
       loyaltyReward = null,
@@ -103,11 +104,14 @@ export const createEPaymentOrder = async (req, res) => {
       : 50;
 
     const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
+    const tax = Number.isFinite(toNum(taxInBody)) && toNum(taxInBody) >= 0
+      ? Math.round(toNum(taxInBody) * 100) / 100
+      : Math.round(subtotal * 0.12 * 100) / 100;
     const totalWeight = items.reduce((s, it) => s + Number(it.weightKg || 0) * Number(it.quantity), 0);
     
     const total = Number.isFinite(toNum(totalInBody)) && toNum(totalInBody) > 0
       ? toNum(totalInBody)
-      : Math.round((subtotal + deliveryFee) * 100) / 100;
+      : Math.round((subtotal + tax + deliveryFee) * 100) / 100;
 
     // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
    // ⭐ CHECK INVENTORY BEFORE CREATING ORDER
@@ -147,6 +151,7 @@ export const createEPaymentOrder = async (req, res) => {
       customerPhone: user?.address || "", // Using address field as phone for now
       items,
       subtotal,
+      tax,
       deliveryFee,
       total,
       totalWeight: Math.round(totalWeight * 100) / 100,
@@ -274,6 +279,7 @@ export const createMyOrder = async (req, res) => {
       address = "",
       deliveryFee: deliveryFeeInBody = 0,
       total: totalInBody,
+      taxAmount: taxInBody,
       paymentMethod = "COD",
       promoCode = null,
       loyaltyReward = null,
@@ -321,6 +327,9 @@ export const createMyOrder = async (req, res) => {
     const items = itemsWithWeights;
 
     const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const tax = Number.isFinite(Number(taxInBody)) && Number(taxInBody) >= 0
+      ? Math.round(Number(taxInBody) * 100) / 100
+      : Math.round(subtotal * 0.12 * 100) / 100;
     const totalWeight = items.reduce((s, i) => s + (i.weightKg || 0) * i.quantity, 0);
     
     const deliveryFee =
@@ -331,7 +340,7 @@ export const createMyOrder = async (req, res) => {
 
     const total = Number.isFinite(Number(totalInBody)) && Number(totalInBody) > 0
       ? Number(totalInBody)
-      : Math.round((subtotal + deliveryFee) * 100) / 100;
+      : Math.round((subtotal + tax + deliveryFee) * 100) / 100;
 
     // ⭐ DECREASE INVENTORY
     await processOrderInventory(items);
@@ -347,6 +356,7 @@ export const createMyOrder = async (req, res) => {
       customerPhone: user?.address || "", // Using address field as phone for now
       items,
       subtotal,
+      tax,
       deliveryFee,
       total,
       totalWeight: Math.round(totalWeight * 100) / 100,

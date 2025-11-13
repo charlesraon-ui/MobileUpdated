@@ -241,6 +241,17 @@ function OrderDetailsModal({ order, visible, onClose }) {
                         : `₱${Number(order.deliveryFee || 0).toFixed(2)}`}
                     </Text>
                   </View>
+                  <View style={s.summaryRow}>
+                    <Text style={s.summaryLabel}>Tax (12%):</Text>
+                    <Text style={s.summaryValue}>
+                      ₱{(
+                        Number(order.tax || 0) ||
+                        Number(
+                          (order.subtotal || order.items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0)) * 0.12
+                        )
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
                   {((order.promoCode && order.promoCode.freeShipping) || (order.loyaltyReward && order.loyaltyReward.freeShipping)) && (
                     <View style={s.summaryRow}>
                       <Text style={[s.summaryLabel, { color: GREEN_DARK }]}>Free Shipping:</Text>

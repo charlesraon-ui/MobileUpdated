@@ -105,9 +105,10 @@ export default function CheckoutScreen() {
   const calculateOrderTotals = () => {
     const deliveryFee = (freeShipping || rewardFreeShipping) ? 0 : getDeliveryFee(deliveryMethod);
     const subtotal = cartTotalAfterDiscount - promoDiscount - rewardDiscount;
-    const total = subtotal + deliveryFee;
+    const tax = Math.round(subtotal * 0.12 * 100) / 100;
+    const total = subtotal + tax + deliveryFee;
 
-    return { deliveryFee, subtotal, total };
+    return { deliveryFee, subtotal, tax, total };
   };
 
   // Validations
@@ -123,7 +124,7 @@ export default function CheckoutScreen() {
   const disabled = !isLoggedIn || cartTotalAfterDiscount <= 0 || !!addrError || placing;
 
   // Calculate final total for display
-  const { deliveryFee, subtotal, total: finalTotal } = calculateOrderTotals();
+  const { deliveryFee, subtotal, tax, total: finalTotal } = calculateOrderTotals();
 
   // ✅ FIXED PLACE ORDER FUNCTION
   const onPlace = async () => {
@@ -144,8 +145,8 @@ export default function CheckoutScreen() {
 
     try {
       // ✅ CALCULATE TOTALS FIRST - THIS WAS THE BUG!
-      const { deliveryFee, subtotal, total } = calculateOrderTotals();
-      console.log("🚀 ORDER DEBUG: Calculated totals - deliveryFee:", deliveryFee, "subtotal:", subtotal, "total:", total);
+      const { deliveryFee, subtotal, tax, total } = calculateOrderTotals();
+      console.log("🚀 ORDER DEBUG: Calculated totals - deliveryFee:", deliveryFee, "subtotal:", subtotal, "tax:", tax, "total:", total);
 
       // ✅ E-PAYMENT FLOW
       if (paymentMethod === "E-Payment") {
@@ -162,6 +163,7 @@ export default function CheckoutScreen() {
             quantity: Number(item.quantity || 1)
           })),
           total: total,
+          taxAmount: tax,
           deliveryFee: deliveryFee,
           address: deliveryMethod === "pickup"
             ? "Poblacion 1, Moncada\nTarlac, Philippines"
@@ -234,6 +236,7 @@ export default function CheckoutScreen() {
           ? "Poblacion 1, Moncada\nTarlac, Philippines"
           : deliveryAddress.trim(),
         total,
+        taxAmount: tax,
         deliveryFee,
         promoCode: appliedPromo ? {
           code: appliedPromo.code,
@@ -343,6 +346,10 @@ export default function CheckoutScreen() {
                rewardFreeShipping ? "FREE (Reward)" : 
                `₱${getDeliveryFee(deliveryMethod)}.00`}
             </Text>
+          </View>
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>Tax (12%)</Text>
+            <Text style={s.summaryValue}>₱{tax.toFixed(2)}</Text>
           </View>
           <View style={s.summaryDivider} />
           <View style={s.totalRow}>

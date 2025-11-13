@@ -239,6 +239,10 @@ export default function OrderDetailsPage() {
                   <Text style={s.summaryLabel}>Delivery Fee</Text>
                   <Text style={s.summaryValue}>₱{Number(order.deliveryFee || 0).toFixed(2)}</Text>
                 </View>
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Tax (12%)</Text>
+                  <Text style={s.summaryValue}>₱{(Number(order.tax || 0) || (Number(order.items?.reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || 0)), 0)) * 0.12)).toFixed(2)}</Text>
+                </View>
                 <View style={[s.summaryRow, s.summaryTotal]}>
                   <Text style={s.summaryTotalLabel}>Total</Text>
                   <Text style={s.summaryTotalValue}>₱{Number(order.total || 0).toFixed(2)}</Text>

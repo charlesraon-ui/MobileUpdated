@@ -98,7 +98,7 @@ export async function createGCashOrder(req, res) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { items, total, address, gcashNumber, deliveryType } = req.body;
+    const { items, total, address, gcashNumber, deliveryType, taxAmount } = req.body;
 
     console.log("📱 Creating GCash order:", { userId, total, itemCount: items?.length });
 
@@ -124,6 +124,7 @@ export async function createGCashOrder(req, res) {
     const order = await Order.create({
       userId: String(userId),
       items,
+      tax: Number.isFinite(Number(taxAmount)) ? Math.round(Number(taxAmount) * 100) / 100 : undefined,
       total,
       address,
       paymentMethod: "GCash",

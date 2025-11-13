@@ -51,7 +51,7 @@ export function normalizeItems(rawItems = []) {
   });
 }
 
-/** Compute subtotal, deliveryFee, and total. */
+/** Compute subtotal, tax, deliveryFee, and total. */
 export function computeTotals(items = [], deliveryType = "in-house", deliveryFeeInBody = 0, totalInBody) {
   const safeItems = Array.isArray(items) ? items : [];
   const subtotal = safeItems.reduce((s, it) => {
@@ -60,6 +60,9 @@ export function computeTotals(items = [], deliveryType = "in-house", deliveryFee
     if (!Number.isFinite(price) || !Number.isFinite(qty) || qty <= 0) return s;
     return s + Number(price) * Number(qty);
   }, 0);
+
+  const taxRate = 0.12;
+  const tax = Math.round(subtotal * taxRate * 100) / 100;
 
   const feeInBodyNum = toNum(deliveryFeeInBody);
   const deliveryFee = Number.isFinite(feeInBodyNum)
@@ -71,9 +74,9 @@ export function computeTotals(items = [], deliveryType = "in-house", deliveryFee
   const totalInBodyNum = toNum(totalInBody);
   const total = Number.isFinite(totalInBodyNum) && totalInBodyNum > 0
     ? totalInBodyNum
-    : Math.round((subtotal + deliveryFee) * 100) / 100;
+    : Math.round((subtotal + tax + deliveryFee) * 100) / 100;
 
-  return { subtotal, deliveryFee, total };
+  return { subtotal, tax, deliveryFee, total };
 }
 
 /** Basic item validation result (non-throwing). */

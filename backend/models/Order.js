@@ -30,6 +30,7 @@ const orderSchema = new mongoose.Schema(
     // keep totals in PESOS; compute in a pre-save if not provided
     subtotal: { type: Number, min: 0, default: 0 },     // items sum (pesos)
     deliveryFee: { type: Number, min: 0, default: 0 },  // pesos
+    tax: { type: Number, min: 0, default: 0 },
     total: { type: Number, min: 0, default: 0 },        // pesos = subtotal + deliveryFee
     totalWeightKg: { type: Number, min: 0, default: 0 }, // total weight in kg
 
@@ -90,9 +91,11 @@ orderSchema.pre("save", function (next) {
   
   this.subtotal = Math.round((Number(this.subtotal) || subtotal) * 100) / 100;
   this.deliveryFee = Math.round((Number(this.deliveryFee) || 0) * 100) / 100;
+  const taxRate = 0.12;
+  this.tax = Math.round((this.subtotal * taxRate) * 100) / 100;
   
   // Calculate total with discounts
-  let calculatedTotal = this.subtotal + this.deliveryFee;
+  let calculatedTotal = this.subtotal + this.tax + this.deliveryFee;
   
   // Apply promo code discount
   if (this.promoCode && this.promoCode.discount > 0) {
