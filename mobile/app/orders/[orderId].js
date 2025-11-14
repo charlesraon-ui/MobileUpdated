@@ -96,8 +96,8 @@ export default function OrderDetailsPage() {
       router.replace("/refund/my-tickets");
       return;
     }
-    // Use safe navigation with fallback to full orders list
-    safeGoBack("/full-orders");
+    // Use safe navigation with fallback to tabs profile (shows bottom tabs)
+    safeGoBack("/tabs/profile");
   };
 
   const oidShort = String(orderId || "").slice(-8).toUpperCase();

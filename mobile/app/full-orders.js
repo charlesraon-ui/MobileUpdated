@@ -13,7 +13,7 @@ export default function FullOrdersRoute() {
       else if (to === "register") router.push("/register");
       else if (to === "orders") router.push({ pathname: "/full-orders", params: p });
       else if (to === "home") router.push("/home");
-      else if (to === "profile") router.push("/tabs/profile");
+      else if (to === "profile") router.replace("/tabs/profile");
       else router.push("/");
     },
   };
