@@ -162,9 +162,9 @@ export default function RegisterScreen() {
       const data = await doRegisterInitiate(payload);
       if (data?.otpRequired) {
         const e = payload.email;
-        // Pass full payload so OTP screen can support "Resend code"
-        // Also pass debugOtp if backend provided it (for dev/testing)
         router.push({ pathname: "/otp", params: { email: e, name: payload.name, password: payload.password, address: payload.address, debugOtp: String(data?.debugOtp || "") } });
+      } else {
+        router.replace("/login");
       }
     } catch (e) {
       const status = e?.response?.status;
