@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AppCtx } from "../../src/context/AppContext";
-import { getOrderRefundStatus } from "../../src/api/apiClient";
+import { getOrderRefundStatus, cancelMyOrderApi } from "../../src/api/apiClient";
 import { safeGoBackToProfile } from "../../src/utils/navigationUtils";
 
 const GREEN = "#10B981";
@@ -62,6 +62,20 @@ export default function OrderDetailsPage() {
     const isEPayment = String(order?.paymentMethod || "").toLowerCase() === "e-payment";
     return isEPayment && base === "pending" ? "confirmed" : base;
   }, [order]);
+
+  const canCancel = useMemo(() => {
+    const s = String(deliveryStatus || "").toLowerCase();
+    return ["pending", "confirmed"].includes(s);
+  }, [deliveryStatus]);
+
+  const onCancel = async () => {
+    try {
+      if (!order?._id) return;
+      await cancelMyOrderApi(order._id);
+      await refreshAuthedData?.(user);
+      router.replace("/tabs/profile");
+    } catch {}
+  };
 
   const onRefresh = async () => {
     try {
@@ -324,6 +338,16 @@ export default function OrderDetailsPage() {
               <Text style={s.supportIcon}>💬</Text>
               <Text style={s.supportButtonText}>Customer Support</Text>
             </TouchableOpacity>
+            {canCancel && (
+              <TouchableOpacity
+                style={s.cancelButton}
+                activeOpacity={0.8}
+                onPress={onCancel}
+              >
+                <Text style={s.cancelIcon}>❌</Text>
+                <Text style={s.cancelButtonText}>Cancel Order</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       )}
@@ -577,4 +601,21 @@ const s = StyleSheet.create({
   supportButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   actionBtn: { backgroundColor: GREEN, paddingVertical: 14, paddingHorizontal: 18, borderRadius: 10 },
   actionBtnText: { color: "#FFFFFF", fontWeight: "700" },
+  cancelButton: {
+    backgroundColor: RED,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    shadowColor: RED,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelIcon: { fontSize: 18, marginRight: 8 },
+  cancelButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 });
