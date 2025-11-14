@@ -121,14 +121,7 @@ export default function AppProvider({ children }) {
         // Failed to load products
       }
 
-      try {
-        console.log("🚀 APPCONTEXT REF INIT: Loading categories...");
-        const categoriesResponse = await getCategories();
-        setCategories(categoriesResponse.data);
-        console.log("🚀 APPCONTEXT REF INIT: Categories loaded successfully:", categoriesResponse.data?.length);
-      } catch (error) {
-        // Failed to load categories
-      }
+      // Categories are derived later; remove early categories fetch to avoid undefined setter
 
       try {
         console.log("🚀 APPCONTEXT REF INIT: Loading bundles...");

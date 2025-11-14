@@ -323,11 +323,11 @@ export default function ProductDetailScreen() {
   );
 
   const img = useMemo(() => {
-    if (!productDetail) return require("../../assets/images/placeholder.svg");
+    if (!productDetail) return require("../../assets/images/icon.png");
     const imageSource = productDetail?.imageUrl || productDetail?.images?.[0];
-    if (!imageSource) return require("../../assets/images/placeholder.svg");
-    if (String(imageSource).startsWith("http")) return imageSource;
-    return toAbsoluteUrl ? toAbsoluteUrl(imageSource) : imageSource;
+    if (!imageSource) return require("../../assets/images/icon.png");
+    if (typeof imageSource === "string" && String(imageSource).startsWith("http")) return imageSource;
+    return toAbsoluteUrl && typeof imageSource === "string" ? toAbsoluteUrl(imageSource) : imageSource;
   }, [productDetail, toAbsoluteUrl]);
 
   // Reset states when component mounts
@@ -489,7 +489,7 @@ export default function ProductDetailScreen() {
   const RecoRow = useCallback(({ item }) => {
     if (!item) return null;
     
-    const imgSrc = item.imageUrl || require("../../assets/images/placeholder-small.svg");
+    const imgSrc = item.imageUrl || require("../../assets/images/android-icon-foreground.png");
     const averageRating = item.reviews?.length 
       ? (item.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / item.reviews.length)
       : (item.averageRating || 0);
@@ -502,7 +502,7 @@ export default function ProductDetailScreen() {
         activeOpacity={0.7}
       >
         <Image 
-          source={{ uri: imgSrc }} 
+          source={typeof imgSrc === "number" ? imgSrc : { uri: imgSrc }} 
           style={s.recoImg}
           onError={(e) => console.log('Reco image load error:', e.nativeEvent.error)}
         />
@@ -635,9 +635,9 @@ export default function ProductDetailScreen() {
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Image */}
           <View style={s.imageContainer}>
-            <Image
-              source={{ uri: img }}
-              style={s.productImage}
+            <Image 
+              source={typeof img === "number" ? img : { uri: img }} 
+              style={s.productImage} 
               resizeMode="cover"
               onLoadStart={() => setImageLoading(true)}
               onLoadEnd={() => setImageLoading(false)}

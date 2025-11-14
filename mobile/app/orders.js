@@ -15,6 +15,7 @@ export default function OrdersRoute() {
       else if (to === "register") router.push("/register");
       else if (to === "orders") router.push({ pathname: "/orders", params: p });
       else if (to === "home") router.push("/home");
+      else if (to === "profile") router.replace("/tabs/profile");
       else router.push("/");
     },
   };
@@ -23,7 +24,6 @@ export default function OrdersRoute() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <OrdersScreen route={{ params }} navigation={navigation} />
-      <Redirect href="/tabs/profile" />;
     </>
   );
 }

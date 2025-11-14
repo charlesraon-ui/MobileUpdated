@@ -15,7 +15,7 @@ import { platformShadow } from "../utils/shadow";
 import { Colors, Radii, ResponsiveUtils } from "../../constants/theme";
 import { sanitizeProductForDisplay, warnIfIdDisplayAttempt } from "../utils/dataSanitizer";
 
-const PLACEHOLDER = require("../../assets/images/placeholder.svg");
+const PLACEHOLDER = require("../../assets/images/icon.png");
 const C = Colors.light;
 
 function formatPrice(n) {
@@ -121,7 +121,7 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
         {/* Image Container */}
         <View style={[s.imageContainer, compact && s.compactImageHeight]}>
           <Image 
-            source={{ uri: img }} 
+            source={typeof img === "number" ? img : { uri: img }} 
             style={s.image} 
             resizeMode="cover"
             onLoadStart={() => setImageLoading(true)}

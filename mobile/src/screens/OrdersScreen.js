@@ -600,7 +600,7 @@ export default function OrdersScreen() {
       <View style={s.header}>
         <TouchableOpacity 
           style={s.backButton}
-          onPress={() => navigation.navigate("profile")}
+          onPress={() => router.replace('/tabs/profile')}
           activeOpacity={0.7}
         >
           <Text style={s.backButtonText}>← Back</Text>
