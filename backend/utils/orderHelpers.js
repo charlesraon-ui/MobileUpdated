@@ -124,6 +124,21 @@ export async function processOrderInventory(items = []) {
   }
 }
 
+export async function restoreInventory(items = []) {
+  const list = Array.isArray(items) ? items : [];
+  for (const it of list) {
+    const pid = it?.productId;
+    const qtyRaw = it?.quantity;
+    const qty = Math.floor(Number(qtyRaw || 0));
+    if (!pid || !qty || qty <= 0) continue;
+    await Product.findByIdAndUpdate(
+      pid,
+      { $inc: { stock: qty, sold: -qty } },
+      { new: true }
+    );
+  }
+}
+
 /** Default export for flexibility (supports default or named imports). */
-const orderHelpers = { toNum, normalizeItems, computeTotals, validateItems, processOrderInventory };
+const orderHelpers = { toNum, normalizeItems, computeTotals, validateItems, processOrderInventory, restoreInventory };
 export default orderHelpers;

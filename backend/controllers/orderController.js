@@ -5,6 +5,7 @@ import Order from "../models/Order.js";
 import Product from "../models/Products.js";
 import User from "../models/User.js";
 import { processOrderInventory } from "../utils/orderHelpers.js";
+import { restoreInventory } from "../utils/orderHelpers.js";
 import { updateLoyaltyAfterPurchase, markRewardsAsUsed } from "./loyaltyController.js";
 import { redeemPromoOnOrder } from "./promoController.js";
 
@@ -635,5 +636,43 @@ export const getMyOrders = async (req, res) => {
   } catch (err) {
     console.error("GET_MY_ORDERS_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+export const cancelMyOrder = async (req, res) => {
+  try {
+    const me = req.user?.userId || req.user?.id;
+    const { orderId } = req.params;
+    if (!me) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!orderId) return res.status(400).json({ success: false, message: "Order ID is required" });
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    if (String(order.userId) !== String(me)) return res.status(403).json({ success: false, message: "Forbidden" });
+
+    const currentStatus = String(order.status || "").toLowerCase();
+    if (["completed", "in-transit", "assigned", "cancelled"].includes(currentStatus)) {
+      return res.status(400).json({ success: false, message: `Cannot cancel an order with status: ${order.status}` });
+    }
+
+    order.status = "cancelled";
+    await order.save();
+
+    if (order.paymentMethod === "COD") {
+      try { await restoreInventory(order.items || []); } catch {}
+    }
+
+    try {
+      const delivery = await Delivery.findOne({ order: order._id });
+      if (delivery) {
+        delivery.status = "cancelled";
+        await delivery.save();
+      }
+    } catch {}
+
+    return res.status(200).json({ success: true, order });
+  } catch (err) {
+    console.error("CANCEL_MY_ORDER_ERROR:", err);
+    return res.status(500).json({ success: false, message: err?.message || "Server error" });
   }
 };

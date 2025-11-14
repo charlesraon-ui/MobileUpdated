@@ -12,6 +12,7 @@ import {
   View
 } from "react-native";
 import { AppCtx } from "../context/AppContext";
+import { cancelMyOrderApi } from "../api/apiClient";
 import { getMyRefundTicketsApi } from "../api/apiClient";
 
 const GREEN = "#10B981";
@@ -27,6 +28,7 @@ const RED = "#EF4444";
 
 function OrderDetailsModal({ order, visible, onClose }) {
   if (!order) return null;
+  const { refreshAuthedData } = useContext(AppCtx);
 
   // ✅ Compute UI status: if E-Payment and order is pending, show confirmed
   const baseStatus = order.delivery?.status || order.status || "pending";
@@ -34,6 +36,15 @@ function OrderDetailsModal({ order, visible, onClose }) {
     String(order.paymentMethod || "").toLowerCase() === "e-payment" && String(baseStatus).toLowerCase() === "pending"
       ? "confirmed"
       : baseStatus;
+
+  const canCancel = ["pending", "confirmed"].includes(String(deliveryStatus).toLowerCase());
+  const onCancel = async () => {
+    try {
+      await cancelMyOrderApi(order._id);
+      await refreshAuthedData?.();
+      onClose?.();
+    } catch {}
+  };
 
   const getDeliveryStatusColor = (status) => {
     const statusLower = String(status || "").toLowerCase();
@@ -344,6 +355,16 @@ function OrderDetailsModal({ order, visible, onClose }) {
             <Text style={s.supportIcon}>💬</Text>
             <Text style={s.supportButtonText}>Customer Support</Text>
           </TouchableOpacity>
+          {canCancel && (
+            <TouchableOpacity
+              style={s.cancelButton}
+              activeOpacity={0.8}
+              onPress={onCancel}
+            >
+              <Text style={s.cancelIcon}>❌</Text>
+              <Text style={s.cancelButtonText}>Cancel Order</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
@@ -1560,6 +1581,30 @@ const s = StyleSheet.create({
     marginRight: 8,
   },
   supportButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  cancelButton: {
+    backgroundColor: RED,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    shadowColor: RED,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  cancelButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",

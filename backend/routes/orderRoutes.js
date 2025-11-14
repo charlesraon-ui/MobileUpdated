@@ -6,6 +6,7 @@ import {
   getMyOrders,
   getOrders,
   updateOrderStatus,
+  cancelMyOrder,
 } from "../controllers/orderController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -24,6 +25,7 @@ router.post("/epayment", authMiddleware, createEPaymentOrder);
 // protected (current user only)
 router.post("/me", authMiddleware, createMyOrder);
 router.get("/me/list", authMiddleware, getMyOrders);
+router.post("/me/:orderId/cancel", authMiddleware, cancelMyOrder);
 
 // deliveries
 // Note: deliveries are served via /api/delivery routes
