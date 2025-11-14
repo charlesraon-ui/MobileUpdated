@@ -3,7 +3,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AppCtx } from "../../src/context/AppContext";
 import { getOrderRefundStatus, cancelMyOrderApi } from "../../src/api/apiClient";
-import { safeGoBackToProfile } from "../../src/utils/navigationUtils";
+import { safeGoBack } from "../../src/utils/navigationUtils";
 
 const GREEN = "#10B981";
 const GREEN_BG = "#ECFDF5";
@@ -96,8 +96,8 @@ export default function OrderDetailsPage() {
       router.replace("/refund/my-tickets");
       return;
     }
-    // Use safe navigation with fallback to profile
-    safeGoBackToProfile();
+    // Use safe navigation with fallback to full orders list
+    safeGoBack("/full-orders");
   };
 
   const oidShort = String(orderId || "").slice(-8).toUpperCase();
